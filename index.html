@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+    <html lang="en">
+
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <style>
+            canvas, body, html { 
+                width: 100vw; height: 100vh; padding: 0;
+                overflow: hidden;
+                margin: 0; overscroll-behavior-x: none; }
+        </style>
+    </head>
+    <body>
+        <canvas id="gl2"></canvas>
+        <script type="module">
+            import GL2 from "./gl2.js"
+            let gl2 = new GL2( document.getElementById('gl2') );
+
+            gl2.vertices.set([
+                0.40,0.40,0.40,-0.40,0.40,0.40,0.40,-0.40,0.40,-0.40,0.40,0.40,0.40,-0.40,0.40,-0.40,-0.40,0.40,0.40,0.40,-0.40,-0.40,0.40,-0.40,0.40,-0.40,-0.40,-0.40,0.40,-0.40,0.40,-0.40,-0.40,-0.40,-0.40,-0.40,0.40,0.40,0.40,0.40,-0.40,0.40,0.40,0.40,-0.40,0.40,0.40,-0.40,0.40,-0.40,-0.40,0.40,-0.40,0.40,-0.40,0.40,0.40,-0.40,-0.40,0.40,-0.40,0.40,-0.40,-0.40,0.40,-0.40,-0.40,-0.40,-0.40,-0.40,-0.40,0.40,0.40,0.40,0.40,-0.40,0.40,0.40,0.40,0.40,-0.40,0.40,0.40,-0.40,-0.40,0.40,-0.40,-0.40,0.40,0.40,0.40,-0.40,0.40,-0.40,-0.40,0.40,0.40,-0.40,-0.40,0.40,-0.40,-0.40,-0.40,-0.40,-0.40,-0.40,-0.40,0.40
+            ])
+
+            gl2.pointCount = gl2.vertices.length/3;
+            gl2.reload()
+
+        </script>
+
+    </body>
+</html>
