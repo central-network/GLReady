@@ -114,7 +114,7 @@ export var M4 = (function() {
   M4.Camera = Camera = class Camera extends M4 {
     constructor(yFov, rAspect, zNear, zFar) {
       var f, rangeInv;
-      f = Math.tan(Math.PI * 0.5 - 0.5 * yFov);
+      f = Math.tan(Math.PI / 2 - yFov / 2);
       rangeInv = 1.0 / (zNear - zFar);
       super([f / rAspect, 0, 0, 0, 0, f, 0, 0, 0, 0, (zNear + zFar) * rangeInv, -1, 0, 0, (zNear * zFar) * rangeInv * 2, 0]);
     }

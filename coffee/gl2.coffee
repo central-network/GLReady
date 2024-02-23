@@ -8,14 +8,14 @@ export class M4 extends Float32Array
     @Camera     : class Camera extends this
         constructor : ( yFov, rAspect, zNear, zFar ) ->
 
-            f = Math.tan Math.PI * 0.5 - 0.5 * yFov
+            f = Math.tan Math.PI/2 - yFov/2
             rangeInv = 1.0 / ( zNear - zFar )
 
             super [
-                f / rAspect, 0, 0, 0,
-                0, f, 0, 0,
-                0, 0, (zNear + zFar) * rangeInv, -1,
-                0, 0, (zNear * zFar) * rangeInv * 2, 0
+                f / rAspect,   0,                             0,    0,
+                0,             f,                             0,    0,
+                0,             0,     (zNear + zFar) * rangeInv,   -1,
+                0,             0, (zNear * zFar) * rangeInv * 2,    0
             ]
 
     @multiply   = ( a, b ) ->
