@@ -481,7 +481,7 @@ export default GL2 = (function() {
 
   GL2.prototype.rendering = true;
 
-  GL2.prototype.yFov = 90;
+  GL2.prototype.yFov = Math.rad(90);
 
   GL2.prototype.zNear = 0.01;
 

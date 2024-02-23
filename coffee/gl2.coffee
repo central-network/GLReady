@@ -149,7 +149,7 @@ export default class GL2 extends EventTarget
     pointCount  : 0
     rendering   : yes
 
-    yFov        : 90
+    yFov        : Math.rad 90
     zNear       : 0.01
     zFar        : 1000
 
