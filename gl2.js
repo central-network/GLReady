@@ -112,25 +112,11 @@ export var M4 = (function() {
   };
 
   M4.Camera = Camera = class Camera extends M4 {
-    constructor(width, height, depth, fudge) {
-      super(M4.multiply([
-        1,
-        0,
-        0,
-        0,
-        0,
-        1,
-        0,
-        0,
-        0,
-        0,
-        1,
-        fudge,
-        0,
-        0,
-        0,
-        1 // Note: This matrix flips the Y axis so 0 is at the top.
-      ], [2 / width, 0, 0, 0, 0, -2 / height, 0, 0, 0, 0, 2 / depth, 0, -1, 1, 0, 1]));
+    constructor(yFov, rAspect, zNear, zFar) {
+      var f, rangeInv;
+      f = Math.tan(Math.PI * 0.5 - 0.5 * yFov);
+      rangeInv = 1.0 / (zNear - zFar);
+      super([f / rAspect, 0, 0, 0, 0, f, 0, 0, 0, 0, (zNear + zFar) * rangeInv, -1, 0, 0, (zNear * zFar) * rangeInv * 2, 0]);
     }
 
   };
@@ -155,9 +141,14 @@ export default GL2 = (function() {
             return canvas.getBoundingClientRect();
           }
         },
-        pixelRatio: {
+        rPixel: {
           get: function() {
             return (typeof window !== "undefined" && window !== null ? window.devicePixelRatio : void 0) || 1;
+          }
+        },
+        rAspect: {
+          get: function() {
+            return this.width / this.height;
           }
         }
       });
@@ -203,20 +194,16 @@ export default GL2 = (function() {
         },
         offsetX: {
           set: function(dx) {
-            return this.pointerX = dx * this.pixelRatio;
+            return this.pointerX = dx * this.rPixel;
           }
         },
         offsetY: {
           set: function(dy) {
-            return this.pointerY = dy * this.pixelRatio;
+            return this.pointerY = dy * this.rPixel;
           }
         }
       });
       Object.defineProperties(this, {
-        fudge: {
-          get: this.getFudge,
-          set: this.setFudge
-        },
         dxCamera: {
           get: this.getdxCamera,
           set: this.setdxCamera
@@ -255,21 +242,21 @@ export default GL2 = (function() {
         }
       });
       Object.assign(this.canvas, {
-        width: this.width * this.pixelRatio,
-        height: this.height * this.pixelRatio
+        width: this.width * this.rPixel,
+        height: this.height * this.rPixel
       });
       Object.defineProperties(this, {
-        program: {
-          value: this.gl.createProgram()
-        },
         vertexBuffer: {
           value: this.gl.createBuffer()
         },
-        vertexShader: {
-          value: this.gl.createShader(this.gl.VERTEX_SHADER)
-        },
         colorBuffer: {
           value: this.gl.createBuffer()
+        },
+        program: {
+          value: this.gl.createProgram()
+        },
+        vertexShader: {
+          value: this.gl.createShader(this.gl.VERTEX_SHADER)
         },
         fragmentShader: {
           value: this.gl.createShader(this.gl.FRAGMENT_SHADER)
@@ -289,7 +276,7 @@ export default GL2 = (function() {
           value: new Float32Array([15 / 0xff, 17 / 0xff, 26 / 0xff, 1])
         },
         camera: {
-          value: new M4.Camera(this.width, this.height, this.depth, this.fudge)
+          value: new M4.Camera(this.yFov, this.rAspect, this.zNear, this.zFar)
         },
         clearMask: {
           value: this.gl.DEPTH_BUFFER_BIT | this.gl.COLOR_BUFFER_BIT
@@ -338,13 +325,12 @@ export default GL2 = (function() {
       this.gl.enableVertexAttribArray(this.a_Color);
       this.gl.vertexAttribPointer(this.a_Color, 3, this.gl.FLOAT, false, 12, 0);
       this.gl.uniform1f(this.u_PointSize, this.pointSize);
-      this.fudge = 1;
-      this.dxCamera = 400;
-      this.dyCamera = 300;
-      this.dzCamera = 0;
-      this.rxCamera = Math.rad(20);
-      this.ryCamera = Math.rad(50);
-      this.rzCamera = Math.rad(80);
+      this.dxCamera = -150;
+      this.dyCamera = 0;
+      this.dzCamera = -360;
+      this.rxCamera = Math.rad(180);
+      this.ryCamera = Math.rad(0);
+      this.rzCamera = Math.rad(0);
       this.sxCamera = 1;
       this.syCamera = 1;
       this.szCamera = 1;
@@ -409,18 +395,6 @@ export default GL2 = (function() {
 
     updateCamera() {
       return this.gl.uniformMatrix4fv(this.u_Camera, false, this.camera.translate(this.dxCamera, this.dyCamera, this.dzCamera).rotate(this.rxCamera, this.ryCamera, this.rzCamera).scale(this.sxCamera, this.syCamera, this.szCamera));
-    }
-
-    updateFudge() {
-      return this.gl.uniform1f(this.u_FudgeFactor, this.fudge);
-    }
-
-    getFudge() {
-      return this.scene.at(this.INDEX_FUDGE);
-    }
-
-    setFudge() {
-      return this.updateFudge(this.scene[this.INDEX_FUDGE] = arguments[0]);
     }
 
     getdxCamera() {
@@ -497,7 +471,7 @@ export default GL2 = (function() {
 
   };
 
-  GL2.prototype.vertexShaderSource = 'attribute vec4     a_Vertex; attribute vec3     a_Color; uniform   float    u_PointSize; uniform   float    u_FudgeFactor; uniform   mat4     u_Camera; varying   vec4     v_Color; void main() { vec4  vPos   = u_Camera * a_Vertex; float zDiv   = 1.0 + vPos.z * u_FudgeFactor; gl_Position  =  vec4( vPos.xyz, zDiv ); gl_PointSize =  u_PointSize; v_Color      =  vec4( a_Color, 1.0 ); }';
+  GL2.prototype.vertexShaderSource = 'attribute vec4     a_Vertex; attribute vec4     a_Color; uniform   float    u_PointSize; uniform   mat4     u_Camera; varying   vec4     v_Color; void main() { gl_Position  =  u_Camera * a_Vertex; gl_PointSize =  u_PointSize; v_Color      =  a_Color; }';
 
   GL2.prototype.fragmentShaderSource = 'precision highp    float; varying   vec4     v_Color; void main() { gl_FragColor = v_Color; }';
 
@@ -507,7 +481,11 @@ export default GL2 = (function() {
 
   GL2.prototype.rendering = true;
 
-  GL2.prototype.INDEX_FUDGE = 1;
+  GL2.prototype.yFov = 90;
+
+  GL2.prototype.zNear = 0.01;
+
+  GL2.prototype.zFar = 1000;
 
   GL2.prototype.INDEX_CAMERA = 2;
 

@@ -6,17 +6,16 @@ Object.defineProperties Math,
 export class M4 extends Float32Array
     
     @Camera     : class Camera extends this
-        constructor : ( width, height, depth, fudge ) ->
-            super M4.multiply [
-                1, 0, 0, 0,
-                0, 1, 0, 0,
-                0, 0, 1, fudge,
-                0, 0, 0, 1,
-              ], [ # Note: This matrix flips the Y axis so 0 is at the top.
-                 2 / width,   0, 0, 0,
-                 0, -2 / height, 0, 0,
-                 0,  0,  2 / depth, 0,
-                -1,  1,  0,  1,
+        constructor : ( yFov, rAspect, zNear, zFar ) ->
+
+            f = Math.tan Math.PI * 0.5 - 0.5 * yFov
+            rangeInv = 1.0 / ( zNear - zFar )
+
+            super [
+                f / rAspect, 0, 0, 0,
+                0, f, 0, 0,
+                0, 0, (zNear + zFar) * rangeInv, -1,
+                0, 0, (zNear * zFar) * rangeInv * 2, 0
             ]
 
     @multiply   = ( a, b ) ->
@@ -125,19 +124,15 @@ export default class GL2 extends EventTarget
 
     vertexShaderSource    : '
         attribute vec4     a_Vertex;
-        attribute vec3     a_Color;
+        attribute vec4     a_Color;
         uniform   float    u_PointSize;
-        uniform   float    u_FudgeFactor;
         uniform   mat4     u_Camera;
         varying   vec4     v_Color;
 
         void main() {
-            vec4  vPos   = u_Camera * a_Vertex;
-            float zDiv   = 1.0 + vPos.z * u_FudgeFactor;
-
-            gl_Position  =  vec4( vPos.xyz, zDiv );
+            gl_Position  =  u_Camera * a_Vertex;
             gl_PointSize =  u_PointSize;
-            v_Color      =  vec4( a_Color, 1.0 );
+            v_Color      =  a_Color;
         }
     ';
 
@@ -154,13 +149,18 @@ export default class GL2 extends EventTarget
     pointCount  : 0
     rendering   : yes
 
+    yFov        : 90
+    zNear       : 0.01
+    zFar        : 1000
+
     constructor : ( canvas ) ->
 
         Object.defineProperties super(),
             gl              : value : canvas.getContext "webgl2" 
             canvas          : value : canvas
             boundingRect    : get   : -> canvas.getBoundingClientRect()
-            pixelRatio      : get   : -> window?.devicePixelRatio or 1
+            rPixel          : get   : -> window?.devicePixelRatio or 1
+            rAspect         : get   : -> @width / @height   
 
         Object.defineProperties this,
             width           : get   : -> @boundingRect.width
@@ -171,15 +171,13 @@ export default class GL2 extends EventTarget
 
             vFactor         : value : @width  / Math.PI
             hFactor         : value : @height / Math.PI    
-            zFactor         : value : 400   
+            zFactor         : value : 400
 
             deltaY          : set   : ( dz ) -> @pointerZ = dz * @zFactor
-            offsetX         : set   : ( dx ) -> @pointerX = dx * @pixelRatio
-            offsetY         : set   : ( dy ) -> @pointerY = dy * @pixelRatio
+            offsetX         : set   : ( dx ) -> @pointerX = dx * @rPixel
+            offsetY         : set   : ( dy ) -> @pointerY = dy * @rPixel
 
         Object.defineProperties this,
-            fudge           : get : @getFudge,      set : @setFudge
-            
             dxCamera        : get : @getdxCamera,   set : @setdxCamera
             dyCamera        : get : @getdyCamera,   set : @setdyCamera
             dzCamera        : get : @getdzCamera,   set : @setdzCamera
@@ -193,14 +191,14 @@ export default class GL2 extends EventTarget
             szCamera        : get : @getszCamera,   set : @setszCamera
 
         Object.assign @canvas,
-            width           : @width  * @pixelRatio
-            height          : @height * @pixelRatio
+            width           : @width  * @rPixel
+            height          : @height * @rPixel
 
         Object.defineProperties this,
-            program         : value :   @gl.createProgram()
             vertexBuffer    : value :   @gl.createBuffer()
-            vertexShader    : value :   @gl.createShader( @gl.VERTEX_SHADER )
             colorBuffer     : value :   @gl.createBuffer()
+            program         : value :   @gl.createProgram()
+            vertexShader    : value :   @gl.createShader( @gl.VERTEX_SHADER )
             fragmentShader  : value :   @gl.createShader( @gl.FRAGMENT_SHADER )
 
         Object.defineProperties this,
@@ -208,7 +206,7 @@ export default class GL2 extends EventTarget
             vertices        : value :   new Float32Array 3 * 1e5
             colors          : value :   new Float32Array 3 * 1e5
             clearColor      : value :   new Float32Array [ 15/0xff, 17/0xff, 26/0xff, 1 ]
-            camera          : value :   new M4.Camera @width, @height, @depth, @fudge
+            camera          : value :   new M4.Camera @yFov, @rAspect, @zNear, @zFar
             clearMask       : value :   @gl.DEPTH_BUFFER_BIT | @gl.COLOR_BUFFER_BIT
             clearDepth      : value :   1
 
@@ -249,15 +247,13 @@ export default class GL2 extends EventTarget
 
         @gl.uniform1f                   @u_PointSize, @pointSize
         
-        @fudge                          = 1
+        @dxCamera                       = -150
+        @dyCamera                       = 0
+        @dzCamera                       = -360
 
-        @dxCamera                       = 400
-        @dyCamera                       = 300
-        @dzCamera                       = 0
-
-        @rxCamera                       = Math.rad 20
-        @ryCamera                       = Math.rad 50
-        @rzCamera                       = Math.rad 80
+        @rxCamera                       = Math.rad 180
+        @ryCamera                       = Math.rad 0
+        @rzCamera                       = Math.rad 0
 
         @sxCamera                       = 1
         @syCamera                       = 1
@@ -311,14 +307,6 @@ export default class GL2 extends EventTarget
                 .translate @dxCamera, @dyCamera, @dzCamera
                 .rotate @rxCamera, @ryCamera, @rzCamera
                 .scale @sxCamera, @syCamera, @szCamera
-
-    updateFudge     : ->
-        @gl.uniform1f @u_FudgeFactor, @fudge        
-
-
-    INDEX_FUDGE     : 1
-    getFudge        : -> @scene.at @INDEX_FUDGE
-    setFudge        : -> @updateFudge @scene[ @INDEX_FUDGE ] = arguments[0]
     
     INDEX_CAMERA    : 2
     getdxCamera     : -> @scene.at @INDEX_CAMERA + 0
