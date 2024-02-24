@@ -330,35 +330,79 @@
                 input.value = gl2[ input.parentElement.id ];
             })
 
-            let dxCamera = document.querySelector("#dxCamera input")
-            let dyCamera = document.querySelector("#dyCamera input")
-            let dzCamera = document.querySelector("#dzCamera input")
+            let dxCamera = document.querySelector("#dxCamera input");
+            let dyCamera = document.querySelector("#dyCamera input");
+            let dzCamera = document.querySelector("#dzCamera input");
             
-            let sxCamera = document.querySelector("#sxCamera input")
-            let syCamera = document.querySelector("#syCamera input")
-            let szCamera = document.querySelector("#szCamera input")
+            let sxCamera = document.querySelector("#sxCamera input");
+            let syCamera = document.querySelector("#syCamera input");
+            let szCamera = document.querySelector("#szCamera input");
             
-            let rxCamera = document.querySelector("#rxCamera input")
-            let ryCamera = document.querySelector("#ryCamera input")
+            let rxCamera = document.querySelector("#rxCamera input");
+            let ryCamera = document.querySelector("#ryCamera input");
 
-            bind.on( "zoom", ({ detail: { dz } }) => {
-                dzCamera.value = gl2.dzCamera += dz
+            /*
+            bind.on( "zoom", ({ detail: { dy, dz, altKey } }) => {
+
+                if (!altKey )
+                    dzCamera.value = gl2.dzCamera += dy
+                
+                else {
+                    sxCamera.value = gl2.sxCamera += dz
+                    syCamera.value = gl2.syCamera += dz
+                    szCamera.value = gl2.szCamera += dz
+                }
             })
 
-            bind.on( "scale", ({ detail: { ds } }) => {
-                sxCamera.value = gl2.sxCamera += ds
-                syCamera.value = gl2.syCamera += ds
-                szCamera.value = gl2.szCamera += ds
-            })
-
-            bind.on( "drag", ({ detail: { rx, ry } }) => {
+            bind.on( "turn", ({ detail: { rx, ry } }) => {
                 rxCamera.value = gl2.rxCamera += rx
                 ryCamera.value = gl2.ryCamera += ry
             })
 
-            bind.on( "move", ({ detail: { dx, dy } }) => {
+            bind.on( "drag", ({ detail: { dx, dy } }) => {
                 dxCamera.value = gl2.dxCamera += dx
                 dyCamera.value = gl2.dyCamera += dy
+            })
+
+            bind.on( "move", ({ detail: { dx, dy, dz } }) => {
+                dxCamera.value = gl2.dxCamera += dx
+                dyCamera.value = gl2.dyCamera += dy
+                dzCamera.value = gl2.dzCamera += dz
+            })
+            */
+
+            gl2.queue( t => {
+
+                if (bind.isRotating) {
+                    rxCamera.value = gl2.rxCamera += bind.rx
+                    ryCamera.value = gl2.ryCamera += bind.ry
+                } 
+
+                if (bind.isDraging) {
+                    dxCamera.value = gl2.dxCamera += bind.dx
+                    dyCamera.value = gl2.dyCamera += bind.dy
+                }
+
+                if (bind.isMoving) {
+                    dxCamera.value = gl2.dxCamera += bind.dx
+                    dzCamera.value = gl2.dzCamera += bind.dz  
+                }
+                
+                if (bind.isJumping) {
+                    dyCamera.value = gl2.dyCamera += bind.dy
+                }
+
+                if (bind.isZooming) {
+                    if (!bind.altKey )
+                        dzCamera.value = gl2.dzCamera += bind.dy
+                    
+                    else {
+                        sxCamera.value = gl2.sxCamera += bind.dz
+                        syCamera.value = gl2.syCamera += bind.dz
+                        szCamera.value = gl2.szCamera += bind.dz
+                    }
+                }
+
             })
 
             self.gl2 = gl2

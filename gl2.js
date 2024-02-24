@@ -139,6 +139,9 @@ export default GL2 = (function() {
         onceQueue: {
           value: new Array
         },
+        renderQueue: {
+          value: new Array
+        },
         boundingRect: {
           get: function() {
             return canvas.getBoundingClientRect();
@@ -360,8 +363,8 @@ export default GL2 = (function() {
       return this.gl.vertexAttribPointer(this.a_Color, 3, this.gl.FLOAT, false, 12, 0);
     }
 
-    render() {
-      var i, job, len, len1, ref;
+    render(t) {
+      var i, j, job, len, len1, len2, ref, ref1;
       boundMethodCheck(this, GL2);
       if (this.rendering) {
         this.gl.clear(this.clearMask);
@@ -371,6 +374,11 @@ export default GL2 = (function() {
             job = ref[i];
             job.call(this);
           }
+        }
+        ref1 = this.renderQueue.slice(0);
+        for (j = 0, len2 = ref1.length; j < len2; j++) {
+          job = ref1[j];
+          job.call(this, t);
         }
         this.gl.drawArrays(this.gl.TRIANGLES, 0, this.pointCount);
         this.gl.drawArrays(this.gl.POINTS, 0, this.pointCount);
@@ -395,6 +403,10 @@ export default GL2 = (function() {
       return this.onceQueue.push(function() {
         return this.gl.uniformMatrix4fv(this.u_Camera, false, this.camera.translate(this.dxCamera, this.dyCamera, this.dzCamera).rotate(this.rxCamera, this.ryCamera, this.rzCamera).scale(this.sxCamera, this.syCamera, this.szCamera));
       });
+    }
+
+    queue(fn) {
+      return this.renderQueue.push(fn) - 1;
     }
 
     get_dxCamera() {

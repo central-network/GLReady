@@ -158,6 +158,7 @@ export default class GL2 extends EventTarget
             gl              : value : canvas.getContext "webgl2" 
             canvas          : value : canvas
             onceQueue       : value : new Array
+            renderQueue     : value : new Array
             boundingRect    : get   : -> canvas.getBoundingClientRect()
             rAspect         : get   : -> @width / @height   
             rPixel          : get   : -> window?.devicePixelRatio or 1
@@ -276,7 +277,7 @@ export default class GL2 extends EventTarget
         @gl.enableVertexAttribArray     @a_Color
         @gl.vertexAttribPointer         @a_Color, 3, @gl.FLOAT, no, 12, 0
 
-    render      : =>
+    render      : ( t ) =>
 
         if  @rendering
             @gl.clear @clearMask
@@ -284,6 +285,9 @@ export default class GL2 extends EventTarget
             if len = @onceQueue.length
                 for job in @onceQueue.splice 0, len
                     job.call this
+
+            for job in @renderQueue.slice 0
+                job.call this, t
 
             @gl.drawArrays @gl.TRIANGLES, 0, @pointCount
             @gl.drawArrays @gl.POINTS, 0, @pointCount
@@ -309,6 +313,8 @@ export default class GL2 extends EventTarget
                 .rotate @rxCamera, @ryCamera, @rzCamera
                 .scale @sxCamera, @syCamera, @szCamera
         
+    queue           : ( fn ) ->
+        @renderQueue.push( fn ) - 1
     
     INDEX_CAMERA    : 2
     get_dxCamera    : -> @scene.at @INDEX_CAMERA + 0
