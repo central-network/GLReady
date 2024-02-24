@@ -119,7 +119,6 @@ export class M4 extends Float32Array
         M4.multiply this, @zRotation rz
     
 
-
 export default class GL2 extends EventTarget
 
     vertexShaderSource    : '
@@ -158,9 +157,10 @@ export default class GL2 extends EventTarget
         Object.defineProperties super(),
             gl              : value : canvas.getContext "webgl2" 
             canvas          : value : canvas
+            onceQueue       : value : new Array
             boundingRect    : get   : -> canvas.getBoundingClientRect()
-            rPixel          : get   : -> window?.devicePixelRatio or 1
             rAspect         : get   : -> @width / @height   
+            rPixel          : get   : -> window?.devicePixelRatio or 1
 
         Object.defineProperties this,
             width           : get   : -> @boundingRect.width
@@ -169,6 +169,7 @@ export default class GL2 extends EventTarget
             left            : get   : -> @boundingRect.x
             top             : get   : -> @boundingRect.y
 
+        Object.defineProperties this,
             vFactor         : value : @width  / Math.PI
             hFactor         : value : @height / Math.PI    
             zFactor         : value : 400
@@ -178,17 +179,17 @@ export default class GL2 extends EventTarget
             offsetY         : set   : ( dy ) -> @pointerY = dy * @rPixel
 
         Object.defineProperties this,
-            dxCamera        : get : @getdxCamera,   set : @setdxCamera
-            dyCamera        : get : @getdyCamera,   set : @setdyCamera
-            dzCamera        : get : @getdzCamera,   set : @setdzCamera
+            dxCamera        : get : @get_dxCamera,   set : @set_dxCamera
+            dyCamera        : get : @get_dyCamera,   set : @set_dyCamera
+            dzCamera        : get : @get_dzCamera,   set : @set_dzCamera
             
-            rxCamera        : get : @getrxCamera,   set : @setrxCamera
-            ryCamera        : get : @getryCamera,   set : @setryCamera
-            rzCamera        : get : @getrzCamera,   set : @setrzCamera
+            rxCamera        : get : @get_rxCamera,   set : @set_rxCamera
+            ryCamera        : get : @get_ryCamera,   set : @set_ryCamera
+            rzCamera        : get : @get_rzCamera,   set : @set_rzCamera
 
-            sxCamera        : get : @getsxCamera,   set : @setsxCamera
-            syCamera        : get : @getsyCamera,   set : @setsyCamera
-            szCamera        : get : @getszCamera,   set : @setszCamera
+            sxCamera        : get : @get_sxCamera,   set : @set_sxCamera
+            syCamera        : get : @get_syCamera,   set : @set_syCamera
+            szCamera        : get : @get_szCamera,   set : @set_szCamera
 
         Object.assign @canvas,
             width           : @width  * @rPixel
@@ -259,13 +260,10 @@ export default class GL2 extends EventTarget
         @syCamera                       = 1
         @szCamera                       = 1
 
-        @dump()
         @bindEvents()
 
     dump        : ->
-        setInterval =>
-            console.warn { @scene, this: @ }
-        , 3000 ; @
+        console.warn { @scene, this: @ }
    
     upload      : ->
         @gl.bindBuffer                  @gl.ARRAY_BUFFER, @vertexBuffer
@@ -281,11 +279,16 @@ export default class GL2 extends EventTarget
     render      : =>
 
         if  @rendering
-            @scene[0]++
-
             @gl.clear @clearMask
+
+            if len = @onceQueue.length
+                for job in @onceQueue.splice 0, len
+                    job.call this
+
             @gl.drawArrays @gl.TRIANGLES, 0, @pointCount
             @gl.drawArrays @gl.POINTS, 0, @pointCount
+
+            ++@scene[0]
 
         requestAnimationFrame @render
 
@@ -297,43 +300,42 @@ export default class GL2 extends EventTarget
         addEventListener "pagehide", (e) => console.warn "onunload: quit-nonblock:", e
         addEventListener "pageshow", (e) => e.persisted and console.warn "backtab:", e
 
-        @canvas.addEventListener "wheel", ({ @deltaY }) =>, { passive: !0 }
-        @canvas.addEventListener "pointermove", ({ @offsetX, @offsetY }) =>, { passive: !0 }
 
 
-    updateCamera    : ->
+    uploadCamera    : -> @onceQueue.push ->
         @gl.uniformMatrix4fv @u_Camera, no,
             @camera
                 .translate @dxCamera, @dyCamera, @dzCamera
                 .rotate @rxCamera, @ryCamera, @rzCamera
                 .scale @sxCamera, @syCamera, @szCamera
+        
     
     INDEX_CAMERA    : 2
-    getdxCamera     : -> @scene.at @INDEX_CAMERA + 0
-    setdxCamera     : -> @updateCamera @scene[ @INDEX_CAMERA + 0 ] = arguments[0]
+    get_dxCamera    : -> @scene.at @INDEX_CAMERA + 0
+    set_dxCamera    : -> @uploadCamera @scene[ @INDEX_CAMERA + 0 ] = arguments[0]
 
-    getdyCamera     : -> @scene.at @INDEX_CAMERA + 1
-    setdyCamera     : -> @updateCamera @scene[ @INDEX_CAMERA + 1 ] = arguments[0]
+    get_dyCamera    : -> @scene.at @INDEX_CAMERA + 1
+    set_dyCamera    : -> @uploadCamera @scene[ @INDEX_CAMERA + 1 ] = arguments[0]
 
-    getdzCamera     : -> @scene.at @INDEX_CAMERA + 2
-    setdzCamera     : -> @updateCamera @scene[ @INDEX_CAMERA + 2 ] = arguments[0]
+    get_dzCamera    : -> @scene.at @INDEX_CAMERA + 2
+    set_dzCamera    : -> @uploadCamera @scene[ @INDEX_CAMERA + 2 ] = arguments[0]
 
-    getrxCamera     : -> @scene.at @INDEX_CAMERA + 3
-    setrxCamera     : -> @updateCamera @scene[ @INDEX_CAMERA + 3 ] = arguments[0]
+    get_rxCamera    : -> @scene.at @INDEX_CAMERA + 3
+    set_rxCamera    : -> @uploadCamera @scene[ @INDEX_CAMERA + 3 ] = arguments[0]
 
-    getryCamera     : -> @scene.at @INDEX_CAMERA + 4
-    setryCamera     : -> @updateCamera @scene[ @INDEX_CAMERA + 4 ] = arguments[0]
+    get_ryCamera    : -> @scene.at @INDEX_CAMERA + 4
+    set_ryCamera    : -> @uploadCamera @scene[ @INDEX_CAMERA + 4 ] = arguments[0]
 
-    getrzCamera     : -> @scene.at @INDEX_CAMERA + 5
-    setrzCamera     : -> @updateCamera @scene[ @INDEX_CAMERA + 5 ] = arguments[0]
+    get_rzCamera    : -> @scene.at @INDEX_CAMERA + 5
+    set_rzCamera    : -> @uploadCamera @scene[ @INDEX_CAMERA + 5 ] = arguments[0]
 
-    getsxCamera     : -> @scene.at @INDEX_CAMERA + 6
-    setsxCamera     : -> @updateCamera @scene[ @INDEX_CAMERA + 6 ] = arguments[0]
+    get_sxCamera    : -> @scene.at @INDEX_CAMERA + 6
+    set_sxCamera    : -> @uploadCamera @scene[ @INDEX_CAMERA + 6 ] = arguments[0]
 
-    getsyCamera     : -> @scene.at @INDEX_CAMERA + 7
-    setsyCamera     : -> @updateCamera @scene[ @INDEX_CAMERA + 7 ] = arguments[0]
+    get_syCamera    : -> @scene.at @INDEX_CAMERA + 7
+    set_syCamera    : -> @uploadCamera @scene[ @INDEX_CAMERA + 7 ] = arguments[0]
 
-    getszCamera     : -> @scene.at @INDEX_CAMERA + 8
-    setszCamera     : -> @updateCamera @scene[ @INDEX_CAMERA + 8 ] = arguments[0]
+    get_szCamera    : -> @scene.at @INDEX_CAMERA + 8
+    set_szCamera    : -> @uploadCamera @scene[ @INDEX_CAMERA + 8 ] = arguments[0]
 
     

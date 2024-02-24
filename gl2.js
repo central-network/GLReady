@@ -136,19 +136,22 @@ export default GL2 = (function() {
         canvas: {
           value: canvas
         },
+        onceQueue: {
+          value: new Array
+        },
         boundingRect: {
           get: function() {
             return canvas.getBoundingClientRect();
           }
         },
-        rPixel: {
-          get: function() {
-            return (typeof window !== "undefined" && window !== null ? window.devicePixelRatio : void 0) || 1;
-          }
-        },
         rAspect: {
           get: function() {
             return this.width / this.height;
+          }
+        },
+        rPixel: {
+          get: function() {
+            return (typeof window !== "undefined" && window !== null ? window.devicePixelRatio : void 0) || 1;
           }
         }
       });
@@ -177,7 +180,9 @@ export default GL2 = (function() {
           get: function() {
             return this.boundingRect.y;
           }
-        },
+        }
+      });
+      Object.defineProperties(this, {
         vFactor: {
           value: this.width / Math.PI
         },
@@ -205,40 +210,40 @@ export default GL2 = (function() {
       });
       Object.defineProperties(this, {
         dxCamera: {
-          get: this.getdxCamera,
-          set: this.setdxCamera
+          get: this.get_dxCamera,
+          set: this.set_dxCamera
         },
         dyCamera: {
-          get: this.getdyCamera,
-          set: this.setdyCamera
+          get: this.get_dyCamera,
+          set: this.set_dyCamera
         },
         dzCamera: {
-          get: this.getdzCamera,
-          set: this.setdzCamera
+          get: this.get_dzCamera,
+          set: this.set_dzCamera
         },
         rxCamera: {
-          get: this.getrxCamera,
-          set: this.setrxCamera
+          get: this.get_rxCamera,
+          set: this.set_rxCamera
         },
         ryCamera: {
-          get: this.getryCamera,
-          set: this.setryCamera
+          get: this.get_ryCamera,
+          set: this.set_ryCamera
         },
         rzCamera: {
-          get: this.getrzCamera,
-          set: this.setrzCamera
+          get: this.get_rzCamera,
+          set: this.set_rzCamera
         },
         sxCamera: {
-          get: this.getsxCamera,
-          set: this.setsxCamera
+          get: this.get_sxCamera,
+          set: this.set_sxCamera
         },
         syCamera: {
-          get: this.getsyCamera,
-          set: this.setsyCamera
+          get: this.get_syCamera,
+          set: this.set_syCamera
         },
         szCamera: {
-          get: this.getszCamera,
-          set: this.setszCamera
+          get: this.get_szCamera,
+          set: this.set_szCamera
         }
       });
       Object.assign(this.canvas, {
@@ -334,18 +339,14 @@ export default GL2 = (function() {
       this.sxCamera = 1;
       this.syCamera = 1;
       this.szCamera = 1;
-      this.dump();
       this.bindEvents();
     }
 
     dump() {
-      setInterval(() => {
-        return console.warn({
-          scene: this.scene,
-          this: this
-        });
-      }, 3000);
-      return this;
+      return console.warn({
+        scene: this.scene,
+        this: this
+      });
     }
 
     upload() {
@@ -360,12 +361,20 @@ export default GL2 = (function() {
     }
 
     render() {
+      var i, job, len, len1, ref;
       boundMethodCheck(this, GL2);
       if (this.rendering) {
-        this.scene[0]++;
         this.gl.clear(this.clearMask);
+        if (len = this.onceQueue.length) {
+          ref = this.onceQueue.splice(0, len);
+          for (i = 0, len1 = ref.length; i < len1; i++) {
+            job = ref[i];
+            job.call(this);
+          }
+        }
         this.gl.drawArrays(this.gl.TRIANGLES, 0, this.pointCount);
         this.gl.drawArrays(this.gl.POINTS, 0, this.pointCount);
+        ++this.scene[0];
       }
       return requestAnimationFrame(this.render);
     }
@@ -377,96 +386,87 @@ export default GL2 = (function() {
       addEventListener("pagehide", (e) => {
         return console.warn("onunload: quit-nonblock:", e);
       });
-      addEventListener("pageshow", (e) => {
+      return addEventListener("pageshow", (e) => {
         return e.persisted && console.warn("backtab:", e);
       });
-      this.canvas.addEventListener("wheel", ({deltaY}) => {
-        this.deltaY = deltaY;
-      }, {
-        passive: !0
-      });
-      return this.canvas.addEventListener("pointermove", ({offsetX, offsetY}) => {
-        this.offsetX = offsetX;
-        this.offsetY = offsetY;
-      }, {
-        passive: !0
+    }
+
+    uploadCamera() {
+      return this.onceQueue.push(function() {
+        return this.gl.uniformMatrix4fv(this.u_Camera, false, this.camera.translate(this.dxCamera, this.dyCamera, this.dzCamera).rotate(this.rxCamera, this.ryCamera, this.rzCamera).scale(this.sxCamera, this.syCamera, this.szCamera));
       });
     }
 
-    updateCamera() {
-      return this.gl.uniformMatrix4fv(this.u_Camera, false, this.camera.translate(this.dxCamera, this.dyCamera, this.dzCamera).rotate(this.rxCamera, this.ryCamera, this.rzCamera).scale(this.sxCamera, this.syCamera, this.szCamera));
-    }
-
-    getdxCamera() {
+    get_dxCamera() {
       return this.scene.at(this.INDEX_CAMERA + 0);
     }
 
-    setdxCamera() {
-      return this.updateCamera(this.scene[this.INDEX_CAMERA + 0] = arguments[0]);
+    set_dxCamera() {
+      return this.uploadCamera(this.scene[this.INDEX_CAMERA + 0] = arguments[0]);
     }
 
-    getdyCamera() {
+    get_dyCamera() {
       return this.scene.at(this.INDEX_CAMERA + 1);
     }
 
-    setdyCamera() {
-      return this.updateCamera(this.scene[this.INDEX_CAMERA + 1] = arguments[0]);
+    set_dyCamera() {
+      return this.uploadCamera(this.scene[this.INDEX_CAMERA + 1] = arguments[0]);
     }
 
-    getdzCamera() {
+    get_dzCamera() {
       return this.scene.at(this.INDEX_CAMERA + 2);
     }
 
-    setdzCamera() {
-      return this.updateCamera(this.scene[this.INDEX_CAMERA + 2] = arguments[0]);
+    set_dzCamera() {
+      return this.uploadCamera(this.scene[this.INDEX_CAMERA + 2] = arguments[0]);
     }
 
-    getrxCamera() {
+    get_rxCamera() {
       return this.scene.at(this.INDEX_CAMERA + 3);
     }
 
-    setrxCamera() {
-      return this.updateCamera(this.scene[this.INDEX_CAMERA + 3] = arguments[0]);
+    set_rxCamera() {
+      return this.uploadCamera(this.scene[this.INDEX_CAMERA + 3] = arguments[0]);
     }
 
-    getryCamera() {
+    get_ryCamera() {
       return this.scene.at(this.INDEX_CAMERA + 4);
     }
 
-    setryCamera() {
-      return this.updateCamera(this.scene[this.INDEX_CAMERA + 4] = arguments[0]);
+    set_ryCamera() {
+      return this.uploadCamera(this.scene[this.INDEX_CAMERA + 4] = arguments[0]);
     }
 
-    getrzCamera() {
+    get_rzCamera() {
       return this.scene.at(this.INDEX_CAMERA + 5);
     }
 
-    setrzCamera() {
-      return this.updateCamera(this.scene[this.INDEX_CAMERA + 5] = arguments[0]);
+    set_rzCamera() {
+      return this.uploadCamera(this.scene[this.INDEX_CAMERA + 5] = arguments[0]);
     }
 
-    getsxCamera() {
+    get_sxCamera() {
       return this.scene.at(this.INDEX_CAMERA + 6);
     }
 
-    setsxCamera() {
-      return this.updateCamera(this.scene[this.INDEX_CAMERA + 6] = arguments[0]);
+    set_sxCamera() {
+      return this.uploadCamera(this.scene[this.INDEX_CAMERA + 6] = arguments[0]);
     }
 
-    getsyCamera() {
+    get_syCamera() {
       return this.scene.at(this.INDEX_CAMERA + 7);
     }
 
-    setsyCamera() {
-      return this.updateCamera(this.scene[this.INDEX_CAMERA + 7] = arguments[0]);
+    set_syCamera() {
+      return this.uploadCamera(this.scene[this.INDEX_CAMERA + 7] = arguments[0]);
     }
 
-    getszCamera() {
+    get_szCamera() {
       return this.scene.at(this.INDEX_CAMERA + 8);
     }
 
-    setszCamera() {
-      return this.updateCamera(this.scene[this.INDEX_CAMERA + 8] = arguments[0]);
+    set_szCamera() {
+      return this.uploadCamera(this.scene[this.INDEX_CAMERA + 8] = arguments[0]);
     }
 
   };
