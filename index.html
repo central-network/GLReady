@@ -342,7 +342,7 @@
             let ryCamera = document.querySelector("#ryCamera input");
 
 
-            gl2.queue( t => {
+            gl2.queue( time => {
 
                 if (bind.rotating) {
                     rxCamera.value = gl2.rxCamera += bind.rx
@@ -371,6 +371,7 @@
                     dzCamera.value = gl2.dzCamera += bind.vz                    
                 }
 
+                bind.time = time
             })
 
             self.gl2 = gl2

@@ -1,172 +1,172 @@
 export default class Bind extends EventTarget
 
-    constructor : ( canvas, buffer = new SharedArrayBuffer 88 ) ->
+    #don't split in/out, no need to check is reached top
+    linearInOut : [ ...[ 0 ... 100 ], ...[ 100 ... 0 ] ]
+
+    constructor : ( canvas, buffer = new SharedArrayBuffer 80 ) ->
 
         super()
 
-        events = new Uint8Array buffer, 0, 24
-        positions = new Float32Array buffer, 24, 16
+        events = new Uint8Array buffer, 0, 24       #? 24 bytes
+        values = new Float32Array buffer, 24, 14    #? 56 bytes
+                                                    #> 80 bytes
         
         Object.defineProperties this,
 
             press       : 
-                set     : -> Atomics.store events, @click = arguments[0], 1
+                set     : -> events[ @click = arguments[ 0 ] ] = 1
 
             release     : 
-                set     : -> Atomics.store events, arguments[0], 0
+                set     : -> events[ arguments[ 0 ] ] = 0
 
             rotating    :
-                get     : -> @looking and Atomics.load( events,  0 )
+                get     : -> @looking and events[ 0 ]
 
             draging     :
-                get     : -> @looking and Atomics.load( events,  2 )
-
-            moving      :
-                get     : -> Atomics.load( events, 12 )
-                set     : -> Atomics.store events, 12, arguments[0]
-
-            jumping     :
-                get     : -> Atomics.load( events, 19 )
-                set     : -> Atomics.store events, 19, arguments[0]
+                get     : -> @looking and events[ 2 ]
 
             running     :
-                get     : -> @moving and @shift
-
-            shift       :
-                get     : -> Atomics.load( events, 20 )
-                set     : -> Atomics.store events, 20, arguments[0]
-
-            alt         :
-                get     : -> Atomics.load( events, 21 )
-                set     : -> Atomics.store events, 21, arguments[0]
-
-            ctrl        :
-                get     : -> Atomics.load( events, 22 )
-                set     : -> Atomics.store events, 22, arguments[0]
-
-            meta        :
-                get     : -> Atomics.load( events, 23 )
-                set     : -> Atomics.store events, 23, arguments[0]
-
-            forward     :
-                get     : -> Atomics.load( events, 13 )
-                set     : -> Atomics.store events, 13, arguments[0]
-
-            backward    :
-                get     : -> Atomics.load( events, 14 )
-                set     : -> Atomics.store events, 14, arguments[0]
-
-            left        :
-                get     : -> Atomics.load( events, 15 )
-                set     : -> Atomics.store events, 15, arguments[0]
-
-            right       :
-                get     : -> Atomics.load( events, 16 )
-                set     : -> Atomics.store events, 16, arguments[0]
-
-            up          :
-                get     : -> Atomics.load( events, 17 )
-                set     : -> Atomics.store events, 17, arguments[0]
-
-            down        :
-                get     : -> Atomics.load( events, 18 )
-                set     : -> Atomics.store events, 18, arguments[0]
-
-            looking     :
-                get     : -> Atomics.load( events, 11 )
-                set     : ->
-                    return unless Atomics.store events, 11, arguments[0]
-                    requestIdleCallback -> Atomics.store events, 11, 0
-
-            zooming     :
-                get     : -> Atomics.load( events, 10 )
-                set     : ->
-                    return unless Atomics.store events, 10, arguments[0]
-                    requestIdleCallback -> Atomics.store events, 10, 0
-
-            dblclick    :
-                get     : -> Atomics.load( events,  9 )
-                set     : ->
-                    Atomics.store events, 9, 1
-                    requestIdleCallback -> Atomics.store events, 9, 0
-
-            click       :
-                get     : -> Atomics.load( events,  8 )
-                set     : ->
-                    Atomics.store events, 8, 1
-                    requestIdleCallback -> Atomics.store events, 8, 0
+                get     : ->  @moving and @shift
 
             offsetX     :
                 set     : ->
-                    @dx = -@x + (@x = arguments[0])
+                    @dx = -@x + (@x = arguments[ 0 ])
                     @ry = ( - @dx / 100 ) % Math.PI
 
             offsetY     :
                 set     : ->
-                    @dy = +@y - (@y = arguments[0])
+                    @dy = +@y - (@y = arguments[ 0 ])
                     @rx = ( - @dy / 100 ) % Math.PI
 
             deltaX      :
                 set     : ->
-                    @sx = arguments[0]
+                    @sx = ( arguments[ 0 ] )
 
             deltaY      :
                 set     : ->
-                    @sy = arguments[0]
-                    @sz = arguments[0] / 1e2
+                    @sz = ( @sy = arguments[ 0 ] ) / 100
+
+            moving      :
+                get     : -> events[ 12 ]
+                set     : -> events[ 12 ] = arguments[ 0 ]
+
+            jumping     :
+                get     : -> events[ 19 ]
+                set     : -> events[ 19 ] = arguments[ 0 ]
+
+            shift       :
+                get     : -> events[ 20 ]
+                set     : -> events[ 20 ] = arguments[ 0 ]
+
+            alt         :
+                get     : -> events[ 21 ]
+                set     : -> events[ 21 ] = arguments[ 0 ]
+
+            ctrl        :
+                get     : -> events[ 22 ]
+                set     : -> events[ 22 ] = arguments[ 0 ]
+
+            meta        :
+                get     : -> events[ 23 ]
+                set     : -> events[ 23 ] = arguments[ 0 ]
+
+            forward     :
+                get     : -> events[ 13 ]
+                set     : -> events[ 13 ] = arguments[ 0 ]
+
+            backward    :
+                get     : -> events[ 14 ]
+                set     : -> events[ 14 ] = arguments[ 0 ]
+
+            left        :
+                get     : -> events[ 15 ]
+                set     : -> events[ 15 ] = arguments[ 0 ]
+
+            right       :
+                get     : -> events[ 16 ]
+                set     : -> events[ 16 ] = arguments[ 0 ]
+
+            up          :
+                get     : -> events[ 17 ]
+                set     : -> events[ 17 ] = arguments[ 0 ]
+
+            down        :
+                get     : -> events[ 18 ]
+                set     : -> events[ 18 ] = arguments[ 0 ]
+
+            looking     :
+                get     : -> events[ 11 ]
+                set     : -> events[ 11 ] = arguments[ 0 ]
+                
+            zooming     :
+                get     : -> events[ 10 ]
+                set     : -> events[ 10 ] = arguments[ 0 ]
+
+            dblclick    :
+                get     : -> events[  9 ]
+                set     : -> events[  9 ] = arguments[ 0 ]
+
+            click       :
+                get     : -> events[  8 ]
+                set     : -> events[  8 ] = arguments[ 0 ]
 
             x           :
-                get     : -> positions[0]
-                set     : -> positions[0] = arguments[0]
+                get     : -> values[  0 ]
+                set     : -> values[  0 ] = arguments[ 0 ]
                     
             dx          :
-                get     : -> positions[1]
-                set     : -> positions[1] = arguments[0]
+                get     : -> values[  1 ]
+                set     : -> values[  1 ] = arguments[ 0 ]
                     
             rx          :
-                get     : -> positions[2]
-                set     : -> positions[2] = arguments[0]
+                get     : -> values[  2 ]
+                set     : -> values[  2 ] = arguments[ 0 ]
                     
             sx          :
-                get     : -> positions[3]
-                set     : -> positions[3] = arguments[0]
+                get     : -> values[  3 ]
+                set     : -> values[  3 ] = arguments[ 0 ]
                     
             vx          :
-                get     : -> positions[4]
-                set     : -> positions[4] = arguments[0]
+                get     : -> values[  4 ]
+                set     : -> values[  4 ] = arguments[ 0 ]
                     
             y           :
-                get     : -> positions[5]
-                set     : -> positions[5] = arguments[0]
+                get     : -> values[  5 ]
+                set     : -> values[  5 ] = arguments[ 0 ]
                     
             dy          :
-                get     : -> positions[6]
-                set     : -> positions[6] = arguments[0]
+                get     : -> values[  6 ]
+                set     : -> values[  6 ] = arguments[ 0 ]
                     
             ry          :
-                get     : -> positions[7]
-                set     : -> positions[7] = arguments[0]
+                get     : -> values[  7 ]
+                set     : -> values[  7 ] = arguments[ 0 ]
                     
             sy          :
-                get     : -> positions[8]
-                set     : -> positions[8] = arguments[0]
+                get     : -> values[  8 ]
+                set     : -> values[  8 ] = arguments[ 0 ]
                     
             vy          :
-                get     : -> positions[9]
-                set     : -> positions[9] = arguments[0]
+                get     : -> values[  9 ]
+                set     : -> values[  9 ] = arguments[ 0 ]
                 
             sz          :
-                get     : -> positions[10]
-                set     : -> positions[10] = arguments[0]
+                get     : -> values[ 10 ]
+                set     : -> values[ 10 ] = arguments[ 0 ]
                 
             vz          :
-                get     : -> positions[11]
-                set     : -> positions[11] = arguments[0]
+                get     : -> values[ 11 ]
+                set     : -> values[ 11 ] = arguments[ 0 ]
                   
-            multiply    :
-                get     : -> positions[12]
-                set     : -> positions[12] = arguments[0]
+            factor      :
+                get     : -> values[ 12 ]
+                set     : -> values[ 12 ] = arguments[ 0 ]
 
+            time        :
+                get     : -> values[ 13 ]
+                set     : ->
+                    events.fill( 0, 8, 12 )
+                    values[ 13 ] = arguments[ 0 ]
 
         canvas.addEventListener "pointerup",    @pointerup.bind @
         canvas.addEventListener "pointermove",  @pointermove.bind( @ ), passive: !0
@@ -179,7 +179,7 @@ export default class Bind extends EventTarget
         document.addEventListener "keyup",      @keyup.bind @
         document.addEventListener "keydown",    @keydown.bind @ 
 
-        @multiply = 5
+        @factor = 5
 
         null
 
@@ -260,11 +260,11 @@ export default class Bind extends EventTarget
 
         else [ 0, 0 ]
 
-        factor = @multiply
+        factor = @factor
         factor *= 2 if @running
 
         @vx *= factor
         @vz *= factor
-        @vy *= @multiply
+        @vy *= @factor
 
         null
