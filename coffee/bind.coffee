@@ -1,6 +1,6 @@
 export default class Bind extends EventTarget
 
-    constructor : ( canvas, buffer = new SharedArrayBuffer 256 ) ->
+    constructor : ( canvas, buffer = new SharedArrayBuffer 88 ) ->
 
         super()
 

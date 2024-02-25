@@ -1,7 +1,7 @@
 var Bind;
 
 export default Bind = class Bind extends EventTarget {
-  constructor(canvas, buffer = new SharedArrayBuffer(256)) {
+  constructor(canvas, buffer = new SharedArrayBuffer(88)) {
     var document, events, positions;
     super();
     events = new Uint8Array(buffer, 0, 24);
