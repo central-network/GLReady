@@ -341,45 +341,6 @@
             let rxCamera = document.querySelector("#rxCamera input");
             let ryCamera = document.querySelector("#ryCamera input");
 
-            /*
-            bind.on( "zoom", ({ detail: { dy, dz, altKey } }) => {
-
-                if (!altKey )
-                    dzCamera.value = gl2.dzCamera += dy
-                
-                else {
-                    sxCamera.value = gl2.sxCamera += dz
-                    syCamera.value = gl2.syCamera += dz
-                    szCamera.value = gl2.szCamera += dz
-                }
-            })
-
-            bind.on( "turn", ({ detail: { rx, ry } }) => {
-                rxCamera.value = gl2.rxCamera += rx
-                ryCamera.value = gl2.ryCamera += ry
-            })
-
-            bind.on( "drag", ({ detail: { dx, dy } }) => {
-                dxCamera.value = gl2.dxCamera += dx
-                dyCamera.value = gl2.dyCamera += dy
-            })
-
-            bind.on( "move", ({ detail: { dx, dy, dz } }) => {
-                dxCamera.value = gl2.dxCamera += dx
-                dyCamera.value = gl2.dyCamera += dy
-                dzCamera.value = gl2.dzCamera += dz
-            })
-
-
-            if (bind.isMoving) {
-                dxCamera.value = gl2.dxCamera += bind.dx
-                dzCamera.value = gl2.dzCamera += bind.dz  
-            }
-            
-            if (bind.isJumping) {
-                dyCamera.value = gl2.dyCamera += bind.dy
-            }
-            */
 
             gl2.queue( t => {
 
@@ -393,9 +354,8 @@
                     dyCamera.value = gl2.dyCamera += bind.dy
                 }
 
-
                 if (bind.zooming) {
-                    if (!bind.altKey )
+                    if (!bind.alt)
                         dzCamera.value = gl2.dzCamera += bind.sy
                     
                     else {
@@ -405,12 +365,10 @@
                     }
                 }
 
-                if (bind.dblclick) {
-                    console.log("dblclicked")
-                }
-
-                if (bind.click) {
-                    console.log("clicked", bind.button)
+                if (bind.moving) {
+                    dxCamera.value = gl2.dxCamera += bind.vx
+                    dyCamera.value = gl2.dyCamera += bind.vy
+                    dzCamera.value = gl2.dzCamera += bind.vz                    
                 }
 
             })
