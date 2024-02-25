@@ -369,38 +369,48 @@
                 dyCamera.value = gl2.dyCamera += dy
                 dzCamera.value = gl2.dzCamera += dz
             })
+
+
+            if (bind.isMoving) {
+                dxCamera.value = gl2.dxCamera += bind.dx
+                dzCamera.value = gl2.dzCamera += bind.dz  
+            }
+            
+            if (bind.isJumping) {
+                dyCamera.value = gl2.dyCamera += bind.dy
+            }
             */
 
             gl2.queue( t => {
 
-                if (bind.isRotating) {
+                if (bind.rotating) {
                     rxCamera.value = gl2.rxCamera += bind.rx
                     ryCamera.value = gl2.ryCamera += bind.ry
                 } 
 
-                if (bind.isDraging) {
+                if (bind.draging) {
                     dxCamera.value = gl2.dxCamera += bind.dx
                     dyCamera.value = gl2.dyCamera += bind.dy
                 }
 
-                if (bind.isMoving) {
-                    dxCamera.value = gl2.dxCamera += bind.dx
-                    dzCamera.value = gl2.dzCamera += bind.dz  
-                }
-                
-                if (bind.isJumping) {
-                    dyCamera.value = gl2.dyCamera += bind.dy
-                }
 
-                if (bind.isZooming) {
+                if (bind.zooming) {
                     if (!bind.altKey )
-                        dzCamera.value = gl2.dzCamera += bind.dy
+                        dzCamera.value = gl2.dzCamera += bind.sy
                     
                     else {
-                        sxCamera.value = gl2.sxCamera += bind.dz
-                        syCamera.value = gl2.syCamera += bind.dz
-                        szCamera.value = gl2.szCamera += bind.dz
+                        sxCamera.value = gl2.sxCamera += bind.sz
+                        syCamera.value = gl2.syCamera += bind.sz
+                        szCamera.value = gl2.szCamera += bind.sz
                     }
+                }
+
+                if (bind.dblclick) {
+                    console.log("dblclicked")
+                }
+
+                if (bind.click) {
+                    console.log("clicked", bind.button)
                 }
 
             })

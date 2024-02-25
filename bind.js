@@ -1,4 +1,4 @@
-var Bind;
+var Bind, buf, u32;
 
 export var ZoomEvent = class ZoomEvent extends CustomEvent {
   constructor(detail) {
@@ -49,102 +49,253 @@ export var MoveEvent = class MoveEvent extends CustomEvent {
 
 };
 
+buf = new SharedArrayBuffer(1e5);
+
+u32 = new Uint32Array(buf);
+
+Atomics.store(u32, 0, 4);
+
+self.malloc = function(byteLength, typedArray) {
+  var length, offset;
+  offset = Atomics.add(u32, 0, byteLength);
+  length = byteLength / typedArray.BYTES_PER_ELEMENT;
+  return new typedArray(buf, offset, length);
+};
+
 export default Bind = (function() {
   class Bind extends EventTarget {
-    constructor(canvas) {
-      Object.assign(super(), {canvas}).listen();
+    constructor(canvas, buffer = new SharedArrayBuffer(256)) {
+      var events, positions;
+      Object.assign(super(), {canvas, buffer});
+      Object.defineProperties(this, {
+        events: {
+          value: events = new Uint8Array(this.buffer, 0, 12)
+        },
+        positions: {
+          value: positions = new Float32Array(this.buffer, 12, 10)
+        }
+      });
+      Object.defineProperties(this, {
+        press: {
+          set: function() {
+            return Atomics.store(events, this.button = arguments[0], 1);
+          }
+        },
+        release: {
+          set: function() {
+            return Atomics.store(events, arguments[0], 0);
+          }
+        },
+        rotating: {
+          get: function() {
+            return this.looking && Atomics.load(events, 0);
+          }
+        },
+        draging: {
+          get: function() {
+            return this.looking && Atomics.load(events, 2);
+          }
+        },
+        looking: {
+          get: function() {
+            return Atomics.load(events, 11);
+          },
+          set: function() {
+            if (!Atomics.store(events, 11, arguments[0])) {
+              return;
+            }
+            return requestIdleCallback(function() {
+              return Atomics.store(events, 11, 0);
+            });
+          }
+        },
+        zooming: {
+          get: function() {
+            return Atomics.load(events, 10);
+          },
+          set: function() {
+            if (!Atomics.store(events, 10, arguments[0])) {
+              return;
+            }
+            return requestIdleCallback(function() {
+              return Atomics.store(events, 10, 0);
+            });
+          }
+        },
+        dblclick: {
+          get: function() {
+            return Atomics.load(events, 9);
+          },
+          set: function() {
+            Atomics.store(events, 9, 1);
+            return requestIdleCallback(function() {
+              return Atomics.store(events, 9, 0);
+            });
+          }
+        },
+        click: {
+          get: function() {
+            return Atomics.load(events, 8);
+          },
+          set: function() {
+            Atomics.store(events, 8, 1);
+            return requestIdleCallback(function() {
+              return Atomics.store(events, 8, 0);
+            });
+          }
+        },
+        button: {
+          get: function() {
+            return Atomics.load(events, 7) - 10;
+          },
+          set: function() {
+            this.click = Atomics.store(events, 7, arguments[0] + 10);
+            return requestIdleCallback(function() {
+              return Atomics.store(events, 7, 0);
+            });
+          }
+        },
+        offsetX: {
+          set: function() {
+            this.dx = -this.x + (this.x = arguments[0]);
+            return this.ry = (-this.dx / 100) % Math.PI;
+          }
+        },
+        offsetY: {
+          set: function() {
+            this.dy = +this.y - (this.y = arguments[0]);
+            return this.rx = (-this.dy / 100) % Math.PI;
+          }
+        },
+        deltaX: {
+          set: function() {
+            return this.sx = arguments[0];
+          }
+        },
+        deltaY: {
+          set: function() {
+            this.sy = arguments[0];
+            return this.sz = arguments[0] / 1e2;
+          }
+        },
+        x: {
+          get: function() {
+            return positions[0];
+          },
+          set: function() {
+            return positions[0] = arguments[0];
+          }
+        },
+        dx: {
+          get: function() {
+            return positions[1];
+          },
+          set: function() {
+            return positions[1] = arguments[0];
+          }
+        },
+        rx: {
+          get: function() {
+            return positions[2];
+          },
+          set: function() {
+            return positions[2] = arguments[0];
+          }
+        },
+        sx: {
+          get: function() {
+            return positions[3];
+          },
+          set: function() {
+            return positions[3] = arguments[0];
+          }
+        },
+        y: {
+          get: function() {
+            return positions[5];
+          },
+          set: function() {
+            return positions[5] = arguments[0];
+          }
+        },
+        dy: {
+          get: function() {
+            return positions[6];
+          },
+          set: function() {
+            return positions[6] = arguments[0];
+          }
+        },
+        ry: {
+          get: function() {
+            return positions[7];
+          },
+          set: function() {
+            return positions[7] = arguments[0];
+          }
+        },
+        sy: {
+          get: function() {
+            return positions[8];
+          },
+          set: function() {
+            return positions[8] = arguments[0];
+          }
+        },
+        sz: {
+          get: function() {
+            return positions[9];
+          },
+          set: function() {
+            return positions[9] = arguments[0];
+          }
+        }
+      });
+      this.listen();
     }
 
     listen() {
       this.width = this.canvas.getBoundingClientRect().width;
       this.height = this.canvas.getBoundingClientRect().height;
       this.document = this.canvas.ownerDocument;
+      this.canvas.addEventListener("contextmenu", function(e) {
+        return e.preventDefault();
+      });
       this.canvas.addEventListener("wheel", this.onwheel.bind(this), {
         passive: true
       });
       this.canvas.addEventListener("pointermove", this.onmove.bind(this), {
         passive: true
       });
-      this.canvas.addEventListener("contextmenu", this.oncontext.bind(this));
       this.canvas.addEventListener("pointerdown", this.ondown.bind(this));
       this.canvas.addEventListener("pointerup", this.onup.bind(this));
-      this.canvas.addEventListener("dblclick", this.ondouble.bind(this));
+      this.canvas.addEventListener("dblclick", this.ondbl.bind(this));
       this.document.addEventListener("keydown", this.onkeydown.bind(this));
       return this.document.addEventListener("keyup", this.onkeyup.bind(this));
-    }
-
-    on(event, handle, options) {
-      this.addEventListener(event, handle, options);
-      return this;
-    }
-
-    emit(event, detail) {
-      this.dispatchEvent(new CustomEvent(event, {detail}));
-      return this;
     }
 
     onwheel({deltaX, deltaY}) {
       this.deltaX = deltaX;
       this.deltaY = deltaY;
-      this.dx = this.deltaX;
-      this.dy = this.deltaY;
-      this.dz = this.deltaY / 100;
-      this.zooming = true;
-      return this.dispatchEvent(new ZoomEvent(this));
+      return this.zooming = 1;
     }
 
-    onmove(e) {
-      var offsetX, offsetY;
-      ({offsetX, offsetY} = e);
-      this.dx = offsetX - this.offsetX;
-      this.dy = this.offsetY - offsetY;
-      this.rx = (-this.dy / 100) % Math.PI;
-      this.ry = (-this.dx / 100) % Math.PI;
-      ({offsetX: this.offsetX, offsetY: this.offsetY} = {offsetX, offsetY});
-      this.looking = false;
-      if (this.draging !== false) {
-        this.dispatchEvent(new DragEvent(this));
-      } else if (this.turning !== false) {
-        this.dispatchEvent(new TurnEvent(this));
-      } else {
-        this.looking = true;
-      }
-      return this.dispatchEvent(new LookEvent(this));
+    onmove({offsetX, offsetY}) {
+      this.offsetX = offsetX;
+      this.offsetY = offsetY;
+      return this.looking = 1;
     }
 
-    oncontext(e) {
-      if (this.disableContextMenu) {
-        return e.preventDefault();
-      }
+    onup({button}) {
+      return this.release = button;
     }
 
-    ondown(e) {
-      ({offsetX: this.offsetX, offsetY: this.offsetY, button: this.button} = e);
-      if (this.button === e.buttons) {
-        this.draging = this.button;
-      } else {
-        this.turning = this.button;
-      }
-      return this.dispatchEvent(new PickEvent(this));
+    ondbl({button}) {
+      return this.dblclick = button;
     }
 
-    onup(e) {
-      this.button = false;
-      switch (e.button) {
-        case this.draging:
-          this.draging = false;
-          break;
-        case this.turning:
-          this.turning = false;
-      }
-      return this.dispatchEvent(new ReleaseEvent(this));
-    }
-
-    ondouble(e) {
-      return this.dispatchEvent(new CustomEvent("dblclick", {
-        ...e,
-        detail: e
-      }));
+    ondown({button}) {
+      return this.press = button;
     }
 
     onkeydown(e) {
@@ -235,26 +386,6 @@ export default Bind = (function() {
 
   };
 
-  Bind.prototype.passive = true;
-
-  Bind.prototype.disableContextMenu = true;
-
-  Bind.prototype.zoom = 0;
-
-  Bind.prototype.slide = 0;
-
-  Bind.prototype.draging = false;
-
-  Bind.prototype.turning = false;
-
-  Bind.prototype.looking = false;
-
-  Bind.prototype.deltaY = 0;
-
-  Bind.prototype.deltaS = 0;
-
-  Bind.prototype.deltaX = 0;
-
   Bind.prototype.pressing = {};
 
   Bind.prototype.shiftKey = false;
@@ -271,23 +402,7 @@ export default Bind = (function() {
 
   Bind.prototype.jumping = false;
 
-  Bind.prototype.zooming = false;
-
-  Bind.prototype.rx = 0;
-
-  Bind.prototype.ry = 0;
-
   Object.defineProperties(Bind.prototype, {
-    isRotating: {
-      get: function() {
-        return this.turning !== false;
-      }
-    },
-    isDraging: {
-      get: function() {
-        return this.draging !== false;
-      }
-    },
     isMoving: {
       get: function() {
         return this.walking !== false;
@@ -301,14 +416,6 @@ export default Bind = (function() {
     isLooking: {
       get: function() {
         return this.looking !== false;
-      }
-    },
-    isZooming: {
-      get: function() {
-        var l;
-        l = this.zooming;
-        this.zooming = false;
-        return l;
       }
     }
   });

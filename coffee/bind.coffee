@@ -20,23 +20,16 @@ export class MoveEvent extends CustomEvent
     constructor : ( detail ) -> super "move", { detail }
 
 
+buf = new SharedArrayBuffer 1e5
+u32 = new Uint32Array buf
+Atomics.store u32, 0, 4
+
+self.malloc = ( byteLength, typedArray ) ->
+    offset = Atomics.add u32, 0, byteLength
+    length = byteLength / typedArray.BYTES_PER_ELEMENT
+    new typedArray buf, offset, length
+
 export default class Bind extends EventTarget
-
-    passive     : yes
-
-    disableContextMenu : yes
-
-    zoom        : 0
-
-    slide       : 0
-
-    draging     : no
-    turning    : no
-    looking     : no
-
-    deltaY      : 0
-    deltaS      : 0
-    deltaX      : 0
 
     pressing    : {}
 
@@ -48,99 +41,146 @@ export default class Bind extends EventTarget
     walking     : no
     moving      : no
     jumping     : no
-    zooming     : no
 
-    rx          : 0
-    ry          : 0
 
     Object.defineProperties this::,
-        isRotating  : get : -> @turning isnt no
-        isDraging   : get : -> @draging isnt no
         isMoving    : get : -> @walking isnt no
         isJumping   : get : -> @jumping isnt no
         isLooking   : get : -> @looking isnt no
-        isZooming   : get : -> l = @zooming ; @zooming = no ; l 
 
-    constructor : ( canvas ) ->
-        Object.assign super(), { canvas }
-            .listen()
+    constructor : ( canvas, buffer = new SharedArrayBuffer 256 ) ->
+        Object.assign super(), { canvas, buffer }
+        
+        Object.defineProperties this,
+            events      : value : events = new Uint8Array @buffer, 0, 12
+            positions   : value : positions = new Float32Array @buffer, 12, 10
+        
+        Object.defineProperties this,
+            press       : 
+                set     : -> Atomics.store events, @button = arguments[0], 1
+
+            release     : 
+                set     : -> Atomics.store events, arguments[0], 0
+
+            rotating    :
+                get     : -> @looking and Atomics.load events, 0
+
+            draging     :
+                get     : -> @looking and Atomics.load events, 2
+
+            looking     :
+                get     : -> Atomics.load events, 11
+                set     : ->
+                    return unless Atomics.store events, 11, arguments[0]
+                    requestIdleCallback -> Atomics.store events, 11, 0
+
+            zooming     :
+                get     : -> Atomics.load events, 10
+                set     : ->
+                    return unless Atomics.store events, 10, arguments[0]
+                    requestIdleCallback -> Atomics.store events, 10, 0
+
+            dblclick    :
+                get     : -> Atomics.load events, 9
+                set     : ->
+                    Atomics.store events, 9, 1
+                    requestIdleCallback -> Atomics.store events, 9, 0
+
+            click       :
+                get     : -> Atomics.load events, 8
+                set     : ->
+                    Atomics.store events, 8, 1
+                    requestIdleCallback -> Atomics.store events, 8, 0
+
+            button      :
+                get     : -> Atomics.load( events, 7 ) - 10
+                set     : ->
+                    @click = Atomics.store events, 7, arguments[0] + 10
+                    requestIdleCallback -> Atomics.store events, 7, 0
+
+            offsetX     : 
+                set     : ->
+                    @dx = -@x + (@x = arguments[0])
+                    @ry = ( - @dx / 100 ) % Math.PI
+
+            offsetY     : 
+                set     : ->
+                    @dy = +@y - (@y = arguments[0])
+                    @rx = ( - @dy / 100 ) % Math.PI
+
+            deltaX      :
+                set     : ->
+                    @sx = arguments[0]
+
+            deltaY      :
+                set     : ->
+                    @sy = arguments[0]
+                    @sz = arguments[0] / 1e2
+
+            x           :
+                get     : -> positions[0]
+                set     : -> positions[0] = arguments[0]
+                    
+            dx          :
+                get     : -> positions[1]
+                set     : -> positions[1] = arguments[0]
+                    
+            rx          :
+                get     : -> positions[2]
+                set     : -> positions[2] = arguments[0]
+                    
+            sx          :
+                get     : -> positions[3]
+                set     : -> positions[3] = arguments[0]
+                    
+
+            y           :
+                get     : -> positions[5]
+                set     : -> positions[5] = arguments[0]
+                    
+                    
+            dy          :
+                get     : -> positions[6]
+                set     : -> positions[6] = arguments[0]
+                    
+                    
+            ry          :
+                get     : -> positions[7]
+                set     : -> positions[7] = arguments[0]
+                    
+                    
+            sy          :
+                get     : -> positions[8]
+                set     : -> positions[8] = arguments[0]
+                    
+    
+            sz          :
+                get     : -> positions[9]
+                set     : -> positions[9] = arguments[0]
+                  
+        @listen()
         
     listen      : ->
         @width = @canvas.getBoundingClientRect().width
         @height = @canvas.getBoundingClientRect().height
         @document = @canvas.ownerDocument
 
+        @canvas.addEventListener "contextmenu", (e) -> e.preventDefault()
         @canvas.addEventListener "wheel", @onwheel.bind( this ), { passive: yes }
         @canvas.addEventListener "pointermove", @onmove.bind( this ), { passive: yes }
-        @canvas.addEventListener "contextmenu", @oncontext.bind( this )
         @canvas.addEventListener "pointerdown", @ondown.bind( this )
         @canvas.addEventListener "pointerup", @onup.bind( this )
-        @canvas.addEventListener "dblclick", @ondouble.bind( this )
+        @canvas.addEventListener "dblclick", @ondbl.bind( this )
         
         @document.addEventListener "keydown", @onkeydown.bind( this )
         @document.addEventListener "keyup", @onkeyup.bind( this )
 
-    on          : ( event, handle, options ) ->
-        @addEventListener event, handle, options ; @
 
-    emit        : ( event, detail ) ->
-        @dispatchEvent new CustomEvent event, { detail } ; @
-
-    onwheel     : ({ @deltaX, @deltaY }) ->
-        @dx = @deltaX
-        @dy = @deltaY
-        @dz = @deltaY / 100
-        @zooming = yes
-        @dispatchEvent new ZoomEvent this
-
-    onmove      : ( e ) ->
-        {   offsetX,
-            offsetY   } = e
-
-        @dx = ( offsetX - @offsetX )
-        @dy = ( @offsetY - offsetY )
-            
-        @rx = ( -@dy / 100 ) % Math.PI
-        @ry = ( -@dx / 100 ) % Math.PI
-
-        { @offsetX, @offsetY } =
-            { offsetX, offsetY }
-
-        @looking = no
-
-        if @draging isnt no
-            @dispatchEvent new DragEvent this
-
-        else if @turning isnt no
-            @dispatchEvent new TurnEvent this
-
-        else @looking = yes 
-
-        @dispatchEvent new LookEvent this
-        
-    oncontext   : ( e ) ->
-        e.preventDefault() if @disableContextMenu
-
-    ondown      : ( e ) ->
-        { @offsetX, @offsetY, @button } = e
-
-        if @button is e.buttons
-            @draging = @button
-        else @turning = @button
-            
-        @dispatchEvent new PickEvent this
-
-    onup        : ( e ) ->
-        @button = no
-
-        switch e.button
-            when @draging then @draging = no 
-            when @turning then @turning = no
-
-        @dispatchEvent new ReleaseEvent this
-
-    ondouble    : ( e ) ->
-        @dispatchEvent new CustomEvent "dblclick", { ...e, detail: e }
+    onwheel     : ({ @deltaX, @deltaY }) -> @zooming = 1
+    onmove      : ({ @offsetX, @offsetY }) -> @looking = 1
+    onup        : ({ button }) -> @release = button 
+    ondbl       : ({ button }) -> @dblclick = button
+    ondown      : ({ button }) -> @press = button
 
     deg45       : Math.PI/4
     deg90       : Math.PI/2
