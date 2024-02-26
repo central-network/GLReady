@@ -318,7 +318,29 @@
             gl2.vertices.set(set)
             gl2.colors.set(clr.map( d => d/255 ))
 
-            gl2.pointCount = set.length/3;
+            gl2.pointsCount = set.length/3;
+
+            let points = [
+                [1, 0,  0],
+                [-1, 0, 0],
+                [0, -1, 0]
+            ]
+
+            let color4 = [ 1, 0.2, 0, 1 ];
+            let shape2 = gl2.malloc( 10 );
+            let shape1 = gl2.malloc( 3 );
+
+            for (let point of shape1) {
+                point.set( points.splice(0,1).at(0) )
+                point.set( color4, 3 )
+            }
+            
+            console.log( shape2 )
+            console.log( shape1 )
+            
+            gl2.postProcess.push(function( time ) {
+
+            })
 
             gl2.upload()
             gl2.render()
@@ -355,9 +377,9 @@
                 }
 
                 if (bind.zooming) {
-                    if (!bind.alt)
+                    if (!bind.alt) {
                         dzCamera.value = gl2.dzCamera += bind.sy
-                    
+                    }
                     else {
                         sxCamera.value = gl2.sxCamera += bind.sz
                         syCamera.value = gl2.syCamera += bind.sz
@@ -367,8 +389,11 @@
 
                 if (bind.moving) {
                     dxCamera.value = gl2.dxCamera += bind.vx
-                    dyCamera.value = gl2.dyCamera += bind.vy
                     dzCamera.value = gl2.dzCamera += bind.vz                    
+                }
+
+                if (bind.jumping) {
+                    dyCamera.value = gl2.dyCamera += bind.vy
                 }
 
                 bind.time = time
@@ -376,6 +401,7 @@
             })
 
             self.gl2 = gl2
+            console.log(bind)
         </script>
         
     </body>

@@ -125,7 +125,64 @@ export var M4 = (function() {
 
 }).call(this);
 
+export var Color = class Color extends Float32Array {};
+
+export var Vertex = class Vertex extends Float32Array {};
+
+export var Attributes = class Attributes extends Float32Array {};
+
+export var Headers = class Headers extends Float32Array {};
+
+export var Vertices = class Vertices extends Array {};
+
+export var Points = class Points extends Array {};
+
+export var Point = (function() {
+  var i, j, len1, prop, ref;
+
+  class Point extends Float32Array {};
+
+  ref = ["x", "y", "z", "r", "g", "b", "a"];
+  for (i = j = 0, len1 = ref.length; j < len1; i = ++j) {
+    prop = ref[i];
+    Object.defineProperty(Point.prototype, prop, (function(index) {
+      return {
+        get: function() {
+          return this[index];
+        },
+        set: function() {
+          return this[index] = arguments[0];
+        }
+      };
+    })(i));
+  }
+
+  Object.defineProperties(Point.prototype, {
+    color: {
+      get: function() {
+        return new Color(this.buffer, 12, 4);
+      },
+      set: function() {
+        return this.set(arguments[0], 3);
+      }
+    },
+    vertex: {
+      get: function() {
+        return new Vertex(this.buffer, 0, 3);
+      },
+      set: function() {
+        return this.set(arguments[0], 0);
+      }
+    }
+  });
+
+  return Point;
+
+}).call(this);
+
 export default GL2 = (function() {
+  var LINES, POINTES, TRIANGLES;
+
   class GL2 extends EventTarget {
     constructor(canvas) {
       var ref;
@@ -140,6 +197,12 @@ export default GL2 = (function() {
           value: new Array
         },
         renderQueue: {
+          value: new Array
+        },
+        preProcess: {
+          value: new Array
+        },
+        postProcess: {
           value: new Array
         },
         boundingRect: {
@@ -254,6 +317,12 @@ export default GL2 = (function() {
         height: this.height * this.rPixel
       });
       Object.defineProperties(this, {
+        lineBuffer: {
+          value: this.gl.createBuffer()
+        },
+        pointBuffer: {
+          value: this.gl.createBuffer()
+        },
         vertexBuffer: {
           value: this.gl.createBuffer()
         },
@@ -278,6 +347,9 @@ export default GL2 = (function() {
           value: new Float32Array(3 * 1e5)
         },
         colors: {
+          value: new Float32Array(3 * 1e5)
+        },
+        lines: {
           value: new Float32Array(3 * 1e5)
         },
         clearColor: {
@@ -363,25 +435,128 @@ export default GL2 = (function() {
       return this.gl.vertexAttribPointer(this.a_Color, 3, this.gl.FLOAT, false, 12, 0);
     }
 
+    malloc(pointsCount, drawAs = this.TRIANGLES) {
+      var BUFFER_OF_HEADERS, BUFFER_OF_POINTS, BYTES_PER_ELEMENT, HEADER_ITEM_COUNT, ITEMS_PER_VERTEX, Mesh, headersOffset;
+      BYTES_PER_ELEMENT = 4;
+      HEADER_ITEM_COUNT = 6;
+      ITEMS_PER_VERTEX = 7;
+      BUFFER_OF_POINTS = this.allocPoints.buffer;
+      BUFFER_OF_HEADERS = this.pointHeaders.buffer;
+      this.pointHeaders.set([this.allocLength, pointsCount, drawAs], (headersOffset = this.headersOffset) / 4);
+      this.allocLength += BYTES_PER_ELEMENT * ITEMS_PER_VERTEX * pointsCount;
+      this.headersOffset += BYTES_PER_ELEMENT * HEADER_ITEM_COUNT;
+      return new (Mesh = (function() {
+        class Mesh extends Number {
+          * [Symbol.iterator]() {
+            var i, j, ref, results;
+            results = [];
+            for (i = j = 0, ref = this.pointsCount; (0 <= ref ? j < ref : j > ref); i = 0 <= ref ? ++j : --j) {
+              results.push((yield this.points[i]));
+            }
+            return results;
+          }
+
+          point() {
+            return new Point(BUFFER_OF_POINTS, this.byteOffset + this.stride * arguments[0], ITEMS_PER_VERTEX);
+          }
+
+        };
+
+        Object.defineProperties(Mesh.prototype, {
+          byteOffset: {
+            get: function() {
+              return this.headers[0];
+            }
+          },
+          pointsCount: {
+            get: function() {
+              return this.headers[1];
+            }
+          },
+          drawAs: {
+            get: function() {
+              return GL2.prototype[this.headers[2]];
+            }
+          },
+          stride: {
+            get: function() {
+              return ITEMS_PER_VERTEX * BYTES_PER_ELEMENT;
+            }
+          },
+          typedIndex: {
+            get: function() {
+              return this.byteOffset / BYTES_PER_ELEMENT;
+            }
+          },
+          byteLength: {
+            get: function() {
+              return this.pointsCount * this.stride;
+            }
+          },
+          vertexCount: {
+            get: function() {
+              return this.pointsCount * 3;
+            }
+          },
+          length: {
+            get: function() {
+              return ITEMS_PER_VERTEX * this.pointsCount;
+            }
+          },
+          attribute: {
+            get: function() {
+              return new Attributes(BUFFER_OF_POINTS, this.byteOffset, this.length);
+            }
+          },
+          headers: {
+            get: function() {
+              return new Headers(BUFFER_OF_HEADERS, this, HEADER_ITEM_COUNT);
+            }
+          },
+          points: {
+            set: function() {
+              return this.attribute.set(arguments[0].flat());
+            },
+            get: function() {
+              var i, j, ref, results;
+              results = [];
+              for (i = j = 0, ref = this.pointsCount; (0 <= ref ? j < ref : j > ref); i = 0 <= ref ? ++j : --j) {
+                results.push(this.point(i));
+              }
+              return results;
+            }
+          }
+        });
+
+        return Mesh;
+
+      }).call(this))(headersOffset);
+    }
+
     render(t) {
-      var i, j, job, len, len1, len2, ref, ref1;
+      var j, job, k, l, len, len1, len2, len3, ref, ref1, ref2;
       boundMethodCheck(this, GL2);
       if (this.rendering) {
         this.gl.clear(this.clearMask);
         if (len = this.onceQueue.length) {
           ref = this.onceQueue.splice(0, len);
-          for (i = 0, len1 = ref.length; i < len1; i++) {
-            job = ref[i];
+          for (j = 0, len1 = ref.length; j < len1; j++) {
+            job = ref[j];
             job.call(this);
           }
         }
         ref1 = this.renderQueue.slice(0);
-        for (j = 0, len2 = ref1.length; j < len2; j++) {
-          job = ref1[j];
+        for (k = 0, len2 = ref1.length; k < len2; k++) {
+          job = ref1[k];
           job.call(this, t);
         }
-        this.gl.drawArrays(this.gl.TRIANGLES, 0, this.pointCount);
-        this.gl.drawArrays(this.gl.POINTS, 0, this.pointCount);
+        this.gl.drawArrays(this.gl.TRIANGLES, 0, this.pointsCount);
+        this.gl.drawArrays(this.gl.POINTS, 0, this.pointsCount);
+        ref2 = this.postProcess.slice(0);
+        for (l = 0, len3 = ref2.length; l < len3; l++) {
+          job = ref2[l];
+          job.call(this, t);
+        }
         ++this.scene[0];
       }
       return requestAnimationFrame(this.render);
@@ -489,7 +664,7 @@ export default GL2 = (function() {
 
   GL2.prototype.scene = new Float32Array(256);
 
-  GL2.prototype.pointCount = 0;
+  GL2.prototype.pointsCount = 0;
 
   GL2.prototype.rendering = true;
 
@@ -498,6 +673,38 @@ export default GL2 = (function() {
   GL2.prototype.zNear = 0.01;
 
   GL2.prototype.zFar = 1000;
+
+  GL2.prototype.TRIANGLES = new (TRIANGLES = class TRIANGLES extends Number {})(WebGL2RenderingContext.prototype.TRIANGLES);
+
+  GL2.prototype.POINTS = new (POINTES = class POINTES extends Number {})(WebGL2RenderingContext.prototype.POINTS);
+
+  GL2.prototype.LINES = new (LINES = class LINES extends Number {})(WebGL2RenderingContext.prototype.LINES);
+
+  Object.defineProperties(GL2.prototype, {
+    [WebGL2RenderingContext.prototype.TRIANGLES]: {
+      get: function() {
+        return this.TRIANGLES;
+      }
+    },
+    [WebGL2RenderingContext.prototype.POINTS]: {
+      get: function() {
+        return this.POINTS;
+      }
+    },
+    [WebGL2RenderingContext.prototype.LINES]: {
+      get: function() {
+        return this.LINES;
+      }
+    }
+  });
+
+  GL2.prototype.allocLength = 0;
+
+  GL2.prototype.allocPoints = new Point(1e7);
+
+  GL2.prototype.pointHeaders = new Headers(1e6);
+
+  GL2.prototype.headersOffset = 0;
 
   GL2.prototype.INDEX_CAMERA = 2;
 

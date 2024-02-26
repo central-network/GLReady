@@ -1,7 +1,7 @@
 export default class Bind extends EventTarget
 
     #don't split in/out, no need to check is reached top
-    linearInOut : [ ...[ 0 ... 100 ], ...[ 100 ... 0 ] ]
+    linearInOut : ( v ) -> [ ...[ 0 ... 10 ], ...[ 10 .. 0 ] ].map (d) -> v * d/10
 
     constructor : ( canvas, buffer = new SharedArrayBuffer 80 ) ->
 
@@ -230,7 +230,7 @@ export default class Bind extends EventTarget
         if !@forward and !@backward and !@right and !@left
             @moving = 0
 
-        if !@up
+        if !@up 
             @jumping = 0
 
         @move e
