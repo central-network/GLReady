@@ -1,4 +1,4 @@
-var GL2,
+var BUFFERS, BYTE_LINES, BYTE_POINTS, BYTE_TRIANGLES, COUNT_HEADERS, COUNT_LINES, COUNT_POINTS, COUNT_TRIANGLES, DRAW_BUFFER, DRAW_COUNT, DRAW_FINISH, DRAW_LENGTH, FIRST_LINES, FIRST_POINTS, FIRST_TRIANGLES, GL2, HEADERS_BUFFER, HEADERS_BYTEOFFSET, HEADERS_LENGTH, INDEX_LINES, INDEX_POINTS, INDEX_TRIANGLES, LENGTH_HEADERS, LENGTH_LINES, LENGTH_POINTS, LENGTH_TRIANGLES, SHARED_ARRAY, SHARED_ARRAY_BUFFER, UNUSED, a, b, dx, dy, dz, g, r, rx, ry, rz,
   boundMethodCheck = function(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new Error('Bound instance method accessed before binding'); } };
 
 Object.defineProperties(Math, {
@@ -125,17 +125,7 @@ export var M4 = (function() {
 
 }).call(this);
 
-export var Color = class Color extends Float32Array {};
-
-export var Vertex = class Vertex extends Float32Array {};
-
-export var Attributes = class Attributes extends Float32Array {};
-
 export var Headers = class Headers extends Float32Array {};
-
-export var Vertices = class Vertices extends Array {};
-
-export var Points = class Points extends Array {};
 
 export var Point = (function() {
   var i, j, len1, prop, ref;
@@ -160,18 +150,18 @@ export var Point = (function() {
   Object.defineProperties(Point.prototype, {
     color: {
       get: function() {
-        return new Color(this.buffer, 12, 4);
+        return new Color(this.buffer, this.byteOffset + 12, 4);
       },
       set: function() {
-        return this.set(arguments[0], 3);
+        return this.set(arguments[0].toRGBA(), 3);
       }
     },
     vertex: {
       get: function() {
-        return new Vertex(this.buffer, 0, 3);
+        return new Vertex(this.buffer, this.byteOffset + 0, 3);
       },
       set: function() {
-        return this.set(arguments[0], 0);
+        return this.vertex.set(arguments[0]);
       }
     }
   });
@@ -180,8 +170,148 @@ export var Point = (function() {
 
 }).call(this);
 
+SHARED_ARRAY_BUFFER = new SharedArrayBuffer(1e8);
+
+SHARED_ARRAY = new Float32Array(SHARED_ARRAY_BUFFER);
+
+BUFFERS = SHARED_ARRAY_BUFFER;
+
+DRAW_LENGTH = 1e6 + 6;
+
+DRAW_COUNT = DRAW_LENGTH / 7;
+
+DRAW_BUFFER = new Point(SHARED_ARRAY_BUFFER, 0, DRAW_LENGTH * 3);
+
+DRAW_FINISH = DRAW_BUFFER.byteOffset + DRAW_BUFFER.byteLength;
+
+FIRST_TRIANGLES = 0;
+
+INDEX_TRIANGLES = 0;
+
+BYTE_TRIANGLES = 0;
+
+FIRST_POINTS = DRAW_COUNT;
+
+INDEX_POINTS = DRAW_LENGTH;
+
+BYTE_POINTS = INDEX_POINTS * 4;
+
+FIRST_LINES = DRAW_COUNT * 2;
+
+INDEX_LINES = DRAW_LENGTH * 2;
+
+BYTE_LINES = INDEX_LINES * 4;
+
+COUNT_TRIANGLES = 0;
+
+COUNT_POINTS = 0;
+
+COUNT_LINES = 0;
+
+console.log({BYTE_POINTS, INDEX_POINTS, FIRST_POINTS, DRAW_COUNT});
+
+LENGTH_TRIANGLES = 0;
+
+LENGTH_POINTS = 0;
+
+LENGTH_LINES = 0;
+
+HEADERS_BYTEOFFSET = DRAW_FINISH;
+
+HEADERS_LENGTH = 1e4;
+
+HEADERS_BUFFER = new Uint32Array(SHARED_ARRAY_BUFFER, HEADERS_BYTEOFFSET, HEADERS_LENGTH);
+
+COUNT_HEADERS = 0;
+
+LENGTH_HEADERS = 0;
+
+r = g = b = a = rx = ry = rz = dx = dy = dz = UNUSED = 0;
+
+export var RGBA = (function() {
+  class RGBA {};
+
+  Object.defineProperties(RGBA, {
+    [Array]: {
+      value: function() {
+        var arr, i, j, len1, ref, v;
+        arr = [1, 1, 1, 1];
+        ref = this;
+        for (i = j = 0, len1 = ref.length; j < len1; i = ++j) {
+          v = ref[i];
+          arr[i] = v > 1 ? v / 255 : v;
+        }
+        return arr;
+      }
+    },
+    [String]: {
+      value: function() {
+        var $;
+        if ("#" === $.at(0)) {
+          return $.substring(1).toRGBA();
+        }
+        if ("x" === $.at(1)) {
+          return $.substring(2).toRGBA();
+        }
+        $ = this.replace(/\W+/g, '');
+        if ($.length === 3) {
+          return $.split("").map(function(i) {
+            return i + i;
+          }).join("").toRGBA();
+        }
+        if ($.length <= 5) {
+          return $.padStart(6, 0).toRGBA();
+        }
+        return $.padEnd(8, "ff").match(/.{1,2}/g).map(function(n) {
+          return parseInt(n, 16) / 0xff;
+        });
+      }
+    }
+  });
+
+  return RGBA;
+
+}).call(this);
+
+Object.defineProperties(Array.prototype, {
+  toRGBA: {
+    value: RGBA[Array]
+  }
+});
+
+Object.defineProperties(String.prototype, {
+  toRGBA: {
+    value: RGBA[String]
+  }
+});
+
+Object.defineProperties(Object.getPrototypeOf(Uint8Array.prototype), {
+  toRGBA: {
+    value: RGBA[Array]
+  }
+});
+
+export var Color = class Color extends Float32Array {
+  set() {
+    return super.set(arguments[0].toRGBA());
+  }
+
+};
+
+export var Vertex = class Vertex extends Float32Array {};
+
+export var Attributes = class Attributes extends Float32Array {};
+
+export var Vertices = class Vertices extends Array {};
+
+export var Position = class Position extends Float32Array {};
+
+export var Rotation = class Rotation extends Float32Array {};
+
+export var Points = class Points extends Array {};
+
 export default GL2 = (function() {
-  var LINES, POINTES, TRIANGLES;
+  var LINES, POINTS, TRIANGLES;
 
   class GL2 extends EventTarget {
     constructor(canvas) {
@@ -192,6 +322,9 @@ export default GL2 = (function() {
         },
         canvas: {
           value: canvas
+        },
+        objects: {
+          value: new Array
         },
         onceQueue: {
           value: new Array
@@ -317,16 +450,7 @@ export default GL2 = (function() {
         height: this.height * this.rPixel
       });
       Object.defineProperties(this, {
-        lineBuffer: {
-          value: this.gl.createBuffer()
-        },
-        pointBuffer: {
-          value: this.gl.createBuffer()
-        },
-        vertexBuffer: {
-          value: this.gl.createBuffer()
-        },
-        colorBuffer: {
+        buffer: {
           value: this.gl.createBuffer()
         },
         program: {
@@ -340,18 +464,6 @@ export default GL2 = (function() {
         }
       });
       Object.defineProperties(this, {
-        pointSize: {
-          value: 2
-        },
-        vertices: {
-          value: new Float32Array(3 * 1e5)
-        },
-        colors: {
-          value: new Float32Array(3 * 1e5)
-        },
-        lines: {
-          value: new Float32Array(3 * 1e5)
-        },
         clearColor: {
           value: new Float32Array([15 / 0xff, 17 / 0xff, 26 / 0xff, 1])
         },
@@ -363,6 +475,14 @@ export default GL2 = (function() {
         },
         clearDepth: {
           value: 1
+        },
+        pointSize: {
+          get: function() {
+            return this.gl.getUniform(this.program, this.u_PointSize);
+          },
+          set: function() {
+            return this.gl.uniform1f(this.u_PointSize, arguments[0]);
+          }
         }
       });
       this.gl.shaderSource(this.vertexShader, this.vertexShaderSource);
@@ -376,6 +496,12 @@ export default GL2 = (function() {
       this.gl.depthFunc(this.gl.LEQUAL);
       this.gl.clearDepth(this.clearDepth);
       this.gl.clearColor(...this.clearColor);
+      this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.buffer);
+      this.gl.bufferData(this.gl.ARRAY_BUFFER, DRAW_BUFFER, this.gl.STATIC_DRAW);
+      this.gl.vertexAttribPointer(this.a_Vertex, 3, this.gl.FLOAT, false, 28, 0);
+      this.gl.vertexAttribPointer(this.a_Color, 4, this.gl.FLOAT, false, 28, 12);
+      this.gl.enableVertexAttribArray(this.a_Vertex);
+      this.gl.enableVertexAttribArray(this.a_Color);
       this.gl.viewport(0, 0, this.canvas.width, this.canvas.height);
       this.gl.linkProgram(this.program);
       this.gl.useProgram(this.program);
@@ -396,15 +522,6 @@ export default GL2 = (function() {
           value: this.gl.getUniformLocation(this.program, "u_FudgeFactor")
         }
       });
-      this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.vertexBuffer);
-      this.gl.bufferData(this.gl.ARRAY_BUFFER, this.vertices, this.gl.STATIC_DRAW);
-      this.gl.enableVertexAttribArray(this.a_Vertex);
-      this.gl.vertexAttribPointer(this.a_Vertex, 3, this.gl.FLOAT, false, 12, 0);
-      this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.colorBuffer);
-      this.gl.bufferData(this.gl.ARRAY_BUFFER, this.colors, this.gl.STATIC_DRAW);
-      this.gl.enableVertexAttribArray(this.a_Color);
-      this.gl.vertexAttribPointer(this.a_Color, 3, this.gl.FLOAT, false, 12, 0);
-      this.gl.uniform1f(this.u_PointSize, this.pointSize);
       this.dxCamera = -150;
       this.dyCamera = 0;
       this.dzCamera = -360;
@@ -424,40 +541,76 @@ export default GL2 = (function() {
       });
     }
 
-    upload() {
-      this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.vertexBuffer);
-      this.gl.bufferData(this.gl.ARRAY_BUFFER, this.vertices, this.gl.STATIC_DRAW);
+    upload(ptr) {
+      if (!ptr) {
+        this.gl.bufferData(this.gl.ARRAY_BUFFER, DRAW_BUFFER, this.gl.STATIC_DRAW);
+      } else {
+        this.gl.bufferSubData(this.gl.ARRAY_BUFFER, ptr.byteOffset, DRAW_BUFFER, ptr.begin, ptr.pointsLength);
+      }
+      this.gl.vertexAttribPointer(this.a_Vertex, 3, this.gl.FLOAT, false, 28, 0);
+      this.gl.vertexAttribPointer(this.a_Color, 4, this.gl.FLOAT, false, 28, 12);
       this.gl.enableVertexAttribArray(this.a_Vertex);
-      this.gl.vertexAttribPointer(this.a_Vertex, 3, this.gl.FLOAT, false, 12, 0);
-      this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.colorBuffer);
-      this.gl.bufferData(this.gl.ARRAY_BUFFER, this.colors, this.gl.STATIC_DRAW);
-      this.gl.enableVertexAttribArray(this.a_Color);
-      return this.gl.vertexAttribPointer(this.a_Color, 3, this.gl.FLOAT, false, 12, 0);
+      return this.gl.enableVertexAttribArray(this.a_Color);
     }
 
-    malloc(pointsCount, drawAs = this.TRIANGLES) {
-      var BUFFER_OF_HEADERS, BUFFER_OF_POINTS, BYTES_PER_ELEMENT, HEADER_ITEM_COUNT, ITEMS_PER_VERTEX, Mesh, headersOffset;
+    malloc(count, drawAs = this.TRIANGLES) {
+      var BYTES_PER_ELEMENT, HEADER_ITEM_COUNT, ITEMS_PER_VERTEX, Mesh, begin, byteLength, byteOffset, enabled, end, headersIndex, needsUpload, pointsCount, pointsLength;
       BYTES_PER_ELEMENT = 4;
-      HEADER_ITEM_COUNT = 6;
+      HEADER_ITEM_COUNT = 24;
       ITEMS_PER_VERTEX = 7;
-      BUFFER_OF_POINTS = this.allocPoints.buffer;
-      BUFFER_OF_HEADERS = this.pointHeaders.buffer;
-      this.pointHeaders.set([this.allocLength, pointsCount, drawAs], (headersOffset = this.headersOffset) / 4);
-      this.allocLength += BYTES_PER_ELEMENT * ITEMS_PER_VERTEX * pointsCount;
-      this.headersOffset += BYTES_PER_ELEMENT * HEADER_ITEM_COUNT;
-      return new (Mesh = (function() {
+      if (drawAs === this.TRIANGLES) {
+        pointsCount = count;
+        pointsLength = pointsCount * ITEMS_PER_VERTEX;
+        byteOffset = BYTE_TRIANGLES;
+        byteLength = pointsLength * BYTES_PER_ELEMENT;
+        begin = INDEX_TRIANGLES;
+        end = begin + pointsLength;
+        INDEX_TRIANGLES += pointsLength;
+        LENGTH_TRIANGLES += pointsLength;
+        COUNT_TRIANGLES += pointsCount;
+        BYTE_TRIANGLES += byteLength;
+      } else if (drawAs === this.POINTS) {
+        pointsCount = count;
+        pointsLength = pointsCount * ITEMS_PER_VERTEX;
+        byteOffset = BYTE_POINTS;
+        byteLength = pointsLength * BYTES_PER_ELEMENT;
+        begin = INDEX_POINTS;
+        end = begin + pointsLength;
+        INDEX_POINTS += pointsLength;
+        LENGTH_POINTS += pointsLength;
+        COUNT_POINTS += pointsCount;
+        BYTE_POINTS += byteLength;
+      } else if (drawAs === this.LINES) {
+        pointsCount = count;
+        pointsLength = pointsCount * ITEMS_PER_VERTEX;
+        byteOffset = BYTE_LINES;
+        byteLength = pointsLength * BYTES_PER_ELEMENT;
+        begin = INDEX_LINES;
+        end = begin + pointsLength;
+        INDEX_LINES += pointsLength;
+        LENGTH_LINES += pointsLength;
+        COUNT_LINES += pointsCount;
+        BYTE_LINES += byteLength;
+      } else {
+        throw ["UNDEFINED_DRAW_METHOD:", drawAs];
+      }
+      HEADERS_BUFFER.set([byteOffset, byteLength, pointsCount, pointsLength, begin, end, COUNT_HEADERS++, drawAs, enabled = 1, needsUpload = 1, UNUSED, UNUSED, r, g, b, a, rx, ry, rz, UNUSED, dx, dy, dz, UNUSED], headersIndex = LENGTH_HEADERS);
+      LENGTH_HEADERS += HEADER_ITEM_COUNT;
+      return this.objects[this.objects.length] = new (Mesh = (function() {
         class Mesh extends Number {
           * [Symbol.iterator]() {
             var i, j, ref, results;
             results = [];
             for (i = j = 0, ref = this.pointsCount; (0 <= ref ? j < ref : j > ref); i = 0 <= ref ? ++j : --j) {
-              results.push((yield this.points[i]));
+              results.push((yield this.point(i)));
             }
             return results;
           }
 
-          point() {
-            return new Point(BUFFER_OF_POINTS, this.byteOffset + this.stride * arguments[0], ITEMS_PER_VERTEX);
+          point(index) {
+            begin = this.begin + ITEMS_PER_VERTEX * index;
+            end = begin + ITEMS_PER_VERTEX;
+            return DRAW_BUFFER.subarray(begin, end);
           }
 
         };
@@ -468,54 +621,82 @@ export default GL2 = (function() {
               return this.headers[0];
             }
           },
-          pointsCount: {
+          byteLength: {
             get: function() {
               return this.headers[1];
             }
           },
+          pointsCount: {
+            get: function() {
+              return this.headers[2];
+            }
+          },
+          pointsLength: {
+            get: function() {
+              return this.headers[3];
+            }
+          },
+          begin: {
+            get: function() {
+              return this.headers[4];
+            }
+          },
+          end: {
+            get: function() {
+              return this.headers[5];
+            }
+          },
+          index: {
+            get: function() {
+              return this.headers[6];
+            }
+          },
           drawAs: {
             get: function() {
-              return GL2.prototype[this.headers[2]];
+              return GL2.prototype[this.headers[7]];
             }
           },
-          stride: {
+          enabled: {
             get: function() {
-              return ITEMS_PER_VERTEX * BYTES_PER_ELEMENT;
+              return this.headers[8];
             }
           },
-          typedIndex: {
+          needsUpload: {
             get: function() {
-              return this.byteOffset / BYTES_PER_ELEMENT;
+              return this.headers[9];
+            },
+            set: function() {
+              return this.headers[9] = arguments[0];
             }
           },
-          byteLength: {
+          attributes: {
             get: function() {
-              return this.pointsCount * this.stride;
-            }
-          },
-          vertexCount: {
-            get: function() {
-              return this.pointsCount * 3;
-            }
-          },
-          length: {
-            get: function() {
-              return ITEMS_PER_VERTEX * this.pointsCount;
-            }
-          },
-          attribute: {
-            get: function() {
-              return new Attributes(BUFFER_OF_POINTS, this.byteOffset, this.length);
+              return DRAW_BUFFER.subarray(this.begin, this.end);
             }
           },
           headers: {
             get: function() {
-              return new Headers(BUFFER_OF_HEADERS, this, HEADER_ITEM_COUNT);
+              return HEADERS_BUFFER.subarray(this, this + HEADER_ITEM_COUNT);
+            }
+          },
+          color: {
+            get: function() {
+              return this.headers.subarray(12, 16);
+            }
+          },
+          rotation: {
+            get: function() {
+              return this.headers.subarray(16, 20);
+            }
+          },
+          position: {
+            get: function() {
+              return this.headers.subarray(20, 24);
             }
           },
           points: {
             set: function() {
-              return this.attribute.set(arguments[0].flat());
+              return this.attributes.set(arguments[0].flat());
             },
             get: function() {
               var i, j, ref, results;
@@ -525,16 +706,21 @@ export default GL2 = (function() {
               }
               return results;
             }
+          },
+          dump: {
+            get: function() {
+              return {byteOffset: this.byteOffset, byteLength: this.byteLength, pointsCount: this.pointsCount, pointsLength: this.pointsLength, begin: this.begin, end: this.end, index: this.index, drawAs: this.drawAs, enabled: this.enabled, needsUpload: this.needsUpload, color: this.color, rotation: this.rotation, position: this.position};
+            }
           }
         });
 
         return Mesh;
 
-      }).call(this))(headersOffset);
+      }).call(this))(headersIndex);
     }
 
     render(t) {
-      var j, job, k, l, len, len1, len2, len3, ref, ref1, ref2;
+      var j, job, k, l, len, len1, len2, len3, len4, m, object, ref, ref1, ref2, ref3;
       boundMethodCheck(this, GL2);
       if (this.rendering) {
         this.gl.clear(this.clearMask);
@@ -550,11 +736,21 @@ export default GL2 = (function() {
           job = ref1[k];
           job.call(this, t);
         }
-        this.gl.drawArrays(this.gl.TRIANGLES, 0, this.pointsCount);
-        this.gl.drawArrays(this.gl.POINTS, 0, this.pointsCount);
-        ref2 = this.postProcess.slice(0);
+        ref2 = this.objects;
         for (l = 0, len3 = ref2.length; l < len3; l++) {
-          job = ref2[l];
+          object = ref2[l];
+          if (!object.needsUpload) {
+            continue;
+          }
+          this.upload(object);
+          object.needsUpload = 0;
+        }
+        this.gl.drawArrays(this.gl.TRIANGLES, FIRST_TRIANGLES, COUNT_TRIANGLES);
+        this.gl.drawArrays(this.gl.POINTS, FIRST_POINTS, COUNT_POINTS);
+        this.gl.drawArrays(this.gl.LINES, FIRST_LINES, COUNT_LINES);
+        ref3 = this.postProcess.slice(0);
+        for (m = 0, len4 = ref3.length; m < len4; m++) {
+          job = ref3[m];
           job.call(this, t);
         }
         ++this.scene[0];
@@ -676,7 +872,7 @@ export default GL2 = (function() {
 
   GL2.prototype.TRIANGLES = new (TRIANGLES = class TRIANGLES extends Number {})(WebGL2RenderingContext.prototype.TRIANGLES);
 
-  GL2.prototype.POINTS = new (POINTES = class POINTES extends Number {})(WebGL2RenderingContext.prototype.POINTS);
+  GL2.prototype.POINTS = new (POINTS = class POINTS extends Number {})(WebGL2RenderingContext.prototype.POINTS);
 
   GL2.prototype.LINES = new (LINES = class LINES extends Number {})(WebGL2RenderingContext.prototype.LINES);
 
@@ -697,14 +893,6 @@ export default GL2 = (function() {
       }
     }
   });
-
-  GL2.prototype.allocLength = 0;
-
-  GL2.prototype.allocPoints = new Point(1e7);
-
-  GL2.prototype.pointHeaders = new Headers(1e6);
-
-  GL2.prototype.headersOffset = 0;
 
   GL2.prototype.INDEX_CAMERA = 2;
 

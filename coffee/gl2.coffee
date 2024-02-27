@@ -118,15 +118,10 @@ export class M4 extends Float32Array
     zRotate     : ( rz ) ->
         M4.multiply this, @zRotation rz
 
-        
-export class Color extends Float32Array
-export class Vertex extends Float32Array
-export class Attributes extends Float32Array
-export class Headers extends Float32Array
-export class Vertices extends Array
-export class Points extends Array
 
-export class Point extends Float32Array
+
+export class Headers    extends Float32Array
+export class Point      extends Float32Array
     for prop, i in [ "x", "y", "z", "r", "g", "b", "a" ]
         Object.defineProperty this::, prop, ((index)->
             get : -> this[index]
@@ -135,12 +130,109 @@ export class Point extends Float32Array
 
     Object.defineProperties this::,
         color   :
-            get : -> new Color @buffer, 12, 4
-            set : -> this.set arguments[0], 3
+            get : -> new Color @buffer, @byteOffset + 12, 4
+            set : -> @set arguments[0].toRGBA(), 3
 
         vertex  :
-            get : -> new Vertex @buffer, 0, 3
-            set : -> this.set arguments[0], 0
+            get : -> new Vertex @buffer, @byteOffset + 0, 3
+            set : -> @vertex.set arguments[0]
+
+
+SHARED_ARRAY_BUFFER = new SharedArrayBuffer 1e8
+SHARED_ARRAY = new Float32Array SHARED_ARRAY_BUFFER
+BUFFERS             = SHARED_ARRAY_BUFFER
+
+
+DRAW_LENGTH         = 1e6 + 6
+DRAW_COUNT          = DRAW_LENGTH / 7
+
+DRAW_BUFFER         = new Point SHARED_ARRAY_BUFFER, 0, DRAW_LENGTH * 3
+DRAW_FINISH         = DRAW_BUFFER.byteOffset + DRAW_BUFFER.byteLength
+
+FIRST_TRIANGLES     = 0
+INDEX_TRIANGLES     = 0
+BYTE_TRIANGLES      = 0
+
+FIRST_POINTS        = DRAW_COUNT
+INDEX_POINTS        = DRAW_LENGTH
+BYTE_POINTS         = INDEX_POINTS * 4
+
+FIRST_LINES         = DRAW_COUNT * 2
+INDEX_LINES         = DRAW_LENGTH * 2
+BYTE_LINES          = INDEX_LINES * 4
+
+
+COUNT_TRIANGLES     = 0
+COUNT_POINTS        = 0
+COUNT_LINES         = 0
+
+
+console.log {BYTE_POINTS, INDEX_POINTS, FIRST_POINTS, DRAW_COUNT}
+
+LENGTH_TRIANGLES    = 0
+LENGTH_POINTS       = 0
+LENGTH_LINES        = 0
+
+HEADERS_BYTEOFFSET  = DRAW_FINISH
+HEADERS_LENGTH      = 1e4
+HEADERS_BUFFER      = new Uint32Array SHARED_ARRAY_BUFFER, HEADERS_BYTEOFFSET, HEADERS_LENGTH
+
+COUNT_HEADERS       = 0
+LENGTH_HEADERS      = 0
+
+
+r  = g  = b = a =
+rx = ry = rz =
+dx = dy = dz =
+UNUSED = 0
+
+export class RGBA
+    Object.defineProperties this,
+
+        [ Array ]   : value : ->
+            arr = [ 1, 1, 1, 1 ]
+
+            for v, i in this
+                arr[i] = if v > 1 then v/255
+                else v
+            
+            arr
+
+        [ String ]  : value : ->
+            if  "#" is $.at 0
+                return $.substring( 1 ).toRGBA()
+
+            if  "x" is $.at 1
+                return $.substring( 2 ).toRGBA()
+
+            $ = @replace( /\W+/g, '' )
+
+            if  $.length is 3
+                return $.split("").map((i) -> i+i).join("").toRGBA()
+
+            if  $.length <= 5
+                return $.padStart( 6, 0 ).toRGBA()
+
+            $.padEnd( 8, "ff" ).match( /.{1,2}/g )
+                .map( (n) -> parseInt( n, 16 ) / 0xff )
+
+Object.defineProperties Array::, 
+    toRGBA : value : RGBA[ Array ]
+
+Object.defineProperties String::, 
+    toRGBA : value : RGBA[ String ]
+
+Object.defineProperties Object.getPrototypeOf(Uint8Array::), 
+    toRGBA : value : RGBA[ Array ]
+
+export class Color      extends Float32Array
+    set : -> super arguments[0].toRGBA()
+export class Vertex     extends Float32Array
+export class Attributes extends Float32Array
+export class Vertices   extends Array
+export class Position   extends Float32Array
+export class Rotation   extends Float32Array
+export class Points     extends Array
 
 export default class GL2 extends EventTarget
 
@@ -180,6 +272,7 @@ export default class GL2 extends EventTarget
         Object.defineProperties super(),
             gl              : value : canvas.getContext "webgl2" 
             canvas          : value : canvas
+            objects         : value : new Array
             onceQueue       : value : new Array
             renderQueue     : value : new Array
             preProcess      : value : new Array
@@ -222,23 +315,19 @@ export default class GL2 extends EventTarget
             height          : @height * @rPixel
 
         Object.defineProperties this,
-            lineBuffer      : value :   @gl.createBuffer()
-            pointBuffer     : value :   @gl.createBuffer()
-            vertexBuffer    : value :   @gl.createBuffer()
-            colorBuffer     : value :   @gl.createBuffer()
+            buffer          : value :   @gl.createBuffer()
             program         : value :   @gl.createProgram()
             vertexShader    : value :   @gl.createShader( @gl.VERTEX_SHADER )
             fragmentShader  : value :   @gl.createShader( @gl.FRAGMENT_SHADER )
 
         Object.defineProperties this,
-            pointSize       : value :   2
-            vertices        : value :   new Float32Array 3 * 1e5
-            colors          : value :   new Float32Array 3 * 1e5
-            lines           : value :   new Float32Array 3 * 1e5
             clearColor      : value :   new Float32Array [ 15/0xff, 17/0xff, 26/0xff, 1 ]
             camera          : value :   new M4.Camera @yFov, @rAspect, @zNear, @zFar
             clearMask       : value :   @gl.DEPTH_BUFFER_BIT | @gl.COLOR_BUFFER_BIT
             clearDepth      : value :   1
+            pointSize       :
+                get         : -> @gl.getUniform @program, @u_PointSize
+                set         : -> @gl.uniform1f @u_PointSize, arguments[0]
 
         @gl.shaderSource                @vertexShader, @vertexShaderSource
         @gl.compileShader               @vertexShader
@@ -254,9 +343,19 @@ export default class GL2 extends EventTarget
         @gl.clearDepth                  @clearDepth
         @gl.clearColor                  ...@clearColor
 
+        @gl.bindBuffer                  @gl.ARRAY_BUFFER, @buffer
+        @gl.bufferData                  @gl.ARRAY_BUFFER, DRAW_BUFFER, @gl.STATIC_DRAW
+
+        @gl.vertexAttribPointer         @a_Vertex, 3, @gl.FLOAT, no, 28, 0
+        @gl.vertexAttribPointer         @a_Color, 4, @gl.FLOAT, no, 28, 12
+        
+        @gl.enableVertexAttribArray     @a_Vertex
+        @gl.enableVertexAttribArray     @a_Color
+
         @gl.viewport                    0, 0, @canvas.width, @canvas.height
         @gl.linkProgram                 @program
         @gl.useProgram                  @program
+
 
         Object.defineProperties this,
             a_Vertex        : value :   @gl.getAttribLocation  @program, "a_Vertex"
@@ -265,17 +364,6 @@ export default class GL2 extends EventTarget
             u_PointSize     : value :   @gl.getUniformLocation @program, "u_PointSize"
             u_FudgeFactor   : value :   @gl.getUniformLocation @program, "u_FudgeFactor"
 
-        @gl.bindBuffer                  @gl.ARRAY_BUFFER, @vertexBuffer
-        @gl.bufferData                  @gl.ARRAY_BUFFER, @vertices, @gl.STATIC_DRAW
-        @gl.enableVertexAttribArray     @a_Vertex
-        @gl.vertexAttribPointer         @a_Vertex, 3, @gl.FLOAT, no, 12, 0
-
-        @gl.bindBuffer                  @gl.ARRAY_BUFFER, @colorBuffer
-        @gl.bufferData                  @gl.ARRAY_BUFFER, @colors, @gl.STATIC_DRAW
-        @gl.enableVertexAttribArray     @a_Color
-        @gl.vertexAttribPointer         @a_Color, 3, @gl.FLOAT, no, 12, 0
-
-        @gl.uniform1f                   @u_PointSize, @pointSize
         
         @dxCamera                       = -150
         @dyCamera                       = 0
@@ -294,20 +382,18 @@ export default class GL2 extends EventTarget
     dump        : ->
         console.warn { @scene, this: @ }
    
-    upload      : ->
-        @gl.bindBuffer                  @gl.ARRAY_BUFFER, @vertexBuffer
-        @gl.bufferData                  @gl.ARRAY_BUFFER, @vertices, @gl.STATIC_DRAW
+    upload      : ( ptr ) ->
+        if !ptr then @gl.bufferData     @gl.ARRAY_BUFFER, DRAW_BUFFER, @gl.STATIC_DRAW
+        else @gl.bufferSubData          @gl.ARRAY_BUFFER, ptr.byteOffset, DRAW_BUFFER, ptr.begin, ptr.pointsLength
+
+        @gl.vertexAttribPointer         @a_Vertex, 3, @gl.FLOAT, no, 28, 0
+        @gl.vertexAttribPointer         @a_Color, 4, @gl.FLOAT, no, 28, 12
+
         @gl.enableVertexAttribArray     @a_Vertex
-        @gl.vertexAttribPointer         @a_Vertex, 3, @gl.FLOAT, no, 12, 0
-
-        @gl.bindBuffer                  @gl.ARRAY_BUFFER, @colorBuffer
-        @gl.bufferData                  @gl.ARRAY_BUFFER, @colors, @gl.STATIC_DRAW
         @gl.enableVertexAttribArray     @a_Color
-        @gl.vertexAttribPointer         @a_Color, 3, @gl.FLOAT, no, 12, 0
-
 
     TRIANGLES   : new (class TRIANGLES extends Number) WebGL2RenderingContext::TRIANGLES
-    POINTS      : new (class POINTES extends Number) WebGL2RenderingContext::POINTS
+    POINTS      : new (class POINTS extends Number) WebGL2RenderingContext::POINTS
     LINES       : new (class LINES extends Number) WebGL2RenderingContext::LINES
     
     Object.defineProperties this::,
@@ -315,50 +401,126 @@ export default class GL2 extends EventTarget
         [ WebGL2RenderingContext::POINTS ]    : get : -> @POINTS
         [ WebGL2RenderingContext::LINES ]     : get : -> @LINES
 
-    allocLength     : 0
-    allocPoints     : new Point 1e7
-    pointHeaders    : new Headers 1e6
-    headersOffset   : 0
 
-    malloc      : ( pointsCount, drawAs = @TRIANGLES ) ->
+
+
+    malloc          : ( count, drawAs = @TRIANGLES ) ->
         BYTES_PER_ELEMENT   = 4
-        HEADER_ITEM_COUNT   = 6
+        HEADER_ITEM_COUNT   = 24
         ITEMS_PER_VERTEX    = 7
-        BUFFER_OF_POINTS    = @allocPoints.buffer
-        BUFFER_OF_HEADERS   = @pointHeaders.buffer
 
-        @pointHeaders.set(
-            [ @allocLength , pointsCount , drawAs ],
-            ( headersOffset = @headersOffset ) / 4
-        )
+        if drawAs is @TRIANGLES
+            
+            pointsCount       = count
+            pointsLength      = pointsCount * ITEMS_PER_VERTEX
+            
+            byteOffset        = BYTE_TRIANGLES
+            byteLength        = pointsLength * BYTES_PER_ELEMENT
+            
+            begin             = INDEX_TRIANGLES
+            end               = begin + pointsLength
 
-        @allocLength    += BYTES_PER_ELEMENT * ITEMS_PER_VERTEX * pointsCount
-        @headersOffset  += BYTES_PER_ELEMENT * HEADER_ITEM_COUNT
+            INDEX_TRIANGLES  += pointsLength
+            LENGTH_TRIANGLES += pointsLength
+            COUNT_TRIANGLES  += pointsCount
+            BYTE_TRIANGLES   += byteLength
+    
+        else if drawAs is @POINTS
+            
+            pointsCount       = count
+            pointsLength      = pointsCount * ITEMS_PER_VERTEX
+            
+            byteOffset        = BYTE_POINTS
+            byteLength        = pointsLength * BYTES_PER_ELEMENT
 
-        new ( class Mesh extends Number
+            begin             = INDEX_POINTS
+            end               = begin + pointsLength
+
+            INDEX_POINTS     += pointsLength
+            LENGTH_POINTS    += pointsLength
+            COUNT_POINTS     += pointsCount
+            BYTE_POINTS      += byteLength
+
+        else if drawAs is @LINES
+            
+            pointsCount       = count
+            pointsLength      = pointsCount * ITEMS_PER_VERTEX
+
+            byteOffset        = BYTE_LINES
+            byteLength        = pointsLength * BYTES_PER_ELEMENT
+            
+            begin             = INDEX_LINES
+            end               = begin + pointsLength
+
+            INDEX_LINES      += pointsLength
+            LENGTH_LINES     += pointsLength
+            COUNT_LINES      += pointsCount
+            BYTE_LINES       += byteLength
+
+        else throw [ "UNDEFINED_DRAW_METHOD:", drawAs ]
+
+        HEADERS_BUFFER.set [
+            byteOffset, byteLength,
+            pointsCount, pointsLength,
+            begin, end, COUNT_HEADERS++,
+            drawAs, enabled = 1, needsUpload = 1,
+            UNUSED, UNUSED, 
+            
+            r, g, b, a,
+            rx, ry, rz, UNUSED,
+            dx, dy, dz, UNUSED
+
+        ], headersIndex = LENGTH_HEADERS
+        LENGTH_HEADERS += HEADER_ITEM_COUNT
+        
+        @objects[ @objects.length ] = new ( class Mesh extends Number
 
             [ Symbol.iterator ] : ->
-                yield @points[ i ] for i in [ 0 ... @pointsCount ]
+                yield @point i for i in [ 0 ... @pointsCount ]
 
-            point               : ->
-                new Point BUFFER_OF_POINTS, @byteOffset + @stride * arguments[ 0 ], ITEMS_PER_VERTEX
+            point               : ( index ) ->
+                begin = @begin + ITEMS_PER_VERTEX * index
+                end = begin + ITEMS_PER_VERTEX
+
+                DRAW_BUFFER.subarray begin, end
 
             Object.defineProperties this::,
                 byteOffset      : get : -> @headers[0]
-                pointsCount     : get : -> @headers[1]
-                drawAs          : get : -> GL2::[ @headers[2] ]
-                stride          : get : -> ITEMS_PER_VERTEX * BYTES_PER_ELEMENT 
-                typedIndex      : get : -> @byteOffset / BYTES_PER_ELEMENT
-                byteLength      : get : -> @pointsCount * @stride
-                vertexCount     : get : -> @pointsCount * 3
-                length          : get : -> ITEMS_PER_VERTEX * @pointsCount
-                attribute       : get : -> new Attributes BUFFER_OF_POINTS, @byteOffset, @length
-                headers         : get : -> new Headers BUFFER_OF_HEADERS, this, HEADER_ITEM_COUNT
-                points          : 
-                    set : -> @attribute.set arguments[0].flat()           
-                    get : -> @point i for i in [ 0 ... @pointsCount ]
+                byteLength      : get : -> @headers[1]
+                
+                pointsCount     : get : -> @headers[2]
+                pointsLength    : get : -> @headers[3]
 
-        )( headersOffset )
+                begin           : get : -> @headers[4]
+                end             : get : -> @headers[5]
+                index           : get : -> @headers[6]
+
+                drawAs          : get : -> GL2::[ @headers[7] ]
+                enabled         : get : -> @headers[8]
+                needsUpload     :
+                    get         : -> @headers[9]
+                    set         : -> @headers[9] = arguments[0]
+                    
+                attributes      : get : -> DRAW_BUFFER.subarray @begin, @end
+                headers         : get : -> HEADERS_BUFFER.subarray @, @ + HEADER_ITEM_COUNT
+
+                color           : get : -> @headers.subarray 12, 16
+                rotation        : get : -> @headers.subarray 16, 20
+                position        : get : -> @headers.subarray 20, 24
+
+                points          : 
+                    set         : -> @attributes.set arguments[0].flat()           
+                    get         : -> @point i for i in [ 0 ... @pointsCount ]
+
+                dump            : get : -> {
+                    @byteOffset, @byteLength,
+                    @pointsCount, @pointsLength,
+                    @begin, @end, @index,
+                    @drawAs, @enabled, @needsUpload,
+                    @color, @rotation, @position
+                }                    
+
+        )( headersIndex )
 
 
     render      : ( t ) =>
@@ -373,8 +535,13 @@ export default class GL2 extends EventTarget
             for job in @renderQueue.slice 0
                 job.call this, t
 
-            @gl.drawArrays @gl.TRIANGLES, 0, @pointsCount
-            @gl.drawArrays @gl.POINTS, 0, @pointsCount
+            for object in @objects
+                continue unless object.needsUpload
+                @upload object; object.needsUpload = 0
+
+            @gl.drawArrays @gl.TRIANGLES, FIRST_TRIANGLES, COUNT_TRIANGLES
+            @gl.drawArrays @gl.POINTS,  FIRST_POINTS,  COUNT_POINTS
+            @gl.drawArrays @gl.LINES, FIRST_LINES, COUNT_LINES
 
             for job in @postProcess.slice 0
                 job.call this, t
@@ -384,14 +551,11 @@ export default class GL2 extends EventTarget
         requestAnimationFrame @render
 
 
-    bindEvents  : ->
+    bindEvents      : ->
         addEventListener "visibilitychange", =>
             @rendering = document.visibilityState is "visible"
-    
         addEventListener "pagehide", (e) => console.warn "onunload: quit-nonblock:", e
         addEventListener "pageshow", (e) => e.persisted and console.warn "backtab:", e
-
-
 
     uploadCamera    : -> @onceQueue.push ->
         @gl.uniformMatrix4fv @u_Camera, no,
@@ -400,8 +564,7 @@ export default class GL2 extends EventTarget
                 .rotate @rxCamera, @ryCamera, @rzCamera
                 .scale @sxCamera, @syCamera, @szCamera
         
-    queue           : ( fn ) ->
-        @renderQueue.push( fn ) - 1
+    queue           : ( fn ) -> @renderQueue.push( fn ) - 1
     
     INDEX_CAMERA    : 2
     get_dxCamera    : -> @scene.at @INDEX_CAMERA + 0

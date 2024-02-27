@@ -315,35 +315,65 @@
                 160, 160, 220,
             ]);
 
-            gl2.vertices.set(set)
-            gl2.colors.set(clr.map( d => d/255 ))
 
-            gl2.pointsCount = set.length/3;
-
-            let points = [
-                [1, 0,  0],
-                [-1, 0, 0],
-                [0, -1, 0]
-            ]
-
-            let color4 = [ 1, 0.2, 0, 1 ];
-            let shape2 = gl2.malloc( 10 );
-            let shape1 = gl2.malloc( 3 );
-
-            for (let point of shape1) {
-                point.set( points.splice(0,1).at(0) )
-                point.set( color4, 3 )
-            }
+            let byteCount = set.length * 4 
+            let typedCount = set.length / 3;
+            let typedLength = set.length;
+            let pairCount = set.length / 3;
+            let pairLength = set.length / 3 * 7;
+            let pairByteLength = set.length / 3 * 7 * 4;
+            let pointCount = pairCount;
             
-            console.log( shape2 )
-            console.log( shape1 )
             
-            gl2.postProcess.push(function( time ) {
+            let shape2 = gl2.malloc( pointCount );
+            let shape1 = gl2.malloc( pointCount, gl2.POINTS );
 
+
+
+            let x, y, z, r = Math.random(), g = Math.random(), b = Math.random(), a;
+
+            shape1.points.forEach( (point, i) => {
+                let begin = i * 3;
+                let end = begin + 3;
+
+                point.vertex.set( set.subarray( begin, end ) )
+                point.color.set( clr.subarray( begin, end ) )
             })
+
+            shape2.points.forEach( (point, i) => {
+                let begin = i * 3;
+                let end = begin + 3;
+
+                [ x, y, z ] = set.subarray( begin, end )
+
+                x += 200
+                z += 200
+
+                point.vertex.set( [ x, y, z ] )
+                point.color.set( [ r, g, b, 1 ] )
+            })
+
+            console.log( shape1 )
+            console.log( shape2 )
+            
+            gl2.pointSize = 20
 
             gl2.upload()
             gl2.render()
+
+            setInterval(function (){
+
+                shape1.points.forEach( (point, i) => {
+                    let begin = i * 3;
+                    let end = begin + 3;
+                    point.color.set( clr.subarray( begin, end ).reverse() )
+                })
+
+                gl2.pointSize = Math.floor( Math.random() * 20)
+                
+                shape1.needsUpload = 1
+
+            }, 3000)
 
             document.querySelectorAll("input").forEach( input => {
                 input.oninput = function ( e ) {
@@ -365,6 +395,12 @@
 
 
             gl2.queue( time => {
+
+                shape1.points.forEach( (point, i) => {
+                    point.z += .1
+                })
+                shape1.needsUpload = 1
+                
 
                 if (bind.rotating) {
                     rxCamera.value = gl2.rxCamera += bind.rx
@@ -401,7 +437,7 @@
             })
 
             self.gl2 = gl2
-            console.log(bind)
+            self.bind = bind
         </script>
         
     </body>
