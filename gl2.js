@@ -300,6 +300,60 @@ export default GL2 = (function() {
   var LINES, POINTS, TRIANGLES;
 
   class GL2 extends EventTarget {
+    static corners(shape) {
+      var found, j, k, len1, len2, points, px, py, pz, ref, ref1, vx, vy, vz, x, y, z;
+      points = [];
+      ref = shape.points;
+      for (j = 0, len1 = ref.length; j < len1; j++) {
+        ({
+          vertex: [vx, vy, vz]
+        } = ref[j]);
+        found = false;
+        ref1 = points.slice();
+        for (k = 0, len2 = ref1.length; k < len2; k++) {
+          [px, py, pz] = ref1[k];
+          x = px === vx;
+          y = py === vy;
+          z = pz === vz;
+          if (found = x && y && z) {
+            break;
+          }
+        }
+        if (!found) {
+          points.push([vx, vy, vz]);
+        }
+      }
+      return Point.from(points.flat());
+    }
+
+    static edges(shape) {
+      var count, found, founds, i, j, k, len1, len2, points, px, py, pz, ref, ref1, vx, vy, vz, x, y, z;
+      points = [];
+      founds = [];
+      count = 0;
+      ref = shape.points;
+      for (i = j = 0, len1 = ref.length; j < len1; i = ++j) {
+        ({
+          vertex: [vx, vy, vz]
+        } = ref[i]);
+        found = false;
+        ref1 = points.slice();
+        for (k = 0, len2 = ref1.length; k < len2; k++) {
+          [px, py, pz] = ref1[k];
+          x = px === vx;
+          y = py === vy;
+          z = pz === vz;
+          if (found = x && y && z) {
+            break;
+          }
+        }
+        if (!found) {
+          points.push([vx, vy, vz]);
+        }
+      }
+      return Point.from(points.flat());
+    }
+
     constructor(canvas) {
       var ref;
       Object.defineProperties((ref = super(), this.render = this.render.bind(this), ref), {

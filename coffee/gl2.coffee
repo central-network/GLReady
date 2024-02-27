@@ -253,6 +253,34 @@ export default class GL2 extends EventTarget
     zNear       : 0.01
     zFar        : 1000
 
+    @corners    : ( shape ) ->
+        points  = []
+        for { vertex: [vx, vy, vz] } in shape.points
+            found = no
+            for [ px, py, pz ] in points.slice()
+                x = px is vx
+                y = py is vy
+                z = pz is vz
+                break if found = x and y and z
+            unless found then points.push [ vx, vy, vz ]
+        Point.from points.flat()
+
+    @edges      : ( shape ) ->
+        points  = []
+        founds  = []
+        count   = 0
+        for { vertex: [vx, vy, vz] }, i in shape.points
+            found = no
+            for [ px, py, pz ] in points.slice()
+                x = px is vx
+                y = py is vy
+                z = pz is vz
+                break if found = x and y and z
+            if !found then points.push [ vx, vy, vz ]
+                
+        Point.from points.flat()
+
+
     constructor : ( canvas ) ->
 
         Object.defineProperties super(),
@@ -499,7 +527,6 @@ export default class GL2 extends EventTarget
                 }                    
 
         )( headersIndex )
-
 
     render      : ( t ) =>
 

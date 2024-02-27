@@ -329,16 +329,7 @@
             let shape1 = gl2.malloc( pointCount, gl2.POINTS );
 
 
-
             let x, y, z, r = Math.random(), g = Math.random(), b = Math.random(), a;
-
-            shape1.points.forEach( (point, i) => {
-                let begin = i * 3;
-                let end = begin + 3;
-
-                point.vertex.set( set.subarray( begin, end ) )
-                point.color.set( clr.subarray( begin, end ) )
-            })
 
             shape2.points.forEach( (point, i) => {
                 let begin = i * 3;
@@ -353,27 +344,45 @@
                 point.color.set( [ r, g, b, 1 ] )
             })
 
-            console.log( shape1 )
             console.log( shape2 )
+
+            let pointsCloud = GL2.corners( shape2 );
+            let shape3 = gl2.malloc( pointsCloud.length/3, gl2.POINTS )
+
+            shape3.points.forEach( (point, i) => {
+                let begin = i * 3;
+                let end = begin + 3;
+
+                [ x, y, z ] = pointsCloud.subarray( begin, end );
+
+                x -= 200
+
+                point.vertex.set( [ x, y, z ] )
+                point.color.set( [ 0, 1, 0, 1 ] )
+            })
+
+
+            let linesCloud = GL2.edges( shape2 );
+            let shape4 = gl2.malloc( linesCloud.length/3, gl2.LINES )
+
+            shape4.points.forEach( (point, i) => {
+                let begin = i * 3;
+                let end = begin + 3;
+
+                [ x, y, z ] = linesCloud.subarray( begin, end );
+
+                y += 200
+
+                point.vertex.set( [ x, y, z ] )
+                point.color.set( [ 0, 0, 1, 1 ] )
+            })
+
             
             gl2.pointSize = 20
 
             gl2.upload()
             gl2.render()
 
-            setInterval(function (){
-
-                shape1.points.forEach( (point, i) => {
-                    let begin = i * 3;
-                    let end = begin + 3;
-                    point.color.set( clr.subarray( begin, end ).reverse() )
-                })
-
-                gl2.pointSize = Math.floor( Math.random() * 20)
-                
-                shape1.needsUpload = 1
-
-            }, 3000)
 
             document.querySelectorAll("input").forEach( input => {
                 input.oninput = function ( e ) {
@@ -396,10 +405,15 @@
 
             gl2.queue( time => {
 
-                shape1.points.forEach( (point, i) => {
-                    point.z += .1
+                shape2.points.forEach( (point, i) => {
+                    point.z += 1
                 })
-                shape1.needsUpload = 1
+                shape2.needsUpload = 1
+                
+                shape3.points.forEach( (point, i) => {
+                    point.x += 1
+                })
+                shape3.needsUpload = 1
                 
 
                 if (bind.rotating) {
