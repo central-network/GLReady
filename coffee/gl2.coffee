@@ -161,22 +161,11 @@ FIRST_LINES         = DRAW_COUNT * 2
 INDEX_LINES         = DRAW_LENGTH * 2
 BYTE_LINES          = INDEX_LINES * 4
 
-
 COUNT_TRIANGLES     = 0
 COUNT_POINTS        = 0
 COUNT_LINES         = 0
 
-
-console.log {BYTE_POINTS, INDEX_POINTS, FIRST_POINTS, DRAW_COUNT}
-
-LENGTH_TRIANGLES    = 0
-LENGTH_POINTS       = 0
-LENGTH_LINES        = 0
-
-HEADERS_BYTEOFFSET  = DRAW_FINISH
-HEADERS_LENGTH      = 1e4
-HEADERS_BUFFER      = new Uint32Array SHARED_ARRAY_BUFFER, HEADERS_BYTEOFFSET, HEADERS_LENGTH
-
+HEADERS_BUFFER      = new Uint32Array SHARED_ARRAY_BUFFER, DRAW_FINISH, 1e4
 COUNT_HEADERS       = 0
 LENGTH_HEADERS      = 0
 
@@ -260,7 +249,7 @@ export default class GL2 extends EventTarget
     '
 
     scene       : new Float32Array 256
-    pointsCount  : 0
+    count  : 0
     rendering   : yes
 
     yFov        : Math.rad 90
@@ -384,7 +373,7 @@ export default class GL2 extends EventTarget
    
     upload      : ( ptr ) ->
         if !ptr then @gl.bufferData     @gl.ARRAY_BUFFER, DRAW_BUFFER, @gl.STATIC_DRAW
-        else @gl.bufferSubData          @gl.ARRAY_BUFFER, ptr.byteOffset, DRAW_BUFFER, ptr.begin, ptr.pointsLength
+        else @gl.bufferSubData          @gl.ARRAY_BUFFER, ptr.byteOffset, DRAW_BUFFER, ptr.begin, ptr.length
 
         @gl.vertexAttribPointer         @a_Vertex, 3, @gl.FLOAT, no, 28, 0
         @gl.vertexAttribPointer         @a_Color, 4, @gl.FLOAT, no, 28, 12
@@ -402,8 +391,6 @@ export default class GL2 extends EventTarget
         [ WebGL2RenderingContext::LINES ]     : get : -> @LINES
 
 
-
-
     malloc          : ( count, drawAs = @TRIANGLES ) ->
         BYTES_PER_ELEMENT   = 4
         HEADER_ITEM_COUNT   = 24
@@ -411,59 +398,53 @@ export default class GL2 extends EventTarget
 
         if drawAs is @TRIANGLES
             
-            pointsCount       = count
-            pointsLength      = pointsCount * ITEMS_PER_VERTEX
-            
-            byteOffset        = BYTE_TRIANGLES
-            byteLength        = pointsLength * BYTES_PER_ELEMENT
-            
             begin             = INDEX_TRIANGLES
-            end               = begin + pointsLength
+            length            = ITEMS_PER_VERTEX * count
 
-            INDEX_TRIANGLES  += pointsLength
-            LENGTH_TRIANGLES += pointsLength
-            COUNT_TRIANGLES  += pointsCount
+            byteOffset        = BYTE_TRIANGLES
+            byteLength        = BYTES_PER_ELEMENT * length
+            
+            INDEX_TRIANGLES  += length
+            COUNT_TRIANGLES  += count
             BYTE_TRIANGLES   += byteLength
     
         else if drawAs is @POINTS
             
-            pointsCount       = count
-            pointsLength      = pointsCount * ITEMS_PER_VERTEX
-            
-            byteOffset        = BYTE_POINTS
-            byteLength        = pointsLength * BYTES_PER_ELEMENT
-
             begin             = INDEX_POINTS
-            end               = begin + pointsLength
+            length            = ITEMS_PER_VERTEX * count
 
-            INDEX_POINTS     += pointsLength
-            LENGTH_POINTS    += pointsLength
-            COUNT_POINTS     += pointsCount
+            byteOffset        = BYTE_POINTS
+            byteLength        = BYTES_PER_ELEMENT * length
+
+            INDEX_POINTS     += length
+            COUNT_POINTS     += count
             BYTE_POINTS      += byteLength
 
         else if drawAs is @LINES
             
-            pointsCount       = count
-            pointsLength      = pointsCount * ITEMS_PER_VERTEX
+            begin             = INDEX_LINES
+            length            = ITEMS_PER_VERTEX * count
 
             byteOffset        = BYTE_LINES
-            byteLength        = pointsLength * BYTES_PER_ELEMENT
-            
-            begin             = INDEX_LINES
-            end               = begin + pointsLength
+            byteLength        = BYTES_PER_ELEMENT * length
 
-            INDEX_LINES      += pointsLength
-            LENGTH_LINES     += pointsLength
-            COUNT_LINES      += pointsCount
+            INDEX_LINES      += length
+            COUNT_LINES      += count
             BYTE_LINES       += byteLength
 
         else throw [ "UNDEFINED_DRAW_METHOD:", drawAs ]
 
         HEADERS_BUFFER.set [
-            byteOffset, byteLength,
-            pointsCount, pointsLength,
-            begin, end, COUNT_HEADERS++,
-            drawAs, enabled = 1, needsUpload = 1,
+            byteOffset,
+            byteLength,
+            count,
+            length,
+            begin,
+            end         = begin + length, 
+            index       = COUNT_HEADERS++,
+            drawAs,
+            enabled     = 1,
+            needsUpload = 1,
             UNUSED, UNUSED, 
             
             r, g, b, a,
@@ -476,7 +457,7 @@ export default class GL2 extends EventTarget
         @objects[ @objects.length ] = new ( class Mesh extends Number
 
             [ Symbol.iterator ] : ->
-                yield @point i for i in [ 0 ... @pointsCount ]
+                yield @point i for i in [ 0 ... @count ]
 
             point               : ( index ) ->
                 begin = @begin + ITEMS_PER_VERTEX * index
@@ -488,8 +469,8 @@ export default class GL2 extends EventTarget
                 byteOffset      : get : -> @headers[0]
                 byteLength      : get : -> @headers[1]
                 
-                pointsCount     : get : -> @headers[2]
-                pointsLength    : get : -> @headers[3]
+                count           : get : -> @headers[2]
+                length          : get : -> @headers[3]
 
                 begin           : get : -> @headers[4]
                 end             : get : -> @headers[5]
@@ -510,11 +491,11 @@ export default class GL2 extends EventTarget
 
                 points          : 
                     set         : -> @attributes.set arguments[0].flat()           
-                    get         : -> @point i for i in [ 0 ... @pointsCount ]
+                    get         : -> @point i for i in [ 0 ... @count ]
 
                 dump            : get : -> {
                     @byteOffset, @byteLength,
-                    @pointsCount, @pointsLength,
+                    @count, @length,
                     @begin, @end, @index,
                     @drawAs, @enabled, @needsUpload,
                     @color, @rotation, @position

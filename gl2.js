@@ -1,4 +1,4 @@
-var BUFFERS, BYTE_LINES, BYTE_POINTS, BYTE_TRIANGLES, COUNT_HEADERS, COUNT_LINES, COUNT_POINTS, COUNT_TRIANGLES, DRAW_BUFFER, DRAW_COUNT, DRAW_FINISH, DRAW_LENGTH, FIRST_LINES, FIRST_POINTS, FIRST_TRIANGLES, GL2, HEADERS_BUFFER, HEADERS_BYTEOFFSET, HEADERS_LENGTH, INDEX_LINES, INDEX_POINTS, INDEX_TRIANGLES, LENGTH_HEADERS, LENGTH_LINES, LENGTH_POINTS, LENGTH_TRIANGLES, SHARED_ARRAY, SHARED_ARRAY_BUFFER, UNUSED, a, b, dx, dy, dz, g, r, rx, ry, rz,
+var BUFFERS, BYTE_LINES, BYTE_POINTS, BYTE_TRIANGLES, COUNT_HEADERS, COUNT_LINES, COUNT_POINTS, COUNT_TRIANGLES, DRAW_BUFFER, DRAW_COUNT, DRAW_FINISH, DRAW_LENGTH, FIRST_LINES, FIRST_POINTS, FIRST_TRIANGLES, GL2, HEADERS_BUFFER, INDEX_LINES, INDEX_POINTS, INDEX_TRIANGLES, LENGTH_HEADERS, SHARED_ARRAY, SHARED_ARRAY_BUFFER, UNUSED, a, b, dx, dy, dz, g, r, rx, ry, rz,
   boundMethodCheck = function(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new Error('Bound instance method accessed before binding'); } };
 
 Object.defineProperties(Math, {
@@ -208,19 +208,7 @@ COUNT_POINTS = 0;
 
 COUNT_LINES = 0;
 
-console.log({BYTE_POINTS, INDEX_POINTS, FIRST_POINTS, DRAW_COUNT});
-
-LENGTH_TRIANGLES = 0;
-
-LENGTH_POINTS = 0;
-
-LENGTH_LINES = 0;
-
-HEADERS_BYTEOFFSET = DRAW_FINISH;
-
-HEADERS_LENGTH = 1e4;
-
-HEADERS_BUFFER = new Uint32Array(SHARED_ARRAY_BUFFER, HEADERS_BYTEOFFSET, HEADERS_LENGTH);
+HEADERS_BUFFER = new Uint32Array(SHARED_ARRAY_BUFFER, DRAW_FINISH, 1e4);
 
 COUNT_HEADERS = 0;
 
@@ -545,7 +533,7 @@ export default GL2 = (function() {
       if (!ptr) {
         this.gl.bufferData(this.gl.ARRAY_BUFFER, DRAW_BUFFER, this.gl.STATIC_DRAW);
       } else {
-        this.gl.bufferSubData(this.gl.ARRAY_BUFFER, ptr.byteOffset, DRAW_BUFFER, ptr.begin, ptr.pointsLength);
+        this.gl.bufferSubData(this.gl.ARRAY_BUFFER, ptr.byteOffset, DRAW_BUFFER, ptr.begin, ptr.length);
       }
       this.gl.vertexAttribPointer(this.a_Vertex, 3, this.gl.FLOAT, false, 28, 0);
       this.gl.vertexAttribPointer(this.a_Color, 4, this.gl.FLOAT, false, 28, 12);
@@ -554,54 +542,45 @@ export default GL2 = (function() {
     }
 
     malloc(count, drawAs = this.TRIANGLES) {
-      var BYTES_PER_ELEMENT, HEADER_ITEM_COUNT, ITEMS_PER_VERTEX, Mesh, begin, byteLength, byteOffset, enabled, end, headersIndex, needsUpload, pointsCount, pointsLength;
+      var BYTES_PER_ELEMENT, HEADER_ITEM_COUNT, ITEMS_PER_VERTEX, Mesh, begin, byteLength, byteOffset, enabled, end, headersIndex, index, length, needsUpload;
       BYTES_PER_ELEMENT = 4;
       HEADER_ITEM_COUNT = 24;
       ITEMS_PER_VERTEX = 7;
       if (drawAs === this.TRIANGLES) {
-        pointsCount = count;
-        pointsLength = pointsCount * ITEMS_PER_VERTEX;
-        byteOffset = BYTE_TRIANGLES;
-        byteLength = pointsLength * BYTES_PER_ELEMENT;
         begin = INDEX_TRIANGLES;
-        end = begin + pointsLength;
-        INDEX_TRIANGLES += pointsLength;
-        LENGTH_TRIANGLES += pointsLength;
-        COUNT_TRIANGLES += pointsCount;
+        length = ITEMS_PER_VERTEX * count;
+        byteOffset = BYTE_TRIANGLES;
+        byteLength = BYTES_PER_ELEMENT * length;
+        INDEX_TRIANGLES += length;
+        COUNT_TRIANGLES += count;
         BYTE_TRIANGLES += byteLength;
       } else if (drawAs === this.POINTS) {
-        pointsCount = count;
-        pointsLength = pointsCount * ITEMS_PER_VERTEX;
-        byteOffset = BYTE_POINTS;
-        byteLength = pointsLength * BYTES_PER_ELEMENT;
         begin = INDEX_POINTS;
-        end = begin + pointsLength;
-        INDEX_POINTS += pointsLength;
-        LENGTH_POINTS += pointsLength;
-        COUNT_POINTS += pointsCount;
+        length = ITEMS_PER_VERTEX * count;
+        byteOffset = BYTE_POINTS;
+        byteLength = BYTES_PER_ELEMENT * length;
+        INDEX_POINTS += length;
+        COUNT_POINTS += count;
         BYTE_POINTS += byteLength;
       } else if (drawAs === this.LINES) {
-        pointsCount = count;
-        pointsLength = pointsCount * ITEMS_PER_VERTEX;
-        byteOffset = BYTE_LINES;
-        byteLength = pointsLength * BYTES_PER_ELEMENT;
         begin = INDEX_LINES;
-        end = begin + pointsLength;
-        INDEX_LINES += pointsLength;
-        LENGTH_LINES += pointsLength;
-        COUNT_LINES += pointsCount;
+        length = ITEMS_PER_VERTEX * count;
+        byteOffset = BYTE_LINES;
+        byteLength = BYTES_PER_ELEMENT * length;
+        INDEX_LINES += length;
+        COUNT_LINES += count;
         BYTE_LINES += byteLength;
       } else {
         throw ["UNDEFINED_DRAW_METHOD:", drawAs];
       }
-      HEADERS_BUFFER.set([byteOffset, byteLength, pointsCount, pointsLength, begin, end, COUNT_HEADERS++, drawAs, enabled = 1, needsUpload = 1, UNUSED, UNUSED, r, g, b, a, rx, ry, rz, UNUSED, dx, dy, dz, UNUSED], headersIndex = LENGTH_HEADERS);
+      HEADERS_BUFFER.set([byteOffset, byteLength, count, length, begin, end = begin + length, index = COUNT_HEADERS++, drawAs, enabled = 1, needsUpload = 1, UNUSED, UNUSED, r, g, b, a, rx, ry, rz, UNUSED, dx, dy, dz, UNUSED], headersIndex = LENGTH_HEADERS);
       LENGTH_HEADERS += HEADER_ITEM_COUNT;
       return this.objects[this.objects.length] = new (Mesh = (function() {
         class Mesh extends Number {
           * [Symbol.iterator]() {
             var i, j, ref, results;
             results = [];
-            for (i = j = 0, ref = this.pointsCount; (0 <= ref ? j < ref : j > ref); i = 0 <= ref ? ++j : --j) {
+            for (i = j = 0, ref = this.count; (0 <= ref ? j < ref : j > ref); i = 0 <= ref ? ++j : --j) {
               results.push((yield this.point(i)));
             }
             return results;
@@ -626,12 +605,12 @@ export default GL2 = (function() {
               return this.headers[1];
             }
           },
-          pointsCount: {
+          count: {
             get: function() {
               return this.headers[2];
             }
           },
-          pointsLength: {
+          length: {
             get: function() {
               return this.headers[3];
             }
@@ -701,7 +680,7 @@ export default GL2 = (function() {
             get: function() {
               var i, j, ref, results;
               results = [];
-              for (i = j = 0, ref = this.pointsCount; (0 <= ref ? j < ref : j > ref); i = 0 <= ref ? ++j : --j) {
+              for (i = j = 0, ref = this.count; (0 <= ref ? j < ref : j > ref); i = 0 <= ref ? ++j : --j) {
                 results.push(this.point(i));
               }
               return results;
@@ -709,7 +688,7 @@ export default GL2 = (function() {
           },
           dump: {
             get: function() {
-              return {byteOffset: this.byteOffset, byteLength: this.byteLength, pointsCount: this.pointsCount, pointsLength: this.pointsLength, begin: this.begin, end: this.end, index: this.index, drawAs: this.drawAs, enabled: this.enabled, needsUpload: this.needsUpload, color: this.color, rotation: this.rotation, position: this.position};
+              return {byteOffset: this.byteOffset, byteLength: this.byteLength, count: this.count, length: this.length, begin: this.begin, end: this.end, index: this.index, drawAs: this.drawAs, enabled: this.enabled, needsUpload: this.needsUpload, color: this.color, rotation: this.rotation, position: this.position};
             }
           }
         });
@@ -860,7 +839,7 @@ export default GL2 = (function() {
 
   GL2.prototype.scene = new Float32Array(256);
 
-  GL2.prototype.pointsCount = 0;
+  GL2.prototype.count = 0;
 
   GL2.prototype.rendering = true;
 
