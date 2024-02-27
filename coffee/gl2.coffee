@@ -138,15 +138,12 @@ export class Point      extends Float32Array
             set : -> @vertex.set arguments[0]
 
 
-SHARED_ARRAY_BUFFER = new SharedArrayBuffer 1e8
-SHARED_ARRAY = new Float32Array SHARED_ARRAY_BUFFER
-BUFFERS             = SHARED_ARRAY_BUFFER
-
-
-DRAW_LENGTH         = 1e6 + 6
+DRAW_LENGTH         = 3e6 + 4
+HEAD_LENGTH         = 1e4
+BUFFER              = new SharedArrayBuffer 1e8
 DRAW_COUNT          = DRAW_LENGTH / 7
 
-DRAW_BUFFER         = new Point SHARED_ARRAY_BUFFER, 0, DRAW_LENGTH * 3
+DRAW_BUFFER         = new Point BUFFER, 0, DRAW_LENGTH * 3
 DRAW_FINISH         = DRAW_BUFFER.byteOffset + DRAW_BUFFER.byteLength
 
 FIRST_TRIANGLES     = 0
@@ -165,7 +162,7 @@ COUNT_TRIANGLES     = 0
 COUNT_POINTS        = 0
 COUNT_LINES         = 0
 
-HEADERS_BUFFER      = new Uint32Array SHARED_ARRAY_BUFFER, DRAW_FINISH, 1e4
+HEADERS_BUFFER      = new Uint32Array BUFFER, DRAW_FINISH, 1e4
 COUNT_HEADERS       = 0
 LENGTH_HEADERS      = 0
 
