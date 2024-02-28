@@ -337,13 +337,11 @@
 
                 [ x, y, z ] = set.subarray( begin, end )
 
-                x += 200
-                z += 200
 
-                point.vertex.set( [ x, y, z ] )
-                point.color.set( [ r, g, b, 1 ] )
+                point.set( [ x, y, z, 0, 0, 0, .3 ] )
             })
 
+            console.log( shape1 )
             console.log( shape2 )
 
             let pointsCloud = GL2.corners( shape2 );
@@ -355,7 +353,6 @@
 
                 [ x, y, z ] = pointsCloud.subarray( begin, end );
 
-                x -= 200
 
                 point.vertex.set( [ x, y, z ] )
                 point.color.set( [ 0, 1, 0, 1 ] )
@@ -365,24 +362,20 @@
             let linesCloud = GL2.edges( shape2 );
             let shape4 = gl2.malloc( linesCloud.length/3, gl2.LINES )
 
-            shape4.points.forEach( (point, i) => {
-                let begin = i * 3;
-                let end = begin + 3;
+            console.log( linesCloud.slice(0) )
 
-                [ x, y, z ] = linesCloud.subarray( begin, end );
+            let j = 0;
+            let len = linesCloud.length/3;
 
-                y += 200
+            for (let k=0; k<len; k++ ) {
+                let xyz = linesCloud.slice( k*3, 3 + k*3);
+                shape4.point(k).set( [...xyz, 0, 1, 1, 1] )
+            }
 
-                point.vertex.set( [ x, y, z ] )
-                point.color.set( [ 0, 0, 1, 1 ] )
-            })
-
-            
-            gl2.pointSize = 20
+            gl2.pointSize = 10
 
             gl2.upload()
             gl2.render()
-
 
             document.querySelectorAll("input").forEach( input => {
                 input.oninput = function ( e ) {
@@ -405,16 +398,6 @@
 
             gl2.queue( time => {
 
-                shape2.points.forEach( (point, i) => {
-                    point.z += 1
-                })
-                shape2.needsUpload = 1
-                
-                shape3.points.forEach( (point, i) => {
-                    point.x += 1
-                })
-                shape3.needsUpload = 1
-                
 
                 if (bind.rotating) {
                     rxCamera.value = gl2.rxCamera += bind.rx

@@ -11,6 +11,13 @@ Object.defineProperties(Math, {
     value: function(rad) {
       return rad * 180 / Math.PI;
     }
+  },
+  powsum: {
+    value: function(arr, pow = 2) {
+      return [...arr].flat().reduce(function(a, b) {
+        return a + Math.pow(b, pow);
+      });
+    }
   }
 });
 
@@ -125,12 +132,88 @@ export var M4 = (function() {
 
 }).call(this);
 
+DRAW_LENGTH = 3e6 + 4;
+
+HEAD_LENGTH = 1e4;
+
+BUFFER = new SharedArrayBuffer(1e8);
+
+DRAW_COUNT = DRAW_LENGTH / 7;
+
 export var Headers = class Headers extends Float32Array {};
 
 export var Point = (function() {
   var i, j, len1, prop, ref;
 
-  class Point extends Float32Array {};
+  class Point extends Float32Array {
+    * [Symbol.iterator]() {
+      var k, ref1, results;
+      results = [];
+      for (i = k = 0, ref1 = this.length; (0 <= ref1 ? k < ref1 : k > ref1); i = 0 <= ref1 ? ++k : --k) {
+        results.push((yield this[i]));
+      }
+      return results;
+    }
+
+    isNeighbour(point) {
+      var a, b, c, dx, dy, dz, x, y, z;
+      [a, b, c] = this.vertex;
+      [x, y, z] = point;
+      dx = x - a;
+      dy = y - b;
+      dz = z - c;
+      if (dx && !dy && !dz) {
+        return dx;
+      }
+      if (!dx && dy && !dz) {
+        return dy;
+      }
+      if (!dx && !dy && dz) {
+        return dz;
+      }
+    }
+
+    distance2d(p0, p1 = this) {
+      var a, b, c, dx, dy, dz, x, y, z;
+      [a, b, c] = p0;
+      [x, y, z] = p1;
+      dx = Math.abs(a - x);
+      dy = Math.abs(b - y);
+      dz = Math.abs(c - z);
+      if (!dx && !dy && !dz) {
+        return 0;
+      }
+      if (dx && !dy && !dz) {
+        return dx;
+      }
+      if (dy && !dz && !dx) {
+        return dy;
+      }
+      if (dz && !dx && !dy) {
+        return dz;
+      }
+      throw ["POINTS_ARE_NOT_IN_SAME_PLANE", p0, p1];
+    }
+
+    nearest(points) {
+      var dist, distance, k, len2, nearest, point;
+      distance = +2e308;
+      nearest = null;
+      for (k = 0, len2 = points.length; k < len2; k++) {
+        point = points[k];
+        if (!(dist = this.distance2d(point))) {
+          continue;
+        }
+        if (distance < dist) {
+          continue;
+        }
+        distance = dist;
+        nearest = point;
+      }
+      return nearest;
+    }
+
+  };
 
   ref = ["x", "y", "z", "r", "g", "b", "a"];
   for (i = j = 0, len1 = ref.length; j < len1; i = ++j) {
@@ -163,20 +246,22 @@ export var Point = (function() {
       set: function() {
         return this.vertex.set(arguments[0]);
       }
+    },
+    vLength: {
+      get: function() {
+        return Math.sqrt(Math.powsum(this.subarray(0, 3)));
+      }
+    },
+    i: {
+      get: function() {
+        return this.byteOffset / this.byteLength % DRAW_COUNT;
+      }
     }
   });
 
   return Point;
 
 }).call(this);
-
-DRAW_LENGTH = 3e6 + 4;
-
-HEAD_LENGTH = 1e4;
-
-BUFFER = new SharedArrayBuffer(1e8);
-
-DRAW_COUNT = DRAW_LENGTH / 7;
 
 DRAW_BUFFER = new Point(BUFFER, 0, DRAW_LENGTH * 3);
 
@@ -259,9 +344,16 @@ export var RGBA = (function() {
 
 }).call(this);
 
+export var XYZ = class XYZ {};
+
 Object.defineProperties(Array.prototype, {
   toRGBA: {
     value: RGBA[Array]
+  },
+  vLength: {
+    get: function() {
+      return Math.sqrt(Math.powsum(this, 2));
+    }
   }
 });
 
@@ -274,6 +366,11 @@ Object.defineProperties(String.prototype, {
 Object.defineProperties(Object.getPrototypeOf(Uint8Array.prototype), {
   toRGBA: {
     value: RGBA[Array]
+  },
+  vLength: {
+    get: function() {
+      return Math.sqrt(Math.powsum(this, 2));
+    }
   }
 });
 
@@ -295,6 +392,8 @@ export var Position = class Position extends Float32Array {};
 export var Rotation = class Rotation extends Float32Array {};
 
 export var Points = class Points extends Array {};
+
+export var Triangle = class Triangle extends Array {};
 
 export default GL2 = (function() {
   var LINES, POINTS, TRIANGLES;
@@ -327,29 +426,34 @@ export default GL2 = (function() {
     }
 
     static edges(shape) {
-      var count, found, founds, i, j, k, len1, len2, points, px, py, pz, ref, ref1, vx, vy, vz, x, y, z;
+      var c, clength, corners, d, found, i, j, k, len1, len2, nearest, neighs, pair, pairs, point, points, ref;
+      i = 0;
+      pairs = [];
       points = [];
-      founds = [];
-      count = 0;
+      corners = this.corners(shape);
+      clength = corners.length;
       ref = shape.points;
-      for (i = j = 0, len1 = ref.length; j < len1; i = ++j) {
-        ({
-          vertex: [vx, vy, vz]
-        } = ref[i]);
+      for (j = 0, len1 = ref.length; j < len1; j++) {
+        point = ref[j];
+        neighs = shape.neighbours(point);
+        nearest = point.nearest(neighs);
+        pair = [c = nearest.i, d = point.i];
         found = false;
-        ref1 = points.slice();
-        for (k = 0, len2 = ref1.length; k < len2; k++) {
-          [px, py, pz] = ref1[k];
-          x = px === vx;
-          y = py === vy;
-          z = pz === vz;
-          if (found = x && y && z) {
+        for (k = 0, len2 = pairs.length; k < len2; k++) {
+          [a, b] = pairs[k];
+          if (found = (c === a) && (d === b)) {
+            break;
+          }
+          if (found = (c === b) && (d === a)) {
             break;
           }
         }
-        if (!found) {
-          points.push([vx, vy, vz]);
+        if (found) {
+          continue;
         }
+        pairs.push(pair);
+        points.push(...nearest.vertex);
+        points.push(...point.vertex);
       }
       return Point.from(points.flat());
     }
@@ -487,7 +591,8 @@ export default GL2 = (function() {
       });
       Object.assign(this.canvas, {
         width: this.width * this.rPixel,
-        height: this.height * this.rPixel
+        height: this.height * this.rPixel,
+        style: "background: rgb(15, 17, 26)"
       });
       Object.defineProperties(this, {
         buffer: {
@@ -513,9 +618,6 @@ export default GL2 = (function() {
         clearMask: {
           value: this.gl.DEPTH_BUFFER_BIT | this.gl.COLOR_BUFFER_BIT
         },
-        clearDepth: {
-          value: 1
-        },
         pointSize: {
           get: function() {
             return this.gl.getUniform(this.program, this.u_PointSize);
@@ -533,9 +635,16 @@ export default GL2 = (function() {
       this.gl.attachShader(this.program, this.fragmentShader);
       this.gl.enable(this.gl.DEPTH_TEST);
       this.gl.enable(this.gl.CULL_FACE);
+      this.gl.enable(this.gl.BLEND);
+      this.gl.blendFunc(this.gl.SRC_COLOR, this.gl.DST_COLOR);
+      this.gl.blendEquation(this.gl.FUNC_ADD);
+      this.gl.blendColor(0, 0, 0, 0);
       this.gl.depthFunc(this.gl.LEQUAL);
-      this.gl.clearDepth(this.clearDepth);
+      this.gl.depthMask(false);
+      this.gl.clearDepth(1);
       this.gl.clearColor(...this.clearColor);
+      this.gl.frontFace(this.gl.CCW);
+      this.gl.cullFace(this.gl.BACK);
       this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.buffer);
       this.gl.bufferData(this.gl.ARRAY_BUFFER, DRAW_BUFFER, this.gl.STATIC_DRAW);
       this.gl.vertexAttribPointer(this.a_Vertex, 3, this.gl.FLOAT, false, 28, 0);
@@ -562,7 +671,7 @@ export default GL2 = (function() {
           value: this.gl.getUniformLocation(this.program, "u_FudgeFactor")
         }
       });
-      this.dxCamera = -150;
+      this.dxCamera = 0;
       this.dyCamera = 0;
       this.dzCamera = -360;
       this.rxCamera = Math.rad(180);
@@ -594,7 +703,7 @@ export default GL2 = (function() {
     }
 
     malloc(count, drawAs = this.TRIANGLES) {
-      var BYTES_PER_ELEMENT, HEADER_ITEM_COUNT, ITEMS_PER_VERTEX, Mesh, begin, byteLength, byteOffset, enabled, end, headersIndex, index, length, needsUpload;
+      var BYTES_PER_ELEMENT, HEADER_ITEM_COUNT, ITEMS_PER_VERTEX, Mesh, begin, byteLength, byteOffset, enabled, end, hIndex, headersIndex, length, needsUpload;
       BYTES_PER_ELEMENT = 4;
       HEADER_ITEM_COUNT = 24;
       ITEMS_PER_VERTEX = 7;
@@ -625,7 +734,7 @@ export default GL2 = (function() {
       } else {
         throw ["UNDEFINED_DRAW_METHOD:", drawAs];
       }
-      HEADERS_BUFFER.set([byteOffset, byteLength, count, length, begin, end = begin + length, index = COUNT_HEADERS++, drawAs, enabled = 1, needsUpload = 1, UNUSED, UNUSED, r, g, b, a, rx, ry, rz, UNUSED, dx, dy, dz, UNUSED], headersIndex = LENGTH_HEADERS);
+      HEADERS_BUFFER.set([byteOffset, byteLength, count, length, begin, end = begin + length, hIndex = COUNT_HEADERS++, drawAs, enabled = 1, needsUpload = 1, UNUSED, UNUSED, r, g, b, a, rx, ry, rz, UNUSED, dx, dy, dz, UNUSED], headersIndex = LENGTH_HEADERS);
       LENGTH_HEADERS += HEADER_ITEM_COUNT;
       return this.objects[this.objects.length] = new (Mesh = (function() {
         class Mesh extends Number {
@@ -638,10 +747,27 @@ export default GL2 = (function() {
             return results;
           }
 
-          point(index) {
-            begin = this.begin + ITEMS_PER_VERTEX * index;
+          point(i) {
+            begin = this.begin + ITEMS_PER_VERTEX * i;
             end = begin + ITEMS_PER_VERTEX;
             return DRAW_BUFFER.subarray(begin, end);
+          }
+
+          triangle(i) {
+            return [this.point(i), this.point(i + 1), this.point(i + 2)];
+          }
+
+          neighbours(point) {
+            var d, i, j, neighs, p, ref, x, y, z;
+            [x, y, z] = point;
+            neighs = [];
+            for (i = j = 0, ref = this.count; (0 <= ref ? j < ref : j > ref); i = 0 <= ref ? ++j : --j) {
+              p = this.point(i);
+              if (d = p.isNeighbour(point)) {
+                neighs.push(p);
+              }
+            }
+            return neighs;
           }
 
         };
@@ -677,7 +803,7 @@ export default GL2 = (function() {
               return this.headers[5];
             }
           },
-          index: {
+          hIndex: {
             get: function() {
               return this.headers[6];
             }
@@ -726,9 +852,6 @@ export default GL2 = (function() {
             }
           },
           points: {
-            set: function() {
-              return this.attributes.set(arguments[0].flat());
-            },
             get: function() {
               var i, j, ref, results;
               results = [];
@@ -738,9 +861,19 @@ export default GL2 = (function() {
               return results;
             }
           },
+          triangles: {
+            get: function() {
+              var i, j, ref, results;
+              results = [];
+              for (i = j = 0, ref = this.count / 3; (0 <= ref ? j < ref : j > ref); i = 0 <= ref ? ++j : --j) {
+                results.push(this.triangle(i));
+              }
+              return results;
+            }
+          },
           dump: {
             get: function() {
-              return {byteOffset: this.byteOffset, byteLength: this.byteLength, count: this.count, length: this.length, begin: this.begin, end: this.end, index: this.index, drawAs: this.drawAs, enabled: this.enabled, needsUpload: this.needsUpload, color: this.color, rotation: this.rotation, position: this.position};
+              return {byteOffset: this.byteOffset, byteLength: this.byteLength, count: this.count, length: this.length, begin: this.begin, end: this.end, id: this.id, drawAs: this.drawAs, enabled: this.enabled, needsUpload: this.needsUpload, color: this.color, rotation: this.rotation, position: this.position};
             }
           }
         });

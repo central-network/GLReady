@@ -1,6 +1,8 @@
 Object.defineProperties Math,
     rad             : value : ( deg ) -> deg * Math.PI / 180
     deg             : value : ( rad ) -> rad * 180 / Math.PI
+    powsum          : value : ( arr, pow = 2 ) ->
+        [ ...arr ].flat().reduce (a, b) -> a + Math.pow b, pow
 
 #? https://webgl2fundamentals.org/webgl/lessons/webgl-3d-perspective.html
 export class M4 extends Float32Array
@@ -118,7 +120,10 @@ export class M4 extends Float32Array
     zRotate     : ( rz ) ->
         M4.multiply this, @zRotation rz
 
-
+DRAW_LENGTH         = 3e6 + 4
+HEAD_LENGTH         = 1e4
+BUFFER              = new SharedArrayBuffer 1e8
+DRAW_COUNT          = DRAW_LENGTH / 7
 
 export class Headers    extends Float32Array
 export class Point      extends Float32Array
@@ -127,6 +132,9 @@ export class Point      extends Float32Array
             get : -> this[index]
             set : -> this[index] = arguments[0]
         )(i)
+
+    [ Symbol.iterator ] : ->
+        yield @[i] for i in [ 0 ... @length ]
 
     Object.defineProperties this::,
         color   :
@@ -137,11 +145,50 @@ export class Point      extends Float32Array
             get : -> new Vertex @buffer, @byteOffset + 0, 3
             set : -> @vertex.set arguments[0]
 
+        vLength : 
+            get : -> Math.sqrt Math.powsum @subarray 0, 3
 
-DRAW_LENGTH         = 3e6 + 4
-HEAD_LENGTH         = 1e4
-BUFFER              = new SharedArrayBuffer 1e8
-DRAW_COUNT          = DRAW_LENGTH / 7
+        i       :
+            get : -> @byteOffset / @byteLength % DRAW_COUNT
+
+    isNeighbour : ( point ) ->
+        [ a, b, c ] = @vertex
+        [ x, y, z ] = point
+
+        dx = x - a
+        dy = y - b
+        dz = z - c
+
+        return dx if  dx and !dy and !dz
+        return dy if !dx and  dy and !dz
+        return dz if !dx and !dy and  dz
+
+    distance2d  : ( p0, p1 = this ) ->
+        [ a, b, c ] = p0    
+        [ x, y, z ] = p1
+        
+        dx = Math.abs a - x
+        dy = Math.abs b - y
+        dz = Math.abs c - z
+
+        return 0 if !dx and !dy and !dz 
+        return dx if dx and !dy and !dz
+        return dy if dy and !dz and !dx
+        return dz if dz and !dx and !dy
+
+        throw [ "POINTS_ARE_NOT_IN_SAME_PLANE", p0, p1 ]
+
+    nearest     : ( points ) ->
+        distance = +Infinity
+        nearest = null
+
+        for point in points
+            continue if !dist = @distance2d point
+            continue if distance < dist
+            distance = dist
+            nearest = point
+
+        nearest
 
 DRAW_BUFFER         = new Point BUFFER, 0, DRAW_LENGTH * 3
 DRAW_FINISH         = DRAW_BUFFER.byteOffset + DRAW_BUFFER.byteLength
@@ -202,14 +249,18 @@ export class RGBA
             $.padEnd( 8, "ff" ).match( /.{1,2}/g )
                 .map( (n) -> parseInt( n, 16 ) / 0xff )
 
+export class XYZ
+
 Object.defineProperties Array::, 
     toRGBA : value : RGBA[ Array ]
+    vLength : get : -> Math.sqrt Math.powsum this, 2
 
 Object.defineProperties String::, 
     toRGBA : value : RGBA[ String ]
 
 Object.defineProperties Object.getPrototypeOf(Uint8Array::), 
-    toRGBA : value : RGBA[ Array ]
+    toRGBA  : value : RGBA[ Array ]
+    vLength : get : -> Math.sqrt Math.powsum this, 2
 
 export class Color      extends Float32Array
     set : -> super arguments[0].toRGBA()
@@ -219,6 +270,7 @@ export class Vertices   extends Array
 export class Position   extends Float32Array
 export class Rotation   extends Float32Array
 export class Points     extends Array
+export class Triangle   extends Array
 
 export default class GL2 extends EventTarget
 
@@ -246,7 +298,7 @@ export default class GL2 extends EventTarget
     '
 
     scene       : new Float32Array 256
-    count  : 0
+    count       : 0
     rendering   : yes
 
     yFov        : Math.rad 90
@@ -266,18 +318,29 @@ export default class GL2 extends EventTarget
         Point.from points.flat()
 
     @edges      : ( shape ) ->
-        points  = []
-        founds  = []
-        count   = 0
-        for { vertex: [vx, vy, vz] }, i in shape.points
+        i = 0
+        pairs = []
+        points = [] 
+
+        corners = @corners shape
+        clength = corners.length
+
+        for point in shape.points
+            neighs = shape.neighbours point 
+            nearest = point.nearest neighs
+            pair = [ c = nearest.i, d = point.i ]
             found = no
-            for [ px, py, pz ] in points.slice()
-                x = px is vx
-                y = py is vy
-                z = pz is vz
-                break if found = x and y and z
-            if !found then points.push [ vx, vy, vz ]
-                
+
+            for [ a, b ] in pairs
+                break if found = (c is a) and (d is b)
+                break if found = (c is b) and (d is a)
+            
+            continue if found
+            pairs.push pair
+
+            points.push ...nearest.vertex
+            points.push ...point.vertex
+
         Point.from points.flat()
 
 
@@ -327,6 +390,7 @@ export default class GL2 extends EventTarget
         Object.assign @canvas,
             width           : @width  * @rPixel
             height          : @height * @rPixel
+            style           : "background: rgb(15, 17, 26)"
 
         Object.defineProperties this,
             buffer          : value :   @gl.createBuffer()
@@ -338,7 +402,6 @@ export default class GL2 extends EventTarget
             clearColor      : value :   new Float32Array [ 15/0xff, 17/0xff, 26/0xff, 1 ]
             camera          : value :   new M4.Camera @yFov, @rAspect, @zNear, @zFar
             clearMask       : value :   @gl.DEPTH_BUFFER_BIT | @gl.COLOR_BUFFER_BIT
-            clearDepth      : value :   1
             pointSize       :
                 get         : -> @gl.getUniform @program, @u_PointSize
                 set         : -> @gl.uniform1f @u_PointSize, arguments[0]
@@ -353,9 +416,19 @@ export default class GL2 extends EventTarget
 
         @gl.enable                      @gl.DEPTH_TEST
         @gl.enable                      @gl.CULL_FACE
-        @gl.depthFunc                   @gl.LEQUAL
-        @gl.clearDepth                  @clearDepth
+        @gl.enable                      @gl.BLEND
+
+        @gl.blendFunc                   @gl.SRC_COLOR, @gl.DST_COLOR
+        @gl.blendEquation               @gl.FUNC_ADD
+        @gl.blendColor                  0, 0, 0, 0
+
+
+        @gl.depthFunc                   @gl.LEQUAL        
+        @gl.depthMask                   no
+        @gl.clearDepth                  1
         @gl.clearColor                  ...@clearColor
+        @gl.frontFace                   @gl.CCW
+        @gl.cullFace                    @gl.BACK
 
         @gl.bindBuffer                  @gl.ARRAY_BUFFER, @buffer
         @gl.bufferData                  @gl.ARRAY_BUFFER, DRAW_BUFFER, @gl.STATIC_DRAW
@@ -379,7 +452,7 @@ export default class GL2 extends EventTarget
             u_FudgeFactor   : value :   @gl.getUniformLocation @program, "u_FudgeFactor"
 
         
-        @dxCamera                       = -150
+        @dxCamera                       = 0
         @dyCamera                       = 0
         @dzCamera                       = -360
 
@@ -466,7 +539,7 @@ export default class GL2 extends EventTarget
             length,
             begin,
             end         = begin + length, 
-            index       = COUNT_HEADERS++,
+            hIndex      = COUNT_HEADERS++,
             drawAs,
             enabled     = 1,
             needsUpload = 1,
@@ -484,11 +557,24 @@ export default class GL2 extends EventTarget
             [ Symbol.iterator ] : ->
                 yield @point i for i in [ 0 ... @count ]
 
-            point               : ( index ) ->
-                begin = @begin + ITEMS_PER_VERTEX * index
+            point               : ( i ) ->
+                begin = @begin + ITEMS_PER_VERTEX * i
                 end = begin + ITEMS_PER_VERTEX
 
                 DRAW_BUFFER.subarray begin, end
+
+            triangle            : ( i ) ->
+                [ @point(i), @point(i+1), @point(i+2) ]
+
+            neighbours          : ( point ) ->
+                [ x, y, z ] = point
+                
+                neighs = []
+                for i in [ 0 ... @count ]
+                    p = @point i
+                    if d = p.isNeighbour point
+                        neighs.push p
+                neighs
 
             Object.defineProperties this::,
                 byteOffset      : get : -> @headers[0]
@@ -499,7 +585,7 @@ export default class GL2 extends EventTarget
 
                 begin           : get : -> @headers[4]
                 end             : get : -> @headers[5]
-                index           : get : -> @headers[6]
+                hIndex          : get : -> @headers[6]
 
                 drawAs          : get : -> GL2::[ @headers[7] ]
                 enabled         : get : -> @headers[8]
@@ -514,14 +600,13 @@ export default class GL2 extends EventTarget
                 rotation        : get : -> @headers.subarray 16, 20
                 position        : get : -> @headers.subarray 20, 24
 
-                points          : 
-                    set         : -> @attributes.set arguments[0].flat()           
-                    get         : -> @point i for i in [ 0 ... @count ]
+                points          : get : -> @point i for i in [ 0 ... @count ]
+                triangles       : get : -> @triangle i for i in [ 0 ... @count/3 ]
 
                 dump            : get : -> {
                     @byteOffset, @byteLength,
                     @count, @length,
-                    @begin, @end, @index,
+                    @begin, @end, @id,
                     @drawAs, @enabled, @needsUpload,
                     @color, @rotation, @position
                 }                    
