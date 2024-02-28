@@ -426,34 +426,35 @@ export default GL2 = (function() {
     }
 
     static edges(shape) {
-      var c, clength, corners, d, found, i, j, k, len1, len2, nearest, neighs, pair, pairs, point, points, ref;
+      var c, d, found, i, j, k, l, len1, len2, len3, neigh, neighs, pair, pairs, point, points, ref, vertex;
       i = 0;
       pairs = [];
       points = [];
-      corners = this.corners(shape);
-      clength = corners.length;
       ref = shape.points;
       for (j = 0, len1 = ref.length; j < len1; j++) {
         point = ref[j];
         neighs = shape.neighbours(point);
-        nearest = point.nearest(neighs);
-        pair = [c = nearest.i, d = point.i];
-        found = false;
-        for (k = 0, len2 = pairs.length; k < len2; k++) {
-          [a, b] = pairs[k];
-          if (found = (c === a) && (d === b)) {
-            break;
+        vertex = point.vertex;
+        for (k = 0, len2 = neighs.length; k < len2; k++) {
+          neigh = neighs[k];
+          pair = [c = neigh.i, d = point.i];
+          found = false;
+          for (l = 0, len3 = pairs.length; l < len3; l++) {
+            [a, b] = pairs[l];
+            if (found = (c === a) && (d === b)) {
+              break;
+            }
+            if (found = (c === b) && (d === a)) {
+              break;
+            }
           }
-          if (found = (c === b) && (d === a)) {
-            break;
+          if (found) {
+            continue;
+          } else {
+            pairs.push(pair);
           }
+          points.push(...vertex, ...neigh.vertex);
         }
-        if (found) {
-          continue;
-        }
-        pairs.push(pair);
-        points.push(...nearest.vertex);
-        points.push(...point.vertex);
       }
       return Point.from(points.flat());
     }
@@ -633,18 +634,16 @@ export default GL2 = (function() {
       this.gl.shaderSource(this.fragmentShader, this.fragmentShaderSource);
       this.gl.compileShader(this.fragmentShader);
       this.gl.attachShader(this.program, this.fragmentShader);
-      this.gl.enable(this.gl.DEPTH_TEST);
-      this.gl.enable(this.gl.CULL_FACE);
       this.gl.enable(this.gl.BLEND);
       this.gl.blendFunc(this.gl.SRC_COLOR, this.gl.DST_COLOR);
       this.gl.blendEquation(this.gl.FUNC_ADD);
-      this.gl.blendColor(0, 0, 0, 0);
+      this.gl.enable(this.gl.DEPTH_TEST);
       this.gl.depthFunc(this.gl.LEQUAL);
       this.gl.depthMask(false);
       this.gl.clearDepth(1);
-      this.gl.clearColor(...this.clearColor);
-      this.gl.frontFace(this.gl.CCW);
+      this.gl.enable(this.gl.CULL_FACE);
       this.gl.cullFace(this.gl.BACK);
+      this.gl.frontFace(this.gl.CCW);
       this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.buffer);
       this.gl.bufferData(this.gl.ARRAY_BUFFER, DRAW_BUFFER, this.gl.STATIC_DRAW);
       this.gl.vertexAttribPointer(this.a_Vertex, 3, this.gl.FLOAT, false, 28, 0);
@@ -887,7 +886,6 @@ export default GL2 = (function() {
       var j, job, k, l, len, len1, len2, len3, len4, m, object, ref, ref1, ref2, ref3;
       boundMethodCheck(this, GL2);
       if (this.rendering) {
-        this.gl.clear(this.clearMask);
         if (len = this.onceQueue.length) {
           ref = this.onceQueue.splice(0, len);
           for (j = 0, len1 = ref.length; j < len1; j++) {

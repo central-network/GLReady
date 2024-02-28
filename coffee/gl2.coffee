@@ -322,24 +322,25 @@ export default class GL2 extends EventTarget
         pairs = []
         points = [] 
 
-        corners = @corners shape
-        clength = corners.length
-
         for point in shape.points
-            neighs = shape.neighbours point 
-            nearest = point.nearest neighs
-            pair = [ c = nearest.i, d = point.i ]
-            found = no
+            neighs = shape.neighbours point
+            vertex = point.vertex
+                
+            for neigh in neighs
+                pair = [ c = neigh.i, d = point.i ]
+                found = no
 
-            for [ a, b ] in pairs
-                break if found = (c is a) and (d is b)
-                break if found = (c is b) and (d is a)
-            
-            continue if found
-            pairs.push pair
+                for [ a, b ] in pairs
+                    break if found = (c is a) and (d is b)
+                    break if found = (c is b) and (d is a)
 
-            points.push ...nearest.vertex
-            points.push ...point.vertex
+                if found then continue
+                else pairs.push pair
+
+                points.push(
+                    ...vertex,  
+                    ...neigh.vertex
+                )
 
         Point.from points.flat()
 
@@ -414,21 +415,18 @@ export default class GL2 extends EventTarget
         @gl.compileShader               @fragmentShader
         @gl.attachShader                @program, @fragmentShader
 
-        @gl.enable                      @gl.DEPTH_TEST
-        @gl.enable                      @gl.CULL_FACE
         @gl.enable                      @gl.BLEND
-
         @gl.blendFunc                   @gl.SRC_COLOR, @gl.DST_COLOR
         @gl.blendEquation               @gl.FUNC_ADD
-        @gl.blendColor                  0, 0, 0, 0
-
-
+        
+        @gl.enable                      @gl.DEPTH_TEST
         @gl.depthFunc                   @gl.LEQUAL        
         @gl.depthMask                   no
         @gl.clearDepth                  1
-        @gl.clearColor                  ...@clearColor
-        @gl.frontFace                   @gl.CCW
+
+        @gl.enable                      @gl.CULL_FACE
         @gl.cullFace                    @gl.BACK
+        @gl.frontFace                   @gl.CCW
 
         @gl.bindBuffer                  @gl.ARRAY_BUFFER, @buffer
         @gl.bufferData                  @gl.ARRAY_BUFFER, DRAW_BUFFER, @gl.STATIC_DRAW
@@ -616,7 +614,6 @@ export default class GL2 extends EventTarget
     render      : ( t ) =>
 
         if  @rendering
-            @gl.clear @clearMask
 
             if len = @onceQueue.length
                 for job in @onceQueue.splice 0, len

@@ -57,18 +57,18 @@
 
             let set = new Float32Array([
                 // left column front
-                0,   0,  0,
-                0, 150,  0,
+                 0,   0,  0,
+                 0, 150,  0,
                 30,   0,  0,
-                0, 150,  0,
+                 0, 150,  0,
                 30, 150,  0,
                 30,   0,  0,
 
                 // top rung front
-                30,   0,  0,
-                30,  30,  0,
+                 30,   0,  0,
+                 30,  30,  0,
                 100,   0,  0,
-                30,  30,  0,
+                 30,  30,  0,
                 100,  30,  0,
                 100,   0,  0,
 
@@ -81,18 +81,18 @@
                 67,  60,  0,
 
                 // left column back
-                    0,   0,  30,
+                 0,   0,  30,
                 30,   0,  30,
-                    0, 150,  30,
-                    0, 150,  30,
+                 0, 150,  30,
+                 0, 150,  30,
                 30,   0,  30,
                 30, 150,  30,
 
                 // top rung back
-                30,   0,  30,
+                 30,   0,  30,
                 100,   0,  30,
-                30,  30,  30,
-                30,  30,  30,
+                 30,  30,  30,
+                 30,  30,  30,
                 100,   0,  30,
                 100,  30,  30,
 
@@ -105,12 +105,12 @@
                 67,  90,  30,
 
                 // top
-                    0,   0,   0,
+                  0,   0,   0,
                 100,   0,   0,
                 100,   0,  30,
-                    0,   0,   0,
+                  0,   0,   0,
                 100,   0,  30,
-                    0,   0,  30,
+                  0,   0,  30,
 
                 // top rung right
                 100,   0,   0,
@@ -336,9 +336,7 @@
                 let end = begin + 3;
 
                 [ x, y, z ] = set.subarray( begin, end )
-
-
-                point.set( [ x, y, z, 0, 0, 0, .3 ] )
+                point.set( [ x, y, z, 0, 0, 0, 1 ] )
             })
 
             console.log( shape1 )
@@ -353,7 +351,6 @@
 
                 [ x, y, z ] = pointsCloud.subarray( begin, end );
 
-
                 point.vertex.set( [ x, y, z ] )
                 point.color.set( [ 0, 1, 0, 1 ] )
             })
@@ -362,14 +359,14 @@
             let linesCloud = GL2.edges( shape2 );
             let shape4 = gl2.malloc( linesCloud.length/3, gl2.LINES )
 
-            console.log( linesCloud.slice(0) )
+            for (let k=0; k<linesCloud.length/3; k++ ) {
+                let begin = k * 3;
 
-            let j = 0;
-            let len = linesCloud.length/3;
+                let xyz = linesCloud.subarray( begin, begin + 3 );
+                let point = shape4.point( k );
 
-            for (let k=0; k<len; k++ ) {
-                let xyz = linesCloud.slice( k*3, 3 + k*3);
-                shape4.point(k).set( [...xyz, 0, 1, 1, 1] )
+                point.vertex.set( xyz )
+                point.color.set( [0, 1, 1, 1] )
             }
 
             gl2.pointSize = 10
