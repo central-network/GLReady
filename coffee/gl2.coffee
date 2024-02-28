@@ -125,7 +125,7 @@ HEAD_LENGTH         = 1e4
 BUFFER              = new SharedArrayBuffer 1e8
 DRAW_COUNT          = DRAW_LENGTH / 7
 
-export class Headers    extends Float32Array
+export class Headers    extends Int32Array
 export class Point      extends Float32Array
     for prop, i in [ "x", "y", "z", "r", "g", "b", "a" ]
         Object.defineProperty this::, prop, ((index)->
@@ -209,7 +209,63 @@ COUNT_TRIANGLES     = 0
 COUNT_POINTS        = 0
 COUNT_LINES         = 0
 
-HEADERS_BUFFER      = new Uint32Array BUFFER, DRAW_FINISH, 1e4
+HEADERS_OFFSET      = DRAW_FINISH
+HEADERS_INDEX       = DRAW_FINISH / 4
+
+HEADERS_BUFFER      = new Headers BUFFER, HEADERS_OFFSET, 1e6
+objects             = new Object()
+
+Object.defineProperties Headers::,
+    x : 
+        get : -> this[0]
+        set : ->
+            #! position
+            diff = ( @byteOffset - HEADERS_OFFSET ) / 4
+            if (diff % 16) is 12 
+                
+                dx = arguments[0] - this[0]
+                for p in @pobject.points
+                    p[0] += dx
+
+                @pobject.needsUpload = 1
+            #? rotation
+            else
+                cos = Math.cos arguments[0]
+                sin = Math.sin arguments[0]
+
+                for p in @robject.points
+                    [ x, y ] = p ; p.set [
+                        x*cos - y*sin
+                        x*sin + y*cos
+                    ]
+
+                @robject.needsUpload = 1
+                
+            this[0] = arguments[0]
+    y : 
+        get : -> this[1]
+        set : ->
+            dy = arguments[0] - @y
+            this[1] = arguments[0]
+            for p in @object.points
+                p.y += dy
+            @object.needsUpload = 1
+    z : 
+        get : -> this[2]
+        set : ->
+            dz = arguments[0] - @z
+            this[2] = arguments[0]
+            for p in @object.points
+                p.z += dz
+            @object.needsUpload = 1
+
+    pobject : get : ->
+        objects[ ( @byteOffset - HEADERS_OFFSET ) / 4 - 20 ]
+    
+    robject : get : ->
+        objects[ ( @byteOffset - HEADERS_OFFSET ) / 4 - 16 ]
+        
+
 COUNT_HEADERS       = 0
 LENGTH_HEADERS      = 0
 
@@ -253,14 +309,12 @@ export class XYZ
 
 Object.defineProperties Array::, 
     toRGBA : value : RGBA[ Array ]
-    vLength : get : -> Math.sqrt Math.powsum this, 2
 
 Object.defineProperties String::, 
     toRGBA : value : RGBA[ String ]
 
 Object.defineProperties Object.getPrototypeOf(Uint8Array::), 
     toRGBA  : value : RGBA[ Array ]
-    vLength : get : -> Math.sqrt Math.powsum this, 2
 
 export class Color      extends Float32Array
     set : -> super arguments[0].toRGBA()
@@ -350,7 +404,6 @@ export default class GL2 extends EventTarget
         Object.defineProperties super(),
             gl              : value : canvas.getContext "webgl2" 
             canvas          : value : canvas
-            objects         : value : new Array
             onceQueue       : value : new Array
             renderQueue     : value : new Array
             preProcess      : value : new Array
@@ -537,7 +590,7 @@ export default class GL2 extends EventTarget
             length,
             begin,
             end         = begin + length, 
-            hIndex      = COUNT_HEADERS++,
+            hIndex      = LENGTH_HEADERS,
             drawAs,
             enabled     = 1,
             needsUpload = 1,
@@ -549,8 +602,9 @@ export default class GL2 extends EventTarget
 
         ], headersIndex = LENGTH_HEADERS
         LENGTH_HEADERS += HEADER_ITEM_COUNT
+        COUNT_HEADERS += 1
         
-        @objects[ @objects.length ] = new ( class Mesh extends Number
+        objects[ headersIndex ] = new ( class Mesh extends Number
 
             [ Symbol.iterator ] : ->
                 yield @point i for i in [ 0 ... @count ]
@@ -595,8 +649,8 @@ export default class GL2 extends EventTarget
                 headers         : get : -> HEADERS_BUFFER.subarray @, @ + HEADER_ITEM_COUNT
 
                 color           : get : -> @headers.subarray 12, 16
-                rotation        : get : -> @headers.subarray 16, 20
-                position        : get : -> @headers.subarray 20, 24
+                rotation        : get : -> @headers.subarray 16, 19
+                position        : get : -> @headers.subarray 20, 23
 
                 points          : get : -> @point i for i in [ 0 ... @count ]
                 triangles       : get : -> @triangle i for i in [ 0 ... @count/3 ]
@@ -622,7 +676,7 @@ export default class GL2 extends EventTarget
             for job in @renderQueue.slice 0
                 job.call this, t
 
-            for object in @objects
+            for hIndex, object of objects
                 continue unless object.needsUpload
                 @upload object; object.needsUpload = 0
 

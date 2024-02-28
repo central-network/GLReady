@@ -1,4 +1,4 @@
-var BUFFER, BYTE_LINES, BYTE_POINTS, BYTE_TRIANGLES, COUNT_HEADERS, COUNT_LINES, COUNT_POINTS, COUNT_TRIANGLES, DRAW_BUFFER, DRAW_COUNT, DRAW_FINISH, DRAW_LENGTH, FIRST_LINES, FIRST_POINTS, FIRST_TRIANGLES, GL2, HEADERS_BUFFER, HEAD_LENGTH, INDEX_LINES, INDEX_POINTS, INDEX_TRIANGLES, LENGTH_HEADERS, UNUSED, a, b, dx, dy, dz, g, r, rx, ry, rz,
+var BUFFER, BYTE_LINES, BYTE_POINTS, BYTE_TRIANGLES, COUNT_HEADERS, COUNT_LINES, COUNT_POINTS, COUNT_TRIANGLES, DRAW_BUFFER, DRAW_COUNT, DRAW_FINISH, DRAW_LENGTH, FIRST_LINES, FIRST_POINTS, FIRST_TRIANGLES, GL2, HEADERS_BUFFER, HEADERS_INDEX, HEADERS_OFFSET, HEAD_LENGTH, INDEX_LINES, INDEX_POINTS, INDEX_TRIANGLES, LENGTH_HEADERS, UNUSED, a, b, dx, dy, dz, g, objects, r, rx, ry, rz,
   boundMethodCheck = function(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new Error('Bound instance method accessed before binding'); } };
 
 Object.defineProperties(Math, {
@@ -140,7 +140,7 @@ BUFFER = new SharedArrayBuffer(1e8);
 
 DRAW_COUNT = DRAW_LENGTH / 7;
 
-export var Headers = class Headers extends Float32Array {};
+export var Headers = class Headers extends Int32Array {};
 
 export var Point = (function() {
   var i, j, len1, prop, ref;
@@ -291,7 +291,89 @@ COUNT_POINTS = 0;
 
 COUNT_LINES = 0;
 
-HEADERS_BUFFER = new Uint32Array(BUFFER, DRAW_FINISH, 1e4);
+HEADERS_OFFSET = DRAW_FINISH;
+
+HEADERS_INDEX = DRAW_FINISH / 4;
+
+HEADERS_BUFFER = new Headers(BUFFER, HEADERS_OFFSET, 1e6);
+
+objects = new Object();
+
+Object.defineProperties(Headers.prototype, {
+  x: {
+    get: function() {
+      return this[0];
+    },
+    set: function() {
+      var cos, diff, dx, j, k, len1, len2, p, ref, ref1, sin, x, y;
+      //! position
+      diff = (this.byteOffset - HEADERS_OFFSET) / 4;
+      if ((diff % 16) === 12) {
+        dx = arguments[0] - this[0];
+        ref = this.pobject.points;
+        for (j = 0, len1 = ref.length; j < len1; j++) {
+          p = ref[j];
+          p[0] += dx;
+        }
+        this.pobject.needsUpload = 1;
+      } else {
+        //? rotation
+        cos = Math.cos(arguments[0]);
+        sin = Math.sin(arguments[0]);
+        ref1 = this.robject.points;
+        for (k = 0, len2 = ref1.length; k < len2; k++) {
+          p = ref1[k];
+          [x, y] = p;
+          p.set([x * cos - y * sin, x * sin + y * cos]);
+        }
+        this.robject.needsUpload = 1;
+      }
+      return this[0] = arguments[0];
+    }
+  },
+  y: {
+    get: function() {
+      return this[1];
+    },
+    set: function() {
+      var dy, j, len1, p, ref;
+      dy = arguments[0] - this.y;
+      this[1] = arguments[0];
+      ref = this.object.points;
+      for (j = 0, len1 = ref.length; j < len1; j++) {
+        p = ref[j];
+        p.y += dy;
+      }
+      return this.object.needsUpload = 1;
+    }
+  },
+  z: {
+    get: function() {
+      return this[2];
+    },
+    set: function() {
+      var dz, j, len1, p, ref;
+      dz = arguments[0] - this.z;
+      this[2] = arguments[0];
+      ref = this.object.points;
+      for (j = 0, len1 = ref.length; j < len1; j++) {
+        p = ref[j];
+        p.z += dz;
+      }
+      return this.object.needsUpload = 1;
+    }
+  },
+  pobject: {
+    get: function() {
+      return objects[(this.byteOffset - HEADERS_OFFSET) / 4 - 20];
+    }
+  },
+  robject: {
+    get: function() {
+      return objects[(this.byteOffset - HEADERS_OFFSET) / 4 - 16];
+    }
+  }
+});
 
 COUNT_HEADERS = 0;
 
@@ -349,11 +431,6 @@ export var XYZ = class XYZ {};
 Object.defineProperties(Array.prototype, {
   toRGBA: {
     value: RGBA[Array]
-  },
-  vLength: {
-    get: function() {
-      return Math.sqrt(Math.powsum(this, 2));
-    }
   }
 });
 
@@ -366,11 +443,6 @@ Object.defineProperties(String.prototype, {
 Object.defineProperties(Object.getPrototypeOf(Uint8Array.prototype), {
   toRGBA: {
     value: RGBA[Array]
-  },
-  vLength: {
-    get: function() {
-      return Math.sqrt(Math.powsum(this, 2));
-    }
   }
 });
 
@@ -467,9 +539,6 @@ export default GL2 = (function() {
         },
         canvas: {
           value: canvas
-        },
-        objects: {
-          value: new Array
         },
         onceQueue: {
           value: new Array
@@ -733,9 +802,10 @@ export default GL2 = (function() {
       } else {
         throw ["UNDEFINED_DRAW_METHOD:", drawAs];
       }
-      HEADERS_BUFFER.set([byteOffset, byteLength, count, length, begin, end = begin + length, hIndex = COUNT_HEADERS++, drawAs, enabled = 1, needsUpload = 1, UNUSED, UNUSED, r, g, b, a, rx, ry, rz, UNUSED, dx, dy, dz, UNUSED], headersIndex = LENGTH_HEADERS);
+      HEADERS_BUFFER.set([byteOffset, byteLength, count, length, begin, end = begin + length, hIndex = LENGTH_HEADERS, drawAs, enabled = 1, needsUpload = 1, UNUSED, UNUSED, r, g, b, a, rx, ry, rz, UNUSED, dx, dy, dz, UNUSED], headersIndex = LENGTH_HEADERS);
       LENGTH_HEADERS += HEADER_ITEM_COUNT;
-      return this.objects[this.objects.length] = new (Mesh = (function() {
+      COUNT_HEADERS += 1;
+      return objects[headersIndex] = new (Mesh = (function() {
         class Mesh extends Number {
           * [Symbol.iterator]() {
             var i, j, ref, results;
@@ -842,12 +912,12 @@ export default GL2 = (function() {
           },
           rotation: {
             get: function() {
-              return this.headers.subarray(16, 20);
+              return this.headers.subarray(16, 19);
             }
           },
           position: {
             get: function() {
-              return this.headers.subarray(20, 24);
+              return this.headers.subarray(20, 23);
             }
           },
           points: {
@@ -883,7 +953,7 @@ export default GL2 = (function() {
     }
 
     render(t) {
-      var j, job, k, l, len, len1, len2, len3, len4, m, object, ref, ref1, ref2, ref3;
+      var hIndex, j, job, k, l, len, len1, len2, len3, object, ref, ref1, ref2;
       boundMethodCheck(this, GL2);
       if (this.rendering) {
         if (len = this.onceQueue.length) {
@@ -898,9 +968,8 @@ export default GL2 = (function() {
           job = ref1[k];
           job.call(this, t);
         }
-        ref2 = this.objects;
-        for (l = 0, len3 = ref2.length; l < len3; l++) {
-          object = ref2[l];
+        for (hIndex in objects) {
+          object = objects[hIndex];
           if (!object.needsUpload) {
             continue;
           }
@@ -910,9 +979,9 @@ export default GL2 = (function() {
         this.gl.drawArrays(this.gl.TRIANGLES, FIRST_TRIANGLES, COUNT_TRIANGLES);
         this.gl.drawArrays(this.gl.POINTS, FIRST_POINTS, COUNT_POINTS);
         this.gl.drawArrays(this.gl.LINES, FIRST_LINES, COUNT_LINES);
-        ref3 = this.postProcess.slice(0);
-        for (m = 0, len4 = ref3.length; m < len4; m++) {
-          job = ref3[m];
+        ref2 = this.postProcess.slice(0);
+        for (l = 0, len3 = ref2.length; l < len3; l++) {
+          job = ref2[l];
           job.call(this, t);
         }
         ++this.scene[0];

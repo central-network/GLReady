@@ -369,6 +369,8 @@
                 point.color.set( [0, 1, 1, 1] )
             }
 
+            console.log( shape4 )
+
             gl2.pointSize = 10
 
             gl2.upload()
@@ -393,8 +395,15 @@
             let ryCamera = document.querySelector("#ryCamera input");
 
 
+
+            setTimeout(function (){
+                shape4.position.x += 100
+                shape4.rotation.x = Math.PI/3
+            }, 100)
+
             gl2.queue( time => {
 
+                
 
                 if (bind.rotating) {
                     rxCamera.value = gl2.rxCamera += bind.rx
