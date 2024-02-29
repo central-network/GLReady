@@ -47,7 +47,7 @@
 
 
         <script type="module">
-            import GL2 from "./gl2.js"
+            import {GL2, M4} from "./gl2.js"
             import Bind from "./bind.js"
 
             let canvas  = document.getElementById('gl2');
@@ -355,6 +355,12 @@
                 point.color.set( [ 0, 1, 0, 1 ] )
             })
 
+            let mat4 = M4.identity
+            
+            mat4.rotate( 0, Math.PI/8 )
+            mat4.translate( 0, 0, 100 )
+            mat4.scale( 1.2 )
+
 
             let linesCloud = GL2.edges( shape2 );
             let shape4 = gl2.malloc( linesCloud.length/3, gl2.LINES )
@@ -368,6 +374,11 @@
                 point.vertex.set( xyz )
                 point.color.set( [0, 1, 1, 1] )
             }
+
+            console.log( "mat4:\n", mat4 )
+
+            shape4.applyMatrix( mat4 )
+
 
             console.log( shape4 )
 
@@ -395,11 +406,6 @@
             let ryCamera = document.querySelector("#ryCamera input");
 
 
-
-            setTimeout(function (){
-                shape4.position.x += 100
-                shape4.rotation.x = Math.PI/3
-            }, 100)
 
             gl2.queue( time => {
 

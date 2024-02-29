@@ -6,6 +6,14 @@ Object.defineProperties Math,
 
 #? https://webgl2fundamentals.org/webgl/lessons/webgl-3d-perspective.html
 export class M4 extends Float32Array
+
+    Object.defineProperty this, "identity", get : ->
+        new M4 [
+            1,  0,  0,  0,
+            0,  1,  0,  0,
+            0,  0,  1,  0,
+            0,  0,  0,  1,
+        ] 
     
     @Camera     : class Camera extends this
         constructor : ( yFov, rAspect, zNear, zFar ) ->
@@ -19,6 +27,27 @@ export class M4 extends Float32Array
                 0,             0,     (zNear + zFar) * rangeInv,   -1,
                 0,             0, (zNear * zFar) * rangeInv * 2,    0
             ]
+
+    @fromVec3   = ( vec3 ) ->
+        new M4 [
+             1,  0,  0,  0,
+             0,  1,  0,  0,
+             0,  0,  1,  0,
+              ... vec3,  1,
+        ]
+
+    modifyVertex : ( vec3 ) ->
+        vec3.set M4.multiply( this, Float32Array.from [
+            1,  0,  0,  0,
+            0,  1,  0,  0,
+            0,  0,  1,  0,
+            ...vec3.subarray(0, 3),  1,
+       ] ).subarray( 12, 15 ) ; vec3
+
+    modifyShape : ( mesh ) ->
+        mesh.applyMatrix this ; mesh
+
+    multiply    : ( b ) -> @set( M4.multiply @, b ); this
 
     @multiply   = ( a, b ) ->
         a00 = a[0 * 4 + 0]; a01 = a[0 * 4 + 1]; a02 = a[0 * 4 + 2]; a03 = a[0 * 4 + 3]
@@ -50,7 +79,7 @@ export class M4 extends Float32Array
             b30 * a03 + b31 * a13 + b32 * a23 + b33 * a33,
         ]
 
-    translation : ( tx, ty, tz ) ->
+    translation : ( tx = 0, ty = 0, tz = 0 ) ->
         [
              1,  0,  0,  0,
              0,  1,  0,  0,
@@ -58,33 +87,57 @@ export class M4 extends Float32Array
             tx, ty, tz,  1,
         ]
 
-    xRotation   : ( angleInRadians ) ->
+    xTranslation : ( tx = 0 ) ->
+        new M4 [
+             1,  0,  0,  0,
+             0,  1,  0,  0,
+             0,  0,  1,  0,
+            tx,  0,  0,  1,
+        ]
+
+    yTranslation : ( ty = 0 ) ->
+        new M4 [
+             1,  0,  0,  0,
+             0,  1,  0,  0,
+             0,  0,  1,  0,
+             0, ty,  0,  1,
+        ]
+
+    zTranslation : ( tz = 0 ) ->
+        new M4 [
+             1,  0,  0,  0,
+             0,  1,  0,  0,
+             0,  0,  1,  0,
+             0,  0, tz,  1,
+        ]
+
+    xRotation   : ( angleInRadians = 0 ) ->
         c = Math.cos angleInRadians
         s = Math.sin angleInRadians
 
-        [
+        new M4 [
              1,  0,  0,  0,
              0,  c,  s,  0,
              0, -s,  c,  0,
              0,  0,  0,  1,
         ]
 
-    yRotation   : ( angleInRadians ) ->
+    yRotation   : ( angleInRadians = 0 ) ->
         c = Math.cos angleInRadians
         s = Math.sin angleInRadians
         
-        [
+        new M4 [
              c,  0, -s,  0,
              0,  1,  0,  0,
              s,  0,  c,  0,
              0,  0,  0,  1,
         ]
 
-    zRotation   : ( angleInRadians ) ->
+    zRotation   : ( angleInRadians = 0 ) ->
         c = Math.cos angleInRadians
         s = Math.sin angleInRadians
         
-        [
+        new M4 [
              c,  s,  0,  0,
             -s,  c,  0,  0,
              0,  0,  1,  0,
@@ -92,7 +145,8 @@ export class M4 extends Float32Array
         ]
 
     scaling     : ( sx, sy, sz ) ->
-        [
+        sz ?= ( sy ?= ( sx ?= 1 ) ) 
+        new M4 [
             sx, 0,  0,  0,
             0, sy,  0,  0,
             0,  0, sz,  0,
@@ -100,7 +154,7 @@ export class M4 extends Float32Array
         ]
 
     translate   : ( tx, ty, tz ) ->
-        M4.multiply this, @translation tx, ty, tz
+        @multiply @translation tx, ty, tz
 
     rotate      : ( rx, ry, rz ) ->
         this
@@ -109,16 +163,69 @@ export class M4 extends Float32Array
             .zRotate rz
     
     scale       : ( sx, sy, sz ) ->
-        M4.multiply this, @scaling sx, sy, sz
+        @multiply @scaling sx, sy, sz
         
     xRotate     : ( rx ) ->
-        M4.multiply this, @xRotation rx
+        @multiply @xRotation rx
     
     yRotate     : ( ry ) ->
-        M4.multiply this, @yRotation ry
+        @multiply @yRotation ry
 
     zRotate     : ( rz ) ->
-        M4.multiply this, @zRotation rz
+        @multiply @zRotation rz
+
+        
+    xTranslate  : ( tx ) ->
+        @multiply @xTranslation tx
+    
+    yTranslate  : ( ty ) ->
+        @multiply @yTranslation ty
+
+    zTranslate  : ( tz ) ->
+        @multiply @zTranslation tz
+
+
+f = new Float32Array [
+     3, 0, 0,
+     1, 0, 0,
+     2, 1, 0
+]
+
+console.log "A0:", [ ...f.subarray( 0, 3 ) ]
+console.log "B0:", [ ...f.subarray( 3, 6 ) ]
+console.log "C0:", [ ...f.subarray( 6, 9 ) ]
+
+i = 0
+len = f.length
+m4 = M4.identity
+
+dx = 4
+dy = 1
+dz = -1
+
+m4.translate( dx, dy, dz )
+m4.scale( 0.5, 0.5, 0.5 )
+
+console.warn {
+    dx, dy, dz
+}
+
+console.warn  " m4 -> ", ...m4
+
+
+while i < len
+    arr = f.subarray i, i+= 3
+    mv4 = M4.fromVec3 arr
+    mul = M4.multiply m4, mv4
+
+    console.log [i], " ", ...mul
+
+    arr.set mul.subarray( 12, 15 )
+
+console.log "A1:", [ ...f.subarray( 0, 3 ) ]
+console.log "B1:", [ ...f.subarray( 3, 6 ) ]
+console.log "C1:", [ ...f.subarray( 6, 9 ) ]
+
 
 DRAW_LENGTH         = 3e6 + 4
 HEAD_LENGTH         = 1e4
@@ -150,6 +257,10 @@ export class Point      extends Float32Array
 
         i       :
             get : -> @byteOffset / @byteLength % DRAW_COUNT
+
+
+    applyMatrix : ( mat4 ) ->
+        mat4.modifyVertex this
 
     isNeighbour : ( point ) ->
         [ a, b, c ] = @vertex
@@ -234,7 +345,9 @@ Object.defineProperties Headers::,
                 sin = Math.sin arguments[0]
 
                 for p in @robject.points
-                    [ x, y ] = p ; p.set [
+                    [ x, y ] = p
+                    
+                    p.set [
                         x*cos - y*sin
                         x*sin + y*cos
                     ]
@@ -326,7 +439,7 @@ export class Rotation   extends Float32Array
 export class Points     extends Array
 export class Triangle   extends Array
 
-export default class GL2 extends EventTarget
+export class GL2 extends EventTarget
 
     vertexShaderSource    : '
         attribute vec4     a_Vertex;
@@ -618,6 +731,11 @@ export default class GL2 extends EventTarget
             triangle            : ( i ) ->
                 [ @point(i), @point(i+1), @point(i+2) ]
 
+            applyMatrix         : ( mat4 ) ->
+                for p in @points
+                    p.applyMatrix mat4
+                @needsUpload = 1 ; @                    
+
             neighbours          : ( point ) ->
                 [ x, y, z ] = point
                 
@@ -700,7 +818,7 @@ export default class GL2 extends EventTarget
 
     uploadCamera    : -> @onceQueue.push ->
         @gl.uniformMatrix4fv @u_Camera, no,
-            @camera
+            @camera.slice()
                 .translate @dxCamera, @dyCamera, @dzCamera
                 .rotate @rxCamera, @ryCamera, @rzCamera
                 .scale @sxCamera, @syCamera, @szCamera

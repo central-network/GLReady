@@ -1,4 +1,4 @@
-var BUFFER, BYTE_LINES, BYTE_POINTS, BYTE_TRIANGLES, COUNT_HEADERS, COUNT_LINES, COUNT_POINTS, COUNT_TRIANGLES, DRAW_BUFFER, DRAW_COUNT, DRAW_FINISH, DRAW_LENGTH, FIRST_LINES, FIRST_POINTS, FIRST_TRIANGLES, GL2, HEADERS_BUFFER, HEADERS_INDEX, HEADERS_OFFSET, HEAD_LENGTH, INDEX_LINES, INDEX_POINTS, INDEX_TRIANGLES, LENGTH_HEADERS, UNUSED, a, b, dx, dy, dz, g, objects, r, rx, ry, rz,
+var BUFFER, BYTE_LINES, BYTE_POINTS, BYTE_TRIANGLES, COUNT_HEADERS, COUNT_LINES, COUNT_POINTS, COUNT_TRIANGLES, DRAW_BUFFER, DRAW_COUNT, DRAW_FINISH, DRAW_LENGTH, FIRST_LINES, FIRST_POINTS, FIRST_TRIANGLES, HEADERS_BUFFER, HEADERS_INDEX, HEADERS_OFFSET, HEAD_LENGTH, INDEX_LINES, INDEX_POINTS, INDEX_TRIANGLES, LENGTH_HEADERS, UNUSED, a, arr, b, dx, dy, dz, f, g, i, len, m4, mul, mv4, objects, r, rx, ry, rz,
   boundMethodCheck = function(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new Error('Bound instance method accessed before binding'); } };
 
 Object.defineProperties(Math, {
@@ -26,6 +26,25 @@ export var M4 = (function() {
 
   //? https://webgl2fundamentals.org/webgl/lessons/webgl-3d-perspective.html
   class M4 extends Float32Array {
+    static fromVec3(vec3) {
+      return new M4([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, ...vec3, 1]);
+    }
+
+    modifyVertex(vec3) {
+      vec3.set(M4.multiply(this, Float32Array.from([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, ...vec3.subarray(0, 3), 1])).subarray(12, 15));
+      return vec3;
+    }
+
+    modifyShape(mesh) {
+      mesh.applyMatrix(this);
+      return mesh;
+    }
+
+    multiply(b) {
+      this.set(M4.multiply(this, b));
+      return this;
+    }
+
     static multiply(a, b) {
       var a00, a01, a02, a03, a10, a11, a12, a13, a20, a21, a22, a23, a30, a31, a32, a33, b00, b01, b02, b03, b10, b11, b12, b13, b20, b21, b22, b23, b30, b31, b32, b33;
       a00 = a[0 * 4 + 0];
@@ -63,37 +82,52 @@ export var M4 = (function() {
       return new M4([b00 * a00 + b01 * a10 + b02 * a20 + b03 * a30, b00 * a01 + b01 * a11 + b02 * a21 + b03 * a31, b00 * a02 + b01 * a12 + b02 * a22 + b03 * a32, b00 * a03 + b01 * a13 + b02 * a23 + b03 * a33, b10 * a00 + b11 * a10 + b12 * a20 + b13 * a30, b10 * a01 + b11 * a11 + b12 * a21 + b13 * a31, b10 * a02 + b11 * a12 + b12 * a22 + b13 * a32, b10 * a03 + b11 * a13 + b12 * a23 + b13 * a33, b20 * a00 + b21 * a10 + b22 * a20 + b23 * a30, b20 * a01 + b21 * a11 + b22 * a21 + b23 * a31, b20 * a02 + b21 * a12 + b22 * a22 + b23 * a32, b20 * a03 + b21 * a13 + b22 * a23 + b23 * a33, b30 * a00 + b31 * a10 + b32 * a20 + b33 * a30, b30 * a01 + b31 * a11 + b32 * a21 + b33 * a31, b30 * a02 + b31 * a12 + b32 * a22 + b33 * a32, b30 * a03 + b31 * a13 + b32 * a23 + b33 * a33]);
     }
 
-    translation(tx, ty, tz) {
+    translation(tx = 0, ty = 0, tz = 0) {
       return [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, tx, ty, tz, 1];
     }
 
-    xRotation(angleInRadians) {
-      var c, s;
-      c = Math.cos(angleInRadians);
-      s = Math.sin(angleInRadians);
-      return [1, 0, 0, 0, 0, c, s, 0, 0, -s, c, 0, 0, 0, 0, 1];
+    xTranslation(tx = 0) {
+      return new M4([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, tx, 0, 0, 1]);
     }
 
-    yRotation(angleInRadians) {
-      var c, s;
-      c = Math.cos(angleInRadians);
-      s = Math.sin(angleInRadians);
-      return [c, 0, -s, 0, 0, 1, 0, 0, s, 0, c, 0, 0, 0, 0, 1];
+    yTranslation(ty = 0) {
+      return new M4([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, ty, 0, 1]);
     }
 
-    zRotation(angleInRadians) {
+    zTranslation(tz = 0) {
+      return new M4([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, tz, 1]);
+    }
+
+    xRotation(angleInRadians = 0) {
       var c, s;
       c = Math.cos(angleInRadians);
       s = Math.sin(angleInRadians);
-      return [c, s, 0, 0, -s, c, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
+      return new M4([1, 0, 0, 0, 0, c, s, 0, 0, -s, c, 0, 0, 0, 0, 1]);
+    }
+
+    yRotation(angleInRadians = 0) {
+      var c, s;
+      c = Math.cos(angleInRadians);
+      s = Math.sin(angleInRadians);
+      return new M4([c, 0, -s, 0, 0, 1, 0, 0, s, 0, c, 0, 0, 0, 0, 1]);
+    }
+
+    zRotation(angleInRadians = 0) {
+      var c, s;
+      c = Math.cos(angleInRadians);
+      s = Math.sin(angleInRadians);
+      return new M4([c, s, 0, 0, -s, c, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]);
     }
 
     scaling(sx, sy, sz) {
-      return [sx, 0, 0, 0, 0, sy, 0, 0, 0, 0, sz, 0, 0, 0, 0, 1];
+      if (sz == null) {
+        sz = (sy != null ? sy : sy = (sx != null ? sx : sx = 1));
+      }
+      return new M4([sx, 0, 0, 0, 0, sy, 0, 0, 0, 0, sz, 0, 0, 0, 0, 1]);
     }
 
     translate(tx, ty, tz) {
-      return M4.multiply(this, this.translation(tx, ty, tz));
+      return this.multiply(this.translation(tx, ty, tz));
     }
 
     rotate(rx, ry, rz) {
@@ -101,22 +135,40 @@ export var M4 = (function() {
     }
 
     scale(sx, sy, sz) {
-      return M4.multiply(this, this.scaling(sx, sy, sz));
+      return this.multiply(this.scaling(sx, sy, sz));
     }
 
     xRotate(rx) {
-      return M4.multiply(this, this.xRotation(rx));
+      return this.multiply(this.xRotation(rx));
     }
 
     yRotate(ry) {
-      return M4.multiply(this, this.yRotation(ry));
+      return this.multiply(this.yRotation(ry));
     }
 
     zRotate(rz) {
-      return M4.multiply(this, this.zRotation(rz));
+      return this.multiply(this.zRotation(rz));
+    }
+
+    xTranslate(tx) {
+      return this.multiply(this.xTranslation(tx));
+    }
+
+    yTranslate(ty) {
+      return this.multiply(this.yTranslation(ty));
+    }
+
+    zTranslate(tz) {
+      return this.multiply(this.zTranslation(tz));
     }
 
   };
+
+  Object.defineProperty(M4, "identity", {
+    get: function() {
+      return new M4([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]);
+    }
+  });
 
   M4.Camera = Camera = class Camera extends M4 {
     constructor(yFov, rAspect, zNear, zFar) {
@@ -132,6 +184,48 @@ export var M4 = (function() {
 
 }).call(this);
 
+f = new Float32Array([3, 0, 0, 1, 0, 0, 2, 1, 0]);
+
+console.log("A0:", [...f.subarray(0, 3)]);
+
+console.log("B0:", [...f.subarray(3, 6)]);
+
+console.log("C0:", [...f.subarray(6, 9)]);
+
+i = 0;
+
+len = f.length;
+
+m4 = M4.identity;
+
+dx = 4;
+
+dy = 1;
+
+dz = -1;
+
+m4.translate(dx, dy, dz);
+
+m4.scale(0.5, 0.5, 0.5);
+
+console.warn({dx, dy, dz});
+
+console.warn(" m4 -> ", ...m4);
+
+while (i < len) {
+  arr = f.subarray(i, i += 3);
+  mv4 = M4.fromVec3(arr);
+  mul = M4.multiply(m4, mv4);
+  console.log([i], " ", ...mul);
+  arr.set(mul.subarray(12, 15));
+}
+
+console.log("A1:", [...f.subarray(0, 3)]);
+
+console.log("B1:", [...f.subarray(3, 6)]);
+
+console.log("C1:", [...f.subarray(6, 9)]);
+
 DRAW_LENGTH = 3e6 + 4;
 
 HEAD_LENGTH = 1e4;
@@ -143,7 +237,7 @@ DRAW_COUNT = DRAW_LENGTH / 7;
 export var Headers = class Headers extends Int32Array {};
 
 export var Point = (function() {
-  var i, j, len1, prop, ref;
+  var j, len1, prop, ref;
 
   class Point extends Float32Array {
     * [Symbol.iterator]() {
@@ -155,8 +249,12 @@ export var Point = (function() {
       return results;
     }
 
+    applyMatrix(mat4) {
+      return mat4.modifyVertex(this);
+    }
+
     isNeighbour(point) {
-      var a, b, c, dx, dy, dz, x, y, z;
+      var a, b, c, x, y, z;
       [a, b, c] = this.vertex;
       [x, y, z] = point;
       dx = x - a;
@@ -174,7 +272,7 @@ export var Point = (function() {
     }
 
     distance2d(p0, p1 = this) {
-      var a, b, c, dx, dy, dz, x, y, z;
+      var a, b, c, x, y, z;
       [a, b, c] = p0;
       [x, y, z] = p1;
       dx = Math.abs(a - x);
@@ -305,7 +403,7 @@ Object.defineProperties(Headers.prototype, {
       return this[0];
     },
     set: function() {
-      var cos, diff, dx, j, k, len1, len2, p, ref, ref1, sin, x, y;
+      var cos, diff, j, k, len1, len2, p, ref, ref1, sin, x, y;
       //! position
       diff = (this.byteOffset - HEADERS_OFFSET) / 4;
       if ((diff % 16) === 12) {
@@ -336,7 +434,7 @@ Object.defineProperties(Headers.prototype, {
       return this[1];
     },
     set: function() {
-      var dy, j, len1, p, ref;
+      var j, len1, p, ref;
       dy = arguments[0] - this.y;
       this[1] = arguments[0];
       ref = this.object.points;
@@ -352,7 +450,7 @@ Object.defineProperties(Headers.prototype, {
       return this[2];
     },
     set: function() {
-      var dz, j, len1, p, ref;
+      var j, len1, p, ref;
       dz = arguments[0] - this.z;
       this[2] = arguments[0];
       ref = this.object.points;
@@ -387,7 +485,7 @@ export var RGBA = (function() {
   Object.defineProperties(RGBA, {
     [Array]: {
       value: function() {
-        var arr, i, j, len1, ref, v;
+        var j, len1, ref, v;
         arr = [1, 1, 1, 1];
         ref = this;
         for (i = j = 0, len1 = ref.length; j < len1; i = ++j) {
@@ -467,7 +565,7 @@ export var Points = class Points extends Array {};
 
 export var Triangle = class Triangle extends Array {};
 
-export default GL2 = (function() {
+export var GL2 = (function() {
   var LINES, POINTS, TRIANGLES;
 
   class GL2 extends EventTarget {
@@ -498,7 +596,7 @@ export default GL2 = (function() {
     }
 
     static edges(shape) {
-      var c, d, found, i, j, k, l, len1, len2, len3, neigh, neighs, pair, pairs, point, points, ref, vertex;
+      var c, d, found, j, k, l, len1, len2, len3, neigh, neighs, pair, pairs, point, points, ref, vertex;
       i = 0;
       pairs = [];
       points = [];
@@ -808,7 +906,7 @@ export default GL2 = (function() {
       return objects[headersIndex] = new (Mesh = (function() {
         class Mesh extends Number {
           * [Symbol.iterator]() {
-            var i, j, ref, results;
+            var j, ref, results;
             results = [];
             for (i = j = 0, ref = this.count; (0 <= ref ? j < ref : j > ref); i = 0 <= ref ? ++j : --j) {
               results.push((yield this.point(i)));
@@ -826,8 +924,19 @@ export default GL2 = (function() {
             return [this.point(i), this.point(i + 1), this.point(i + 2)];
           }
 
+          applyMatrix(mat4) {
+            var j, len1, p, ref;
+            ref = this.points;
+            for (j = 0, len1 = ref.length; j < len1; j++) {
+              p = ref[j];
+              p.applyMatrix(mat4);
+            }
+            this.needsUpload = 1;
+            return this;
+          }
+
           neighbours(point) {
-            var d, i, j, neighs, p, ref, x, y, z;
+            var d, j, neighs, p, ref, x, y, z;
             [x, y, z] = point;
             neighs = [];
             for (i = j = 0, ref = this.count; (0 <= ref ? j < ref : j > ref); i = 0 <= ref ? ++j : --j) {
@@ -922,7 +1031,7 @@ export default GL2 = (function() {
           },
           points: {
             get: function() {
-              var i, j, ref, results;
+              var j, ref, results;
               results = [];
               for (i = j = 0, ref = this.count; (0 <= ref ? j < ref : j > ref); i = 0 <= ref ? ++j : --j) {
                 results.push(this.point(i));
@@ -932,7 +1041,7 @@ export default GL2 = (function() {
           },
           triangles: {
             get: function() {
-              var i, j, ref, results;
+              var j, ref, results;
               results = [];
               for (i = j = 0, ref = this.count / 3; (0 <= ref ? j < ref : j > ref); i = 0 <= ref ? ++j : --j) {
                 results.push(this.triangle(i));
@@ -953,7 +1062,7 @@ export default GL2 = (function() {
     }
 
     render(t) {
-      var hIndex, j, job, k, l, len, len1, len2, len3, object, ref, ref1, ref2;
+      var hIndex, j, job, k, l, len1, len2, len3, object, ref, ref1, ref2;
       boundMethodCheck(this, GL2);
       if (this.rendering) {
         if (len = this.onceQueue.length) {
@@ -1003,7 +1112,7 @@ export default GL2 = (function() {
 
     uploadCamera() {
       return this.onceQueue.push(function() {
-        return this.gl.uniformMatrix4fv(this.u_Camera, false, this.camera.translate(this.dxCamera, this.dyCamera, this.dzCamera).rotate(this.rxCamera, this.ryCamera, this.rzCamera).scale(this.sxCamera, this.syCamera, this.szCamera));
+        return this.gl.uniformMatrix4fv(this.u_Camera, false, this.camera.slice().translate(this.dxCamera, this.dyCamera, this.dzCamera).rotate(this.rxCamera, this.ryCamera, this.rzCamera).scale(this.sxCamera, this.syCamera, this.szCamera));
       });
     }
 
