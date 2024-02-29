@@ -186,7 +186,6 @@ export class M4 extends Float32Array
 
 
 DRAW_LENGTH         = 3e6 + 4
-HEAD_LENGTH         = 1e4
 BUFFER              = new SharedArrayBuffer 1e8
 DRAW_COUNT          = DRAW_LENGTH / 7
 
@@ -212,7 +211,6 @@ export class Point      extends Float32Array
 
         index   :
             get : -> @byteOffset / @byteLength % DRAW_COUNT
-
 
     applyMatrix : ( mat4 ) ->
         mat4.modifyVertex this
@@ -267,7 +265,7 @@ FIRST_POINTS        = DRAW_COUNT
 INDEX_POINTS        = DRAW_LENGTH
 BYTE_POINTS         = INDEX_POINTS * 4
 
-FIRST_LINES         = DRAW_COUNT * 2
+FIRST_LINES         = DRAW_COUNT  * 2
 INDEX_LINES         = DRAW_LENGTH * 2
 BYTE_LINES          = INDEX_LINES * 4
 
@@ -338,10 +336,20 @@ COUNT_HEADERS       = 0
 LENGTH_HEADERS      = 0
 
 
-r  = g  = b = a =
+r  = 
+g  = 
+b  = 
+a  =
 rx = ry = rz =
 dx = dy = dz =
-UNUSED = 0
+UNUSED  = 0
+
+[
+    m10, m11, m12, m13,
+    m20, m21, m22, m23,
+    m30, m31, m32, m33,
+    m40, m41, m42, m43
+] = M4.identity
 
 export class RGBA
     Object.defineProperties this,
@@ -610,7 +618,7 @@ export class GL2 extends EventTarget
 
     malloc          : ( count, drawAs = @TRIANGLES ) ->
         BYTES_PER_ELEMENT   = 4
-        HEADER_ITEM_COUNT   = 24
+        HEADER_ITEM_COUNT   = 40
         ITEMS_PER_VERTEX    = 7
 
         if drawAs is @TRIANGLES
@@ -666,7 +674,12 @@ export class GL2 extends EventTarget
             
             r, g, b, a,
             rx, ry, rz, UNUSED,
-            dx, dy, dz, UNUSED
+            dx, dy, dz, UNUSED,
+
+            m10, m11, m12, m13,
+            m20, m21, m22, m23,
+            m30, m31, m32, m33,
+            m40, m41, m42, m43
 
         ], headersIndex = LENGTH_HEADERS
         LENGTH_HEADERS += HEADER_ITEM_COUNT
@@ -721,6 +734,10 @@ export class GL2 extends EventTarget
                 color           : get : -> @headers.subarray 12, 16
                 rotation        : get : -> @headers.subarray 16, 19
                 position        : get : -> @headers.subarray 20, 23
+
+                matrix          : get : ->
+                    m4 = @headers.subarray( 24, 40 )
+                    new M4 m4.buffer, m4.byteOffset, m4.length
 
                 points          : get : -> @point i for i in [ 0 ... @count ]
                 triangles       : get : -> @triangle i for i in [ 0 ... @count/3 ]

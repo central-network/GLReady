@@ -1,4 +1,4 @@
-var BUFFER, BYTE_LINES, BYTE_POINTS, BYTE_TRIANGLES, COUNT_HEADERS, COUNT_LINES, COUNT_POINTS, COUNT_TRIANGLES, DRAW_BUFFER, DRAW_COUNT, DRAW_FINISH, DRAW_LENGTH, FIRST_LINES, FIRST_POINTS, FIRST_TRIANGLES, HEADERS_BUFFER, HEADERS_INDEX, HEADERS_OFFSET, HEAD_LENGTH, INDEX_LINES, INDEX_POINTS, INDEX_TRIANGLES, LENGTH_HEADERS, UNUSED, a, b, dx, dy, dz, g, objects, r, rx, ry, rz,
+var BUFFER, BYTE_LINES, BYTE_POINTS, BYTE_TRIANGLES, COUNT_HEADERS, COUNT_LINES, COUNT_POINTS, COUNT_TRIANGLES, DRAW_BUFFER, DRAW_COUNT, DRAW_FINISH, DRAW_LENGTH, FIRST_LINES, FIRST_POINTS, FIRST_TRIANGLES, HEADERS_BUFFER, HEADERS_INDEX, HEADERS_OFFSET, INDEX_LINES, INDEX_POINTS, INDEX_TRIANGLES, LENGTH_HEADERS, UNUSED, a, b, dx, dy, dz, g, m10, m11, m12, m13, m20, m21, m22, m23, m30, m31, m32, m33, m40, m41, m42, m43, objects, r, rx, ry, rz,
   boundMethodCheck = function(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new Error('Bound instance method accessed before binding'); } };
 
 Object.defineProperties(Math, {
@@ -185,8 +185,6 @@ export var M4 = (function() {
 }).call(this);
 
 DRAW_LENGTH = 3e6 + 4;
-
-HEAD_LENGTH = 1e4;
 
 BUFFER = new SharedArrayBuffer(1e8);
 
@@ -427,6 +425,8 @@ COUNT_HEADERS = 0;
 LENGTH_HEADERS = 0;
 
 r = g = b = a = rx = ry = rz = dx = dy = dz = UNUSED = 0;
+
+[m10, m11, m12, m13, m20, m21, m22, m23, m30, m31, m32, m33, m40, m41, m42, m43] = M4.identity;
 
 export var RGBA = (function() {
   class RGBA {};
@@ -820,7 +820,7 @@ export var GL2 = (function() {
     malloc(count, drawAs = this.TRIANGLES) {
       var BYTES_PER_ELEMENT, HEADER_ITEM_COUNT, ITEMS_PER_VERTEX, Mesh, begin, byteLength, byteOffset, enabled, end, hIndex, headersIndex, length, needsUpload;
       BYTES_PER_ELEMENT = 4;
-      HEADER_ITEM_COUNT = 24;
+      HEADER_ITEM_COUNT = 40;
       ITEMS_PER_VERTEX = 7;
       if (drawAs === this.TRIANGLES) {
         begin = INDEX_TRIANGLES;
@@ -849,7 +849,7 @@ export var GL2 = (function() {
       } else {
         throw ["UNDEFINED_DRAW_METHOD:", drawAs];
       }
-      HEADERS_BUFFER.set([byteOffset, byteLength, count, length, begin, end = begin + length, hIndex = LENGTH_HEADERS, drawAs, enabled = 1, needsUpload = 1, UNUSED, UNUSED, r, g, b, a, rx, ry, rz, UNUSED, dx, dy, dz, UNUSED], headersIndex = LENGTH_HEADERS);
+      HEADERS_BUFFER.set([byteOffset, byteLength, count, length, begin, end = begin + length, hIndex = LENGTH_HEADERS, drawAs, enabled = 1, needsUpload = 1, UNUSED, UNUSED, r, g, b, a, rx, ry, rz, UNUSED, dx, dy, dz, UNUSED, m10, m11, m12, m13, m20, m21, m22, m23, m30, m31, m32, m33, m40, m41, m42, m43], headersIndex = LENGTH_HEADERS);
       LENGTH_HEADERS += HEADER_ITEM_COUNT;
       COUNT_HEADERS += 1;
       return objects[headersIndex] = new (Mesh = (function() {
@@ -967,6 +967,13 @@ export var GL2 = (function() {
           position: {
             get: function() {
               return this.headers.subarray(20, 23);
+            }
+          },
+          matrix: {
+            get: function() {
+              var m4;
+              m4 = this.headers.subarray(24, 40);
+              return new M4(m4.buffer, m4.byteOffset, m4.length);
             }
           },
           points: {
