@@ -21,6 +21,63 @@ Object.defineProperties(Math, {
   }
 });
 
+objects = new Object();
+
+Object.defineProperties(objects, {
+  get: {
+    value: function(offset) {
+      return this[(offset - HEADERS_OFFSET) / 4];
+    }
+  }
+});
+
+export var Position = (function() {
+  class Position extends Float32Array {
+    apply() {
+      this.mesh.matrix[0] = this.mesh.matrix[5] = this.mesh.matrix[10] = this.mesh.matrix[15] = 1;
+      return this.mesh.applyMatrix();
+    }
+
+  };
+
+  Position.prototype.headerOffset = (24 + 12) * 4;
+
+  Object.defineProperties(Position.prototype, {
+    x: {
+      set: function() {
+        return this.apply(this[0] = arguments[0]);
+      },
+      get: function() {
+        return this[0];
+      }
+    },
+    y: {
+      set: function() {
+        return this.apply(this[0] = arguments[0]);
+      },
+      get: function() {
+        return this[0];
+      }
+    },
+    z: {
+      set: function() {
+        return this.apply(this[0] = arguments[0]);
+      },
+      get: function() {
+        return this[0];
+      }
+    },
+    mesh: {
+      get: function() {
+        return objects.get(this.byteOffset - this.headerOffset);
+      }
+    }
+  });
+
+  return Position;
+
+}).call(this);
+
 export var M4 = (function() {
   var Camera;
 
@@ -163,6 +220,17 @@ export var M4 = (function() {
     }
 
   };
+
+  Object.defineProperties(M4.prototype, {
+    position: {
+      set: function() {
+        return this.position.set(arguments[0]);
+      },
+      get: function() {
+        return new Position(this.buffer, this.byteOffset + 48, 3);
+      }
+    }
+  });
 
   Object.defineProperty(M4, "identity", {
     get: function() {
@@ -342,8 +410,6 @@ HEADERS_INDEX = DRAW_FINISH / 4;
 
 HEADERS_BUFFER = new Headers(BUFFER, HEADERS_OFFSET, 1e6);
 
-objects = new Object();
-
 Object.defineProperties(Headers.prototype, {
   x: {
     get: function() {
@@ -505,10 +571,6 @@ export var Vertex = class Vertex extends Float32Array {};
 export var Attributes = class Attributes extends Float32Array {};
 
 export var Vertices = class Vertices extends Array {};
-
-export var Position = class Position extends Float32Array {};
-
-export var Rotation = class Rotation extends Float32Array {};
 
 export var Points = class Points extends Array {};
 
@@ -864,7 +926,7 @@ export var GL2 = (function() {
             return [this.point(i), this.point(i + 1), this.point(i + 2)];
           }
 
-          applyMatrix(mat4) {
+          applyMatrix(mat4 = this.matrix) {
             var j, len1, p, ref;
             ref = this.points;
             for (j = 0, len1 = ref.length; j < len1; j++) {
@@ -966,7 +1028,7 @@ export var GL2 = (function() {
           },
           position: {
             get: function() {
-              return this.headers.subarray(20, 23);
+              return this.matrix.position;
             }
           },
           matrix: {
@@ -996,9 +1058,9 @@ export var GL2 = (function() {
               return results;
             }
           },
-          dump: {
+          [Symbol("(dump)")]: {
             get: function() {
-              return {byteOffset: this.byteOffset, byteLength: this.byteLength, count: this.count, length: this.length, begin: this.begin, end: this.end, id: this.id, drawAs: this.drawAs, enabled: this.enabled, needsUpload: this.needsUpload, color: this.color, rotation: this.rotation, position: this.position};
+              return {byteOffset: this.byteOffset, byteLength: this.byteLength, count: this.count, length: this.length, begin: this.begin, end: this.end, id: this.id, drawAs: this.drawAs, enabled: this.enabled, needsUpload: this.needsUpload, color: this.color, rotation: this.rotation, position: this.position, matrix: this.matrix};
             }
           },
           [Symbol.iterator]: {

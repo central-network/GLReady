@@ -4,8 +4,48 @@ Object.defineProperties Math,
     powsum          : value : ( arr, pow = 2 ) ->
         [ ...arr ].flat().reduce (a, b) -> a + Math.pow b, pow
 
+
+objects = new Object()
+
+Object.defineProperties objects,
+    get : value : ( offset ) ->
+        this[ ( offset - HEADERS_OFFSET ) / 4 ]
+
+
+export class Position   extends Float32Array
+
+    headerOffset : ( 24 + 12 ) * 4
+
+    Object.defineProperties this::,
+        x       : 
+            set : -> @apply @[0] = arguments[0]
+            get : -> @[0]
+        y       : 
+            set : -> @apply @[0] = arguments[0]
+            get : -> @[0]
+        z       : 
+            set : -> @apply @[0] = arguments[0]
+            get : -> @[0]
+
+        mesh    :
+            get : -> objects.get @byteOffset - @headerOffset
+
+    apply  : ->
+        @mesh.matrix[0] = 
+        @mesh.matrix[5] = 
+        @mesh.matrix[10] =  
+        @mesh.matrix[15] = 1  
+        @mesh.applyMatrix()
+
+
+
 #? https://webgl2fundamentals.org/webgl/lessons/webgl-3d-perspective.html
 export class M4 extends Float32Array
+
+    Object.defineProperties this::,
+        position :
+            set : -> @position.set arguments[ 0 ]
+            get : -> new Position @buffer, @byteOffset + 48, 3
 
     Object.defineProperty this, "identity", get : ->
         new M4 [
@@ -277,7 +317,6 @@ HEADERS_OFFSET      = DRAW_FINISH
 HEADERS_INDEX       = DRAW_FINISH / 4
 
 HEADERS_BUFFER      = new Headers BUFFER, HEADERS_OFFSET, 1e6
-objects             = new Object()
 
 Object.defineProperties Headers::,
     x : 
@@ -397,8 +436,6 @@ export class Color      extends Float32Array
 export class Vertex     extends Float32Array
 export class Attributes extends Float32Array
 export class Vertices   extends Array
-export class Position   extends Float32Array
-export class Rotation   extends Float32Array
 export class Points     extends Array
 export class Triangle   extends Array
 
@@ -696,7 +733,7 @@ export class GL2 extends EventTarget
             triangle            : ( i ) ->
                 [ @point(i), @point(i+1), @point(i+2) ]
 
-            applyMatrix         : ( mat4 ) ->
+            applyMatrix         : ( mat4 = @matrix ) ->
                 for p in @points
                     p.applyMatrix mat4
                 @needsUpload = 1 ; @                    
@@ -733,7 +770,7 @@ export class GL2 extends EventTarget
 
                 color           : get : -> @headers.subarray 12, 16
                 rotation        : get : -> @headers.subarray 16, 19
-                position        : get : -> @headers.subarray 20, 23
+                position        : get : -> @matrix.position
 
                 matrix          : get : ->
                     m4 = @headers.subarray( 24, 40 )
@@ -742,12 +779,12 @@ export class GL2 extends EventTarget
                 points          : get : -> @point i for i in [ 0 ... @count ]
                 triangles       : get : -> @triangle i for i in [ 0 ... @count/3 ]
 
-                dump            : get : -> {
+                [ Symbol("(dump)") ]            : get : -> {
                     @byteOffset, @byteLength,
                     @count, @length,
                     @begin, @end, @id,
                     @drawAs, @enabled, @needsUpload,
-                    @color, @rotation, @position
+                    @color, @rotation, @position, @matrix
                 }
                 
                 [ Symbol.iterator ] : value : ->
