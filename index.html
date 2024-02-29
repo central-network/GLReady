@@ -356,7 +356,7 @@
             })
 
             let mat4 = M4.identity
-            
+
             mat4.rotate( 0, Math.PI/8 )
             mat4.translate( 0, 0, 100 )
             mat4.scale( 1.2 )
@@ -375,12 +375,10 @@
                 point.color.set( [0, 1, 1, 1] )
             }
 
-            console.log( "mat4:\n", mat4 )
-
+            console.log( mat4 )
+            
             shape4.applyMatrix( mat4 )
-
-
-            console.log( shape4 )
+            
 
             gl2.pointSize = 10
 

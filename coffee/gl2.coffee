@@ -185,48 +185,6 @@ export class M4 extends Float32Array
         @multiply @zTranslation tz
 
 
-f = new Float32Array [
-     3, 0, 0,
-     1, 0, 0,
-     2, 1, 0
-]
-
-console.log "A0:", [ ...f.subarray( 0, 3 ) ]
-console.log "B0:", [ ...f.subarray( 3, 6 ) ]
-console.log "C0:", [ ...f.subarray( 6, 9 ) ]
-
-i = 0
-len = f.length
-m4 = M4.identity
-
-dx = 4
-dy = 1
-dz = -1
-
-m4.translate( dx, dy, dz )
-m4.scale( 0.5, 0.5, 0.5 )
-
-console.warn {
-    dx, dy, dz
-}
-
-console.warn  " m4 -> ", ...m4
-
-
-while i < len
-    arr = f.subarray i, i+= 3
-    mv4 = M4.fromVec3 arr
-    mul = M4.multiply m4, mv4
-
-    console.log [i], " ", ...mul
-
-    arr.set mul.subarray( 12, 15 )
-
-console.log "A1:", [ ...f.subarray( 0, 3 ) ]
-console.log "B1:", [ ...f.subarray( 3, 6 ) ]
-console.log "C1:", [ ...f.subarray( 6, 9 ) ]
-
-
 DRAW_LENGTH         = 3e6 + 4
 HEAD_LENGTH         = 1e4
 BUFFER              = new SharedArrayBuffer 1e8
@@ -240,9 +198,6 @@ export class Point      extends Float32Array
             set : -> this[index] = arguments[0]
         )(i)
 
-    [ Symbol.iterator ] : ->
-        yield @[i] for i in [ 0 ... @length ]
-
     Object.defineProperties this::,
         color   :
             get : -> new Color @buffer, @byteOffset + 12, 4
@@ -255,7 +210,7 @@ export class Point      extends Float32Array
         vLength : 
             get : -> Math.sqrt Math.powsum @subarray 0, 3
 
-        i       :
+        index   :
             get : -> @byteOffset / @byteLength % DRAW_COUNT
 
 
@@ -494,7 +449,7 @@ export class GL2 extends EventTarget
             vertex = point.vertex
                 
             for neigh in neighs
-                pair = [ c = neigh.i, d = point.i ]
+                pair = [ c = neigh.index, d = point.index ]
                 found = no
 
                 for [ a, b ] in pairs
@@ -719,9 +674,6 @@ export class GL2 extends EventTarget
         
         objects[ headersIndex ] = new ( class Mesh extends Number
 
-            [ Symbol.iterator ] : ->
-                yield @point i for i in [ 0 ... @count ]
-
             point               : ( i ) ->
                 begin = @begin + ITEMS_PER_VERTEX * i
                 end = begin + ITEMS_PER_VERTEX
@@ -779,7 +731,10 @@ export class GL2 extends EventTarget
                     @begin, @end, @id,
                     @drawAs, @enabled, @needsUpload,
                     @color, @rotation, @position
-                }                    
+                }
+                
+                [ Symbol.iterator ] : value : ->
+                    yield @point i for i in [ 0 ... @count ]
 
         )( headersIndex )
 

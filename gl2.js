@@ -1,4 +1,4 @@
-var BUFFER, BYTE_LINES, BYTE_POINTS, BYTE_TRIANGLES, COUNT_HEADERS, COUNT_LINES, COUNT_POINTS, COUNT_TRIANGLES, DRAW_BUFFER, DRAW_COUNT, DRAW_FINISH, DRAW_LENGTH, FIRST_LINES, FIRST_POINTS, FIRST_TRIANGLES, HEADERS_BUFFER, HEADERS_INDEX, HEADERS_OFFSET, HEAD_LENGTH, INDEX_LINES, INDEX_POINTS, INDEX_TRIANGLES, LENGTH_HEADERS, UNUSED, a, arr, b, dx, dy, dz, f, g, i, len, m4, mul, mv4, objects, r, rx, ry, rz,
+var BUFFER, BYTE_LINES, BYTE_POINTS, BYTE_TRIANGLES, COUNT_HEADERS, COUNT_LINES, COUNT_POINTS, COUNT_TRIANGLES, DRAW_BUFFER, DRAW_COUNT, DRAW_FINISH, DRAW_LENGTH, FIRST_LINES, FIRST_POINTS, FIRST_TRIANGLES, HEADERS_BUFFER, HEADERS_INDEX, HEADERS_OFFSET, HEAD_LENGTH, INDEX_LINES, INDEX_POINTS, INDEX_TRIANGLES, LENGTH_HEADERS, UNUSED, a, b, dx, dy, dz, g, objects, r, rx, ry, rz,
   boundMethodCheck = function(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new Error('Bound instance method accessed before binding'); } };
 
 Object.defineProperties(Math, {
@@ -184,48 +184,6 @@ export var M4 = (function() {
 
 }).call(this);
 
-f = new Float32Array([3, 0, 0, 1, 0, 0, 2, 1, 0]);
-
-console.log("A0:", [...f.subarray(0, 3)]);
-
-console.log("B0:", [...f.subarray(3, 6)]);
-
-console.log("C0:", [...f.subarray(6, 9)]);
-
-i = 0;
-
-len = f.length;
-
-m4 = M4.identity;
-
-dx = 4;
-
-dy = 1;
-
-dz = -1;
-
-m4.translate(dx, dy, dz);
-
-m4.scale(0.5, 0.5, 0.5);
-
-console.warn({dx, dy, dz});
-
-console.warn(" m4 -> ", ...m4);
-
-while (i < len) {
-  arr = f.subarray(i, i += 3);
-  mv4 = M4.fromVec3(arr);
-  mul = M4.multiply(m4, mv4);
-  console.log([i], " ", ...mul);
-  arr.set(mul.subarray(12, 15));
-}
-
-console.log("A1:", [...f.subarray(0, 3)]);
-
-console.log("B1:", [...f.subarray(3, 6)]);
-
-console.log("C1:", [...f.subarray(6, 9)]);
-
 DRAW_LENGTH = 3e6 + 4;
 
 HEAD_LENGTH = 1e4;
@@ -237,24 +195,15 @@ DRAW_COUNT = DRAW_LENGTH / 7;
 export var Headers = class Headers extends Int32Array {};
 
 export var Point = (function() {
-  var j, len1, prop, ref;
+  var i, j, len1, prop, ref;
 
   class Point extends Float32Array {
-    * [Symbol.iterator]() {
-      var k, ref1, results;
-      results = [];
-      for (i = k = 0, ref1 = this.length; (0 <= ref1 ? k < ref1 : k > ref1); i = 0 <= ref1 ? ++k : --k) {
-        results.push((yield this[i]));
-      }
-      return results;
-    }
-
     applyMatrix(mat4) {
       return mat4.modifyVertex(this);
     }
 
     isNeighbour(point) {
-      var a, b, c, x, y, z;
+      var a, b, c, dx, dy, dz, x, y, z;
       [a, b, c] = this.vertex;
       [x, y, z] = point;
       dx = x - a;
@@ -272,7 +221,7 @@ export var Point = (function() {
     }
 
     distance2d(p0, p1 = this) {
-      var a, b, c, x, y, z;
+      var a, b, c, dx, dy, dz, x, y, z;
       [a, b, c] = p0;
       [x, y, z] = p1;
       dx = Math.abs(a - x);
@@ -350,7 +299,7 @@ export var Point = (function() {
         return Math.sqrt(Math.powsum(this.subarray(0, 3)));
       }
     },
-    i: {
+    index: {
       get: function() {
         return this.byteOffset / this.byteLength % DRAW_COUNT;
       }
@@ -403,7 +352,7 @@ Object.defineProperties(Headers.prototype, {
       return this[0];
     },
     set: function() {
-      var cos, diff, j, k, len1, len2, p, ref, ref1, sin, x, y;
+      var cos, diff, dx, j, k, len1, len2, p, ref, ref1, sin, x, y;
       //! position
       diff = (this.byteOffset - HEADERS_OFFSET) / 4;
       if ((diff % 16) === 12) {
@@ -434,7 +383,7 @@ Object.defineProperties(Headers.prototype, {
       return this[1];
     },
     set: function() {
-      var j, len1, p, ref;
+      var dy, j, len1, p, ref;
       dy = arguments[0] - this.y;
       this[1] = arguments[0];
       ref = this.object.points;
@@ -450,7 +399,7 @@ Object.defineProperties(Headers.prototype, {
       return this[2];
     },
     set: function() {
-      var j, len1, p, ref;
+      var dz, j, len1, p, ref;
       dz = arguments[0] - this.z;
       this[2] = arguments[0];
       ref = this.object.points;
@@ -485,7 +434,7 @@ export var RGBA = (function() {
   Object.defineProperties(RGBA, {
     [Array]: {
       value: function() {
-        var j, len1, ref, v;
+        var arr, i, j, len1, ref, v;
         arr = [1, 1, 1, 1];
         ref = this;
         for (i = j = 0, len1 = ref.length; j < len1; i = ++j) {
@@ -596,7 +545,7 @@ export var GL2 = (function() {
     }
 
     static edges(shape) {
-      var c, d, found, j, k, l, len1, len2, len3, neigh, neighs, pair, pairs, point, points, ref, vertex;
+      var c, d, found, i, j, k, l, len1, len2, len3, neigh, neighs, pair, pairs, point, points, ref, vertex;
       i = 0;
       pairs = [];
       points = [];
@@ -607,7 +556,7 @@ export var GL2 = (function() {
         vertex = point.vertex;
         for (k = 0, len2 = neighs.length; k < len2; k++) {
           neigh = neighs[k];
-          pair = [c = neigh.i, d = point.i];
+          pair = [c = neigh.index, d = point.index];
           found = false;
           for (l = 0, len3 = pairs.length; l < len3; l++) {
             [a, b] = pairs[l];
@@ -905,15 +854,6 @@ export var GL2 = (function() {
       COUNT_HEADERS += 1;
       return objects[headersIndex] = new (Mesh = (function() {
         class Mesh extends Number {
-          * [Symbol.iterator]() {
-            var j, ref, results;
-            results = [];
-            for (i = j = 0, ref = this.count; (0 <= ref ? j < ref : j > ref); i = 0 <= ref ? ++j : --j) {
-              results.push((yield this.point(i)));
-            }
-            return results;
-          }
-
           point(i) {
             begin = this.begin + ITEMS_PER_VERTEX * i;
             end = begin + ITEMS_PER_VERTEX;
@@ -936,7 +876,7 @@ export var GL2 = (function() {
           }
 
           neighbours(point) {
-            var d, j, neighs, p, ref, x, y, z;
+            var d, i, j, neighs, p, ref, x, y, z;
             [x, y, z] = point;
             neighs = [];
             for (i = j = 0, ref = this.count; (0 <= ref ? j < ref : j > ref); i = 0 <= ref ? ++j : --j) {
@@ -1031,7 +971,7 @@ export var GL2 = (function() {
           },
           points: {
             get: function() {
-              var j, ref, results;
+              var i, j, ref, results;
               results = [];
               for (i = j = 0, ref = this.count; (0 <= ref ? j < ref : j > ref); i = 0 <= ref ? ++j : --j) {
                 results.push(this.point(i));
@@ -1041,7 +981,7 @@ export var GL2 = (function() {
           },
           triangles: {
             get: function() {
-              var j, ref, results;
+              var i, j, ref, results;
               results = [];
               for (i = j = 0, ref = this.count / 3; (0 <= ref ? j < ref : j > ref); i = 0 <= ref ? ++j : --j) {
                 results.push(this.triangle(i));
@@ -1053,6 +993,16 @@ export var GL2 = (function() {
             get: function() {
               return {byteOffset: this.byteOffset, byteLength: this.byteLength, count: this.count, length: this.length, begin: this.begin, end: this.end, id: this.id, drawAs: this.drawAs, enabled: this.enabled, needsUpload: this.needsUpload, color: this.color, rotation: this.rotation, position: this.position};
             }
+          },
+          [Symbol.iterator]: {
+            value: function*() {
+              var i, j, ref, results;
+              results = [];
+              for (i = j = 0, ref = this.count; (0 <= ref ? j < ref : j > ref); i = 0 <= ref ? ++j : --j) {
+                results.push((yield this.point(i)));
+              }
+              return results;
+            }
           }
         });
 
@@ -1062,7 +1012,7 @@ export var GL2 = (function() {
     }
 
     render(t) {
-      var hIndex, j, job, k, l, len1, len2, len3, object, ref, ref1, ref2;
+      var hIndex, j, job, k, l, len, len1, len2, len3, object, ref, ref1, ref2;
       boundMethodCheck(this, GL2);
       if (this.rendering) {
         if (len = this.onceQueue.length) {
