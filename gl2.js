@@ -1,4 +1,4 @@
-var BUFFER, BYTE_LINES, BYTE_POINTS, BYTE_TRIANGLES, COUNT_HEADERS, COUNT_LINES, COUNT_POINTS, COUNT_TRIANGLES, DRAW_BUFFER, DRAW_COUNT, DRAW_FINISH, DRAW_LENGTH, FIRST_LINES, FIRST_POINTS, FIRST_TRIANGLES, HEADERS_BUFFER, HEADERS_INDEX, HEADERS_OFFSET, INDEX_LINES, INDEX_POINTS, INDEX_TRIANGLES, LENGTH_HEADERS, UNUSED, a, b, dx, dy, dz, g, m10, m11, m12, m13, m20, m21, m22, m23, m30, m31, m32, m33, m40, m41, m42, m43, objects, r, rx, ry, rz,
+var BUFFER, BYTES_PER_ELEMENT, BYTE_LINES, BYTE_POINTS, BYTE_TRIANGLES, COUNT_HEADERS, COUNT_LINES, COUNT_POINTS, COUNT_TRIANGLES, DRAW_BUFFER, DRAW_COUNT, DRAW_FINISH, DRAW_LENGTH, FIRST_LINES, FIRST_POINTS, FIRST_TRIANGLES, HEADERS, HEADERS_INDEX, HEADERS_OFFSET, HEADER_ITEM_COUNT, INDEX_LINES, INDEX_POINTS, INDEX_TRIANGLES, ITEMS_PER_VERTEX, LENGTH_HEADERS, UNUSED, a, b, dx, dy, dz, f32, g, i32, m10, m11, m12, m13, m20, m21, m22, m23, m30, m31, m32, m33, m40, m41, m42, m43, r, rx, ry, rz,
   boundMethodCheck = function(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new Error('Bound instance method accessed before binding'); } };
 
 Object.defineProperties(Math, {
@@ -21,60 +21,264 @@ Object.defineProperties(Math, {
   }
 });
 
-objects = new Object();
+BYTES_PER_ELEMENT = 4;
 
-Object.defineProperties(objects, {
-  get: {
-    value: function(offset) {
-      return this[(offset - HEADERS_OFFSET) / 4];
+HEADER_ITEM_COUNT = 40;
+
+ITEMS_PER_VERTEX = 7;
+
+DRAW_LENGTH = 3e6 + 4;
+
+BUFFER = new SharedArrayBuffer(1e8);
+
+DRAW_COUNT = DRAW_LENGTH / 7;
+
+i32 = new Int32Array(BUFFER);
+
+f32 = new Float32Array(BUFFER);
+
+self.objects = new Object();
+
+export var Attribute = class Attribute extends Float32Array {};
+
+export var Attributes = class Attributes extends Attribute {};
+
+export var Pointer = (function() {
+  class Pointer extends Number {
+    put(index, value) {
+      return this.base[this.begin + index] = value;
     }
-  }
-});
 
-export var Position = (function() {
-  class Position extends Float32Array {
-    apply() {
-      this.mesh.matrix[0] = this.mesh.matrix[5] = this.mesh.matrix[10] = this.mesh.matrix[15] = 1;
-      return this.mesh.applyMatrix();
+    get(index) {
+      return this.base[this.begin + index];
+    }
+
+    set(array) {
+      this.array.set(array);
+      return this;
+    }
+
+    * [Symbol.iterator]() {
+      var i, j, ref, results;
+      results = [];
+      for (i = j = 0, ref = this.length; (0 <= ref ? j < ref : j > ref); i = 0 <= ref ? ++j : --j) {
+        results.push((yield this.get(i)));
+      }
+      return results;
     }
 
   };
 
-  Position.prototype.headerOffset = (24 + 12) * 4;
+  Pointer.prototype.base = new Float32Array(BUFFER);
 
-  Object.defineProperties(Position.prototype, {
-    x: {
-      set: function() {
-        return this.apply(this[0] = arguments[0]);
-      },
+  Object.defineProperties(Pointer.prototype, {
+    array: {
       get: function() {
-        return this[0];
+        return this.base.subarray(this.begin, this.end);
       }
     },
-    y: {
-      set: function() {
-        return this.apply(this[0] = arguments[0]);
-      },
+    begin: {
       get: function() {
-        return this[0];
+        return this.index + this.byteOffset / 4;
       }
     },
-    z: {
-      set: function() {
-        return this.apply(this[0] = arguments[0]);
-      },
+    end: {
       get: function() {
-        return this[0];
+        return this.begin + this.length;
       }
     },
-    mesh: {
+    index: {
       get: function() {
-        return objects.get(this.byteOffset - this.headerOffset);
+        return this / 4;
+      }
+    },
+    length: {
+      get: function() {
+        return this.byteLength / 4;
       }
     }
   });
 
+  return Pointer;
+
+}).call(this);
+
+export var AtomicPointer = (function() {
+  class AtomicPointer extends Pointer {
+    put(index, value) {
+      return Atomics.store(this.base, this.begin + index, value);
+    }
+
+    get(index) {
+      return Atomics.load(this.base, this.begin + index);
+    }
+
+    set(array) {
+      var i, j, ref;
+      for (i = j = 0, ref = this.length; (0 <= ref ? j < ref : j > ref); i = 0 <= ref ? ++j : --j) {
+        this.put(i, array[i]);
+      }
+      return this;
+    }
+
+  };
+
+  AtomicPointer.prototype.base = new Int32Array(BUFFER);
+
+  return AtomicPointer;
+
+}).call(this);
+
+export var Headers = (function() {
+  class Headers extends AtomicPointer {};
+
+  Headers.prototype.byteOffset = 0;
+
+  Headers.prototype.byteLength = 40 * 4;
+
+  return Headers;
+
+}).call(this);
+
+export var Position = (function() {
+  var index, j, key, len1, ref;
+
+  class Position extends Pointer {};
+
+  Position.prototype.byteOffset = 80;
+
+  Position.prototype.byteLength = 12;
+
+  ref = ["x", "y", "z"];
+  for (index = j = 0, len1 = ref.length; j < len1; index = ++j) {
+    key = ref[index];
+    Object.defineProperty(Position.prototype, key, (function(i) {
+      return {
+        get: function() {
+          return this.get(i);
+        },
+        set: function() {
+          return this.put(i, arguments[0]);
+        }
+      };
+    })(index));
+  }
+
   return Position;
+
+}).call(this);
+
+export var Rotation = (function() {
+  var index, j, key, len1, ref;
+
+  class Rotation extends Pointer {};
+
+  Rotation.prototype.byteOffset = 64;
+
+  Rotation.prototype.byteLength = 12;
+
+  ref = ["x", "y", "z"];
+  for (index = j = 0, len1 = ref.length; j < len1; index = ++j) {
+    key = ref[index];
+    Object.defineProperty(Rotation.prototype, key, (function(i) {
+      return {
+        get: function() {
+          return this.get(i);
+        },
+        set: function() {
+          return this.put(i, arguments[0]);
+        }
+      };
+    })(index));
+  }
+
+  return Rotation;
+
+}).call(this);
+
+export var Color = (function() {
+  var index, j, key, len1, ref;
+
+  class Color extends Pointer {
+    set(value) {
+      return super.set(Color.parse(value));
+    }
+
+    static parse(any) {
+      var arr, i, k, len2, v;
+      if (any instanceof this) {
+        return any;
+      }
+      if ("function" === typeof any.fill) {
+        arr = [1, 1, 1, 1];
+        for (i = k = 0, len2 = any.length; k < len2; i = ++k) {
+          v = any[i];
+          arr[i] = v > 1 ? v / 255 : v;
+        }
+        return arr;
+      }
+      if ("function" === typeof any.trim) {
+        if ("#" === any.at(0)) {
+          return Color.parse(any.substring(1));
+        }
+        if ("x" === any.at(1)) {
+          return Color.parse(any.substring(2));
+          any = any.replace(/\W+/g, '');
+        }
+        if (any.length === 3) {
+          return Color.parse(any.split("").map(function(i) {
+            return i + i;
+          }).join(""));
+        }
+        if (any.length <= 5) {
+          return Color.parse(any.padStart(6, 0));
+        }
+        return any.padEnd(8, "ff").match(/.{1,2}/g).map(function(n) {
+          return parseInt(n, 16) / 0xff;
+        });
+      }
+    }
+
+  };
+
+  Color.prototype.byteOffset = 48;
+
+  Color.prototype.byteLength = 16;
+
+  ref = ["r", "g", "b", "a"];
+  for (index = j = 0, len1 = ref.length; j < len1; index = ++j) {
+    key = ref[index];
+    Object.defineProperty(Color.prototype, key, (function(i) {
+      return {
+        get: function() {
+          return this.get(i);
+        },
+        set: function() {
+          return this.put(i, arguments[0]);
+        }
+      };
+    })(index));
+  }
+
+  return Color;
+
+}).call(this);
+
+export var ColorAttribute = (function() {
+  class ColorAttribute extends Color {};
+
+  ColorAttribute.prototype.byteOffset = 12;
+
+  return ColorAttribute;
+
+}).call(this);
+
+export var PositionAttribute = (function() {
+  class PositionAttribute extends Position {};
+
+  PositionAttribute.prototype.byteOffset = 0;
+
+  return PositionAttribute;
 
 }).call(this);
 
@@ -90,11 +294,6 @@ export var M4 = (function() {
     modifyVertex(vec3) {
       vec3.set(M4.multiply(this, Float32Array.from([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, ...vec3.subarray(0, 3), 1])).subarray(12, 15));
       return vec3;
-    }
-
-    modifyShape(mesh) {
-      mesh.applyMatrix(this);
-      return mesh;
     }
 
     multiply(b) {
@@ -221,17 +420,6 @@ export var M4 = (function() {
 
   };
 
-  Object.defineProperties(M4.prototype, {
-    position: {
-      set: function() {
-        return this.position.set(arguments[0]);
-      },
-      get: function() {
-        return new Position(this.buffer, this.byteOffset + 48, 3);
-      }
-    }
-  });
-
   Object.defineProperty(M4, "identity", {
     get: function() {
       return new M4([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]);
@@ -252,13 +440,30 @@ export var M4 = (function() {
 
 }).call(this);
 
-DRAW_LENGTH = 3e6 + 4;
+Float32Array.prototype.sub = Float32Array.prototype.subarray;
 
-BUFFER = new SharedArrayBuffer(1e8);
-
-DRAW_COUNT = DRAW_LENGTH / 7;
-
-export var Headers = class Headers extends Int32Array {};
+Object.defineProperties(Float32Array.prototype, {
+  sub: {
+    value: function() {
+      return this.subarray(...arguments);
+    }
+  },
+  vertex: {
+    get: function() {
+      return this.sub(0, 3);
+    }
+  },
+  color: {
+    get: function() {
+      return this.sub(3, 7);
+    }
+  },
+  index: {
+    get: function() {
+      return this.byteOffset / this.byteLength % DRAW_COUNT;
+    }
+  }
+});
 
 export var Point = (function() {
   var i, j, len1, prop, ref;
@@ -269,9 +474,13 @@ export var Point = (function() {
     }
 
     isNeighbour(point) {
+      return Point.isNeighbours(this, point);
+    }
+
+    static isNeighbours(p0, p1) {
       var a, b, c, dx, dy, dz, x, y, z;
-      [a, b, c] = this.vertex;
-      [x, y, z] = point;
+      [a, b, c] = p0;
+      [x, y, z] = p1;
       dx = x - a;
       dy = y - b;
       dz = z - c;
@@ -346,15 +555,15 @@ export var Point = (function() {
   Object.defineProperties(Point.prototype, {
     color: {
       get: function() {
-        return new Color(this.buffer, this.byteOffset + 12, 4);
+        return new ColorAttribute(this.byteOffset);
       },
       set: function() {
-        return this.set(arguments[0].toRGBA(), 3);
+        return this.color.set(arguments[0]);
       }
     },
     vertex: {
       get: function() {
-        return new Vertex(this.buffer, this.byteOffset + 0, 3);
+        return new PositionAttribute(this.byteOffset);
       },
       set: function() {
         return this.vertex.set(arguments[0]);
@@ -376,7 +585,7 @@ export var Point = (function() {
 
 }).call(this);
 
-DRAW_BUFFER = new Point(BUFFER, 0, DRAW_LENGTH * 3);
+DRAW_BUFFER = new Float32Array(BUFFER, 0, DRAW_LENGTH * 3);
 
 DRAW_FINISH = DRAW_BUFFER.byteOffset + DRAW_BUFFER.byteLength;
 
@@ -408,83 +617,7 @@ HEADERS_OFFSET = DRAW_FINISH;
 
 HEADERS_INDEX = DRAW_FINISH / 4;
 
-HEADERS_BUFFER = new Headers(BUFFER, HEADERS_OFFSET, 1e6);
-
-Object.defineProperties(Headers.prototype, {
-  x: {
-    get: function() {
-      return this[0];
-    },
-    set: function() {
-      var cos, diff, dx, j, k, len1, len2, p, ref, ref1, sin, x, y;
-      //! position
-      diff = (this.byteOffset - HEADERS_OFFSET) / 4;
-      if ((diff % 16) === 12) {
-        dx = arguments[0] - this[0];
-        ref = this.pobject.points;
-        for (j = 0, len1 = ref.length; j < len1; j++) {
-          p = ref[j];
-          p[0] += dx;
-        }
-        this.pobject.needsUpload = 1;
-      } else {
-        //? rotation
-        cos = Math.cos(arguments[0]);
-        sin = Math.sin(arguments[0]);
-        ref1 = this.robject.points;
-        for (k = 0, len2 = ref1.length; k < len2; k++) {
-          p = ref1[k];
-          [x, y] = p;
-          p.set([x * cos - y * sin, x * sin + y * cos]);
-        }
-        this.robject.needsUpload = 1;
-      }
-      return this[0] = arguments[0];
-    }
-  },
-  y: {
-    get: function() {
-      return this[1];
-    },
-    set: function() {
-      var dy, j, len1, p, ref;
-      dy = arguments[0] - this.y;
-      this[1] = arguments[0];
-      ref = this.object.points;
-      for (j = 0, len1 = ref.length; j < len1; j++) {
-        p = ref[j];
-        p.y += dy;
-      }
-      return this.object.needsUpload = 1;
-    }
-  },
-  z: {
-    get: function() {
-      return this[2];
-    },
-    set: function() {
-      var dz, j, len1, p, ref;
-      dz = arguments[0] - this.z;
-      this[2] = arguments[0];
-      ref = this.object.points;
-      for (j = 0, len1 = ref.length; j < len1; j++) {
-        p = ref[j];
-        p.z += dz;
-      }
-      return this.object.needsUpload = 1;
-    }
-  },
-  pobject: {
-    get: function() {
-      return objects[(this.byteOffset - HEADERS_OFFSET) / 4 - 20];
-    }
-  },
-  robject: {
-    get: function() {
-      return objects[(this.byteOffset - HEADERS_OFFSET) / 4 - 16];
-    }
-  }
-});
+HEADERS = new Int32Array(BUFFER, HEADERS_OFFSET, 1e6);
 
 COUNT_HEADERS = 0;
 
@@ -494,87 +627,232 @@ r = g = b = a = rx = ry = rz = dx = dy = dz = UNUSED = 0;
 
 [m10, m11, m12, m13, m20, m21, m22, m23, m30, m31, m32, m33, m40, m41, m42, m43] = M4.identity;
 
-export var RGBA = (function() {
-  class RGBA {};
-
-  Object.defineProperties(RGBA, {
-    [Array]: {
-      value: function() {
-        var arr, i, j, len1, ref, v;
-        arr = [1, 1, 1, 1];
-        ref = this;
-        for (i = j = 0, len1 = ref.length; j < len1; i = ++j) {
-          v = ref[i];
-          arr[i] = v > 1 ? v / 255 : v;
-        }
-        return arr;
-      }
-    },
-    [String]: {
-      value: function() {
-        var $;
-        if ("#" === $.at(0)) {
-          return $.substring(1).toRGBA();
-        }
-        if ("x" === $.at(1)) {
-          return $.substring(2).toRGBA();
-        }
-        $ = this.replace(/\W+/g, '');
-        if ($.length === 3) {
-          return $.split("").map(function(i) {
-            return i + i;
-          }).join("").toRGBA();
-        }
-        if ($.length <= 5) {
-          return $.padStart(6, 0).toRGBA();
-        }
-        return $.padEnd(8, "ff").match(/.{1,2}/g).map(function(n) {
-          return parseInt(n, 16) / 0xff;
-        });
-      }
-    }
-  });
-
-  return RGBA;
-
-}).call(this);
-
-export var XYZ = class XYZ {};
-
-Object.defineProperties(Array.prototype, {
-  toRGBA: {
-    value: RGBA[Array]
-  }
-});
-
-Object.defineProperties(String.prototype, {
-  toRGBA: {
-    value: RGBA[String]
-  }
-});
-
-Object.defineProperties(Object.getPrototypeOf(Uint8Array.prototype), {
-  toRGBA: {
-    value: RGBA[Array]
-  }
-});
-
-export var Color = class Color extends Float32Array {
-  set() {
-    return super.set(arguments[0].toRGBA());
-  }
-
-};
-
 export var Vertex = class Vertex extends Float32Array {};
-
-export var Attributes = class Attributes extends Float32Array {};
 
 export var Vertices = class Vertices extends Array {};
 
 export var Points = class Points extends Array {};
 
 export var Triangle = class Triangle extends Array {};
+
+export var Mesh = (function() {
+  class Mesh extends Number {
+    point(i) {
+      var begin, end;
+      begin = this.begin + ITEMS_PER_VERTEX * i;
+      end = begin + ITEMS_PER_VERTEX;
+      return DRAW_BUFFER.subarray(begin, end);
+    }
+
+    triangle(i) {
+      return [this.point(i), this.point(i + 1), this.point(i + 2)];
+    }
+
+    applyMatrix(mat4) {
+      var j, len1, p, ref;
+      if (!mat4) {
+        this.matrix.set(M4.identity);
+        this.matrix.rotate(...this.rotation);
+        this.matrix.translate(...this.position);
+        mat4 = this.matrix;
+      }
+      ref = this.points;
+      for (j = 0, len1 = ref.length; j < len1; j++) {
+        p = ref[j];
+        mat4.modifyVertex(p.vertex);
+      }
+      this.needsUpload = 1;
+      return this;
+    }
+
+    neighbours(point) {
+      var i, j, neighs, p, ref;
+      neighs = [];
+      for (i = j = 0, ref = this.count; (0 <= ref ? j < ref : j > ref); i = 0 <= ref ? ++j : --j) {
+        p = this.point(i);
+        if (Point.isNeighbours(p, point)) {
+          neighs.push(p);
+        }
+      }
+      return neighs;
+    }
+
+  };
+
+  Object.defineProperties(Mesh.prototype, {
+    drawAs: {
+      get: function() {
+        return GL2.prototype[this.headers.get(7)];
+      },
+      set: function() {
+        return this.headers.put(7, arguments[0]);
+      }
+    },
+    byteOffset: {
+      get: function() {
+        return this.headers.get(0);
+      },
+      set: function() {
+        return this.headers.put(0, arguments[0]);
+      }
+    },
+    byteLength: {
+      get: function() {
+        return this.headers.get(1);
+      },
+      set: function() {
+        return this.headers.put(1, arguments[0]);
+      }
+    },
+    count: {
+      get: function() {
+        return this.headers.get(2);
+      },
+      set: function() {
+        return this.headers.put(2, arguments[0]);
+      }
+    },
+    length: {
+      get: function() {
+        return this.headers.get(3);
+      },
+      set: function() {
+        return this.headers.put(3, arguments[0]);
+      }
+    },
+    begin: {
+      get: function() {
+        return this.headers.get(4);
+      },
+      set: function() {
+        return this.headers.put(4, arguments[0]);
+      }
+    },
+    end: {
+      get: function() {
+        return this.headers.get(5);
+      },
+      set: function() {
+        return this.headers.put(5, arguments[0]);
+      }
+    },
+    hIndex: {
+      get: function() {
+        return this.headers.get(6);
+      },
+      set: function() {
+        return this.headers.put(6, arguments[0]);
+      }
+    },
+    enabled: {
+      get: function() {
+        return this.headers.get(8);
+      },
+      set: function() {
+        return this.headers.put(8, arguments[0]);
+      }
+    },
+    needsUpload: {
+      get: function() {
+        return this.headers.get(9);
+      },
+      set: function() {
+        return this.headers.put(9, arguments[0]);
+      }
+    },
+    attributes: {
+      get: function() {
+        return new Attributes(BUFFER, this.byteOffset, this.length);
+      },
+      set: function() {
+        return this.attributes.set(arguments[0]);
+      }
+    },
+    color: {
+      get: function() {
+        return new Color(this);
+      },
+      set: function() {
+        this.color.set(arguments[0]);
+        return this.needsUpload = 1;
+      }
+    },
+    headers: {
+      get: function() {
+        return new Headers(this);
+      },
+      set: function() {
+        this.headers.set(arguments[0]);
+        return this.applyMatrix();
+      }
+    },
+    rotation: {
+      get: function() {
+        return new Rotation(this);
+      },
+      set: function() {
+        this.rotation.set(arguments[0]);
+        return this.applyMatrix();
+      }
+    },
+    position: {
+      get: function() {
+        return new Position(this);
+      },
+      set: function() {
+        this.position.set(arguments[0]);
+        return this.applyMatrix();
+      }
+    },
+    matrix: {
+      get: function() {
+        return new M4(BUFFER, this + 96, 16);
+      },
+      set: function() {
+        this.matrix.set(arguments[0]);
+        return this.applyMatrix();
+      }
+    },
+    points: {
+      get: function() {
+        var i, j, ref, results;
+        results = [];
+        for (i = j = 0, ref = this.count; (0 <= ref ? j < ref : j > ref); i = 0 <= ref ? ++j : --j) {
+          results.push(this.point(i));
+        }
+        return results;
+      }
+    },
+    triangles: {
+      get: function() {
+        var i, j, ref, results;
+        results = [];
+        for (i = j = 0, ref = this.count / 3; (0 <= ref ? j < ref : j > ref); i = 0 <= ref ? ++j : --j) {
+          results.push(this.triangle(i));
+        }
+        return results;
+      }
+    },
+    [Symbol("(dump)")]: {
+      get: function() {
+        return {byteOffset: this.byteOffset, byteLength: this.byteLength, count: this.count, length: this.length, begin: this.begin, end: this.end, id: this.id, drawAs: this.drawAs, enabled: this.enabled, needsUpload: this.needsUpload, color: this.color, rotation: this.rotation, position: this.position, matrix: this.matrix};
+      }
+    },
+    [Symbol.iterator]: {
+      value: function*() {
+        var i, j, ref, results;
+        results = [];
+        for (i = j = 0, ref = this.count; (0 <= ref ? j < ref : j > ref); i = 0 <= ref ? ++j : --j) {
+          results.push((yield this.point(i)));
+        }
+        return results;
+      }
+    }
+  });
+
+  return Mesh;
+
+}).call(this);
 
 export var GL2 = (function() {
   var LINES, POINTS, TRIANGLES;
@@ -585,9 +863,7 @@ export var GL2 = (function() {
       points = [];
       ref = shape.points;
       for (j = 0, len1 = ref.length; j < len1; j++) {
-        ({
-          vertex: [vx, vy, vz]
-        } = ref[j]);
+        [vx, vy, vz] = ref[j];
         found = false;
         ref1 = points.slice();
         for (k = 0, len2 = ref1.length; k < len2; k++) {
@@ -612,8 +888,8 @@ export var GL2 = (function() {
       pairs = [];
       points = [];
       ref = shape.points;
-      for (j = 0, len1 = ref.length; j < len1; j++) {
-        point = ref[j];
+      for (i = j = 0, len1 = ref.length; j < len1; i = ++j) {
+        point = ref[i];
         neighs = shape.neighbours(point);
         vertex = point.vertex;
         for (k = 0, len2 = neighs.length; k < len2; k++) {
@@ -880,10 +1156,7 @@ export var GL2 = (function() {
     }
 
     malloc(count, drawAs = this.TRIANGLES) {
-      var BYTES_PER_ELEMENT, HEADER_ITEM_COUNT, ITEMS_PER_VERTEX, Mesh, begin, byteLength, byteOffset, enabled, end, hIndex, headersIndex, length, needsUpload;
-      BYTES_PER_ELEMENT = 4;
-      HEADER_ITEM_COUNT = 40;
-      ITEMS_PER_VERTEX = 7;
+      var begin, byteLength, byteOffset, enabled, end, hIndex, headers, headersOffset, length, mesh, needsUpload;
       if (drawAs === this.TRIANGLES) {
         begin = INDEX_TRIANGLES;
         length = ITEMS_PER_VERTEX * count;
@@ -911,173 +1184,13 @@ export var GL2 = (function() {
       } else {
         throw ["UNDEFINED_DRAW_METHOD:", drawAs];
       }
-      HEADERS_BUFFER.set([byteOffset, byteLength, count, length, begin, end = begin + length, hIndex = LENGTH_HEADERS, drawAs, enabled = 1, needsUpload = 1, UNUSED, UNUSED, r, g, b, a, rx, ry, rz, UNUSED, dx, dy, dz, UNUSED, m10, m11, m12, m13, m20, m21, m22, m23, m30, m31, m32, m33, m40, m41, m42, m43], headersIndex = LENGTH_HEADERS);
+      headersOffset = HEADERS_OFFSET + LENGTH_HEADERS * 4;
       LENGTH_HEADERS += HEADER_ITEM_COUNT;
-      COUNT_HEADERS += 1;
-      return objects[headersIndex] = new (Mesh = (function() {
-        class Mesh extends Number {
-          point(i) {
-            begin = this.begin + ITEMS_PER_VERTEX * i;
-            end = begin + ITEMS_PER_VERTEX;
-            return DRAW_BUFFER.subarray(begin, end);
-          }
-
-          triangle(i) {
-            return [this.point(i), this.point(i + 1), this.point(i + 2)];
-          }
-
-          applyMatrix(mat4 = this.matrix) {
-            var j, len1, p, ref;
-            ref = this.points;
-            for (j = 0, len1 = ref.length; j < len1; j++) {
-              p = ref[j];
-              p.applyMatrix(mat4);
-            }
-            this.needsUpload = 1;
-            return this;
-          }
-
-          neighbours(point) {
-            var d, i, j, neighs, p, ref, x, y, z;
-            [x, y, z] = point;
-            neighs = [];
-            for (i = j = 0, ref = this.count; (0 <= ref ? j < ref : j > ref); i = 0 <= ref ? ++j : --j) {
-              p = this.point(i);
-              if (d = p.isNeighbour(point)) {
-                neighs.push(p);
-              }
-            }
-            return neighs;
-          }
-
-        };
-
-        Object.defineProperties(Mesh.prototype, {
-          byteOffset: {
-            get: function() {
-              return this.headers[0];
-            }
-          },
-          byteLength: {
-            get: function() {
-              return this.headers[1];
-            }
-          },
-          count: {
-            get: function() {
-              return this.headers[2];
-            }
-          },
-          length: {
-            get: function() {
-              return this.headers[3];
-            }
-          },
-          begin: {
-            get: function() {
-              return this.headers[4];
-            }
-          },
-          end: {
-            get: function() {
-              return this.headers[5];
-            }
-          },
-          hIndex: {
-            get: function() {
-              return this.headers[6];
-            }
-          },
-          drawAs: {
-            get: function() {
-              return GL2.prototype[this.headers[7]];
-            }
-          },
-          enabled: {
-            get: function() {
-              return this.headers[8];
-            }
-          },
-          needsUpload: {
-            get: function() {
-              return this.headers[9];
-            },
-            set: function() {
-              return this.headers[9] = arguments[0];
-            }
-          },
-          attributes: {
-            get: function() {
-              return DRAW_BUFFER.subarray(this.begin, this.end);
-            }
-          },
-          headers: {
-            get: function() {
-              return HEADERS_BUFFER.subarray(this, this + HEADER_ITEM_COUNT);
-            }
-          },
-          color: {
-            get: function() {
-              return this.headers.subarray(12, 16);
-            }
-          },
-          rotation: {
-            get: function() {
-              return this.headers.subarray(16, 19);
-            }
-          },
-          position: {
-            get: function() {
-              return this.matrix.position;
-            }
-          },
-          matrix: {
-            get: function() {
-              var m4;
-              m4 = this.headers.subarray(24, 40);
-              return new M4(m4.buffer, m4.byteOffset, m4.length);
-            }
-          },
-          points: {
-            get: function() {
-              var i, j, ref, results;
-              results = [];
-              for (i = j = 0, ref = this.count; (0 <= ref ? j < ref : j > ref); i = 0 <= ref ? ++j : --j) {
-                results.push(this.point(i));
-              }
-              return results;
-            }
-          },
-          triangles: {
-            get: function() {
-              var i, j, ref, results;
-              results = [];
-              for (i = j = 0, ref = this.count / 3; (0 <= ref ? j < ref : j > ref); i = 0 <= ref ? ++j : --j) {
-                results.push(this.triangle(i));
-              }
-              return results;
-            }
-          },
-          [Symbol("(dump)")]: {
-            get: function() {
-              return {byteOffset: this.byteOffset, byteLength: this.byteLength, count: this.count, length: this.length, begin: this.begin, end: this.end, id: this.id, drawAs: this.drawAs, enabled: this.enabled, needsUpload: this.needsUpload, color: this.color, rotation: this.rotation, position: this.position, matrix: this.matrix};
-            }
-          },
-          [Symbol.iterator]: {
-            value: function*() {
-              var i, j, ref, results;
-              results = [];
-              for (i = j = 0, ref = this.count; (0 <= ref ? j < ref : j > ref); i = 0 <= ref ? ++j : --j) {
-                results.push((yield this.point(i)));
-              }
-              return results;
-            }
-          }
-        });
-
-        return Mesh;
-
-      }).call(this))(headersIndex);
+      headers = new Headers(headersOffset);
+      headers.set([byteOffset, byteLength, count, length, begin, end = begin + length, hIndex = LENGTH_HEADERS, drawAs, enabled = 1, needsUpload = 1, UNUSED, UNUSED, r, g, b, a, rx, ry, rz, UNUSED, dx, dy, dz, UNUSED]);
+      mesh = new Mesh(headersOffset);
+      mesh.matrix.set(M4.identity);
+      return objects[headersOffset] = mesh;
     }
 
     render(t) {

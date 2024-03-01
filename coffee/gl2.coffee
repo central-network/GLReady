@@ -5,47 +5,124 @@ Object.defineProperties Math,
         [ ...arr ].flat().reduce (a, b) -> a + Math.pow b, pow
 
 
-objects = new Object()
 
-Object.defineProperties objects,
-    get : value : ( offset ) ->
-        this[ ( offset - HEADERS_OFFSET ) / 4 ]
+BYTES_PER_ELEMENT   = 4
+HEADER_ITEM_COUNT   = 40
+ITEMS_PER_VERTEX    = 7
+DRAW_LENGTH         = 3e6 + 4
+BUFFER              = new SharedArrayBuffer 1e8
+DRAW_COUNT          = DRAW_LENGTH / 7
 
+i32 = new Int32Array BUFFER
+f32 = new Float32Array BUFFER
 
-export class Position   extends Float32Array
+self.objects = new Object()
 
-    headerOffset : ( 24 + 12 ) * 4
+export class Attribute extends Float32Array
+export class Attributes extends Attribute
+
+export class Pointer extends Number
+    base    : new Float32Array BUFFER
+
+    put     : ( index, value ) -> @base[ @begin + index ] = value
+    get     : ( index ) -> @base[ @begin + index ]
+    set     : ( array ) -> @array.set array ; @
+
+    [ Symbol.iterator ] : ->
+        yield @get i for i in [ 0 ... @length ]    
 
     Object.defineProperties this::,
-        x       : 
-            set : -> @apply @[0] = arguments[0]
-            get : -> @[0]
-        y       : 
-            set : -> @apply @[0] = arguments[0]
-            get : -> @[0]
-        z       : 
-            set : -> @apply @[0] = arguments[0]
-            get : -> @[0]
+        array   : get : -> @base.subarray @begin, @end
+        begin   : get : -> @index + @byteOffset / 4
+        end     : get : -> @begin + @length
+        index   : get : -> this / 4
+        length  : get : -> @byteLength / 4
 
-        mesh    :
-            get : -> objects.get @byteOffset - @headerOffset
+export class AtomicPointer extends Pointer
+    base        : new Int32Array BUFFER
 
-    apply  : ->
-        @mesh.matrix[0] = 
-        @mesh.matrix[5] = 
-        @mesh.matrix[10] =  
-        @mesh.matrix[15] = 1  
-        @mesh.applyMatrix()
+    put     : ( index, value ) -> Atomics.store @base, @begin + index, value
+    get     : ( index ) -> Atomics.load @base, @begin + index
+    set     : ( array ) -> @put i, array[i] for i in [ 0 ... @length ] ; @
 
 
+export class Headers    extends AtomicPointer
+    byteOffset  : 0
+    byteLength  : 40 * 4
+
+export class Position   extends Pointer
+    byteOffset  : 80
+    byteLength  : 12
+
+    for key, index in [ "x", "y", "z" ]
+        Object.defineProperty this::, key, ((i)->
+            get : -> @get i
+            set : -> @put i, arguments[0]
+        ) index
+
+export class Rotation   extends Pointer
+    byteOffset  : 64
+    byteLength  : 12
+
+    for key, index in [ "x", "y", "z" ]
+        Object.defineProperty this::, key, ((i)->
+            get : -> @get i
+            set : -> @put i, arguments[0]
+        ) index
+
+export class Color extends Pointer
+    byteOffset  : 48
+    byteLength  : 16
+
+    for key, index in [ "r", "g", "b", "a" ]
+        Object.defineProperty this::, key, ((i)->
+            get : -> @get i
+            set : -> @put i, arguments[0]
+        ) index
+
+    set         : ( value ) ->
+        super Color.parse value
+   
+    @parse      : ( any ) ->
+        if  any instanceof this
+            return any
+
+        if  "function" is typeof any.fill
+            arr = [ 1, 1, 1, 1 ]
+
+            for v, i in any
+                arr[i] = if v > 1 then v/255
+                else v
+            
+            return arr
+
+        if  "function" is typeof any.trim
+
+            if  "#" is any.at 0
+                return Color.parse any.substring 1
+
+            if  "x" is any.at 1
+                return Color.parse any.substring 2
+
+                any = any.replace( /\W+/g, '' )
+
+            if  any.length is 3
+                return Color.parse any.split("").map((i) -> i+i).join("")
+
+            if  any.length <= 5
+                return Color.parse any.padStart 6, 0
+
+            return any.padEnd( 8, "ff" ).match( /.{1,2}/g )
+                .map( (n) -> parseInt( n, 16 ) / 0xff )
+
+export class ColorAttribute     extends Color
+    byteOffset  : 12
+
+export class PositionAttribute  extends Position
+    byteOffset  : 0
 
 #? https://webgl2fundamentals.org/webgl/lessons/webgl-3d-perspective.html
 export class M4 extends Float32Array
-
-    Object.defineProperties this::,
-        position :
-            set : -> @position.set arguments[ 0 ]
-            get : -> new Position @buffer, @byteOffset + 48, 3
 
     Object.defineProperty this, "identity", get : ->
         new M4 [
@@ -83,9 +160,6 @@ export class M4 extends Float32Array
             0,  0,  1,  0,
             ...vec3.subarray(0, 3),  1,
        ] ).subarray( 12, 15 ) ; vec3
-
-    modifyShape : ( mesh ) ->
-        mesh.applyMatrix this ; mesh
 
     multiply    : ( b ) -> @set( M4.multiply @, b ); this
 
@@ -225,12 +299,14 @@ export class M4 extends Float32Array
         @multiply @zTranslation tz
 
 
-DRAW_LENGTH         = 3e6 + 4
-BUFFER              = new SharedArrayBuffer 1e8
-DRAW_COUNT          = DRAW_LENGTH / 7
-
-export class Headers    extends Int32Array
-export class Point      extends Float32Array
+Float32Array::sub = Float32Array::subarray
+Object.defineProperties Float32Array::,
+    sub : value : -> @subarray ...arguments
+    vertex : get : -> @sub 0, 3
+    color : get : -> @sub 3, 7
+    index   : get : -> @byteOffset / @byteLength % DRAW_COUNT
+    
+export class Point              extends Float32Array
     for prop, i in [ "x", "y", "z", "r", "g", "b", "a" ]
         Object.defineProperty this::, prop, ((index)->
             get : -> this[index]
@@ -239,11 +315,11 @@ export class Point      extends Float32Array
 
     Object.defineProperties this::,
         color   :
-            get : -> new Color @buffer, @byteOffset + 12, 4
-            set : -> @set arguments[0].toRGBA(), 3
+            get : -> new ColorAttribute @byteOffset
+            set : -> @color.set arguments[0]
 
         vertex  :
-            get : -> new Vertex @buffer, @byteOffset + 0, 3
+            get : -> new PositionAttribute @byteOffset
             set : -> @vertex.set arguments[0]
 
         vLength : 
@@ -252,12 +328,14 @@ export class Point      extends Float32Array
         index   :
             get : -> @byteOffset / @byteLength % DRAW_COUNT
 
-    applyMatrix : ( mat4 ) ->
-        mat4.modifyVertex this
+    applyMatrix : ( mat4 ) -> mat4.modifyVertex this
 
     isNeighbour : ( point ) ->
-        [ a, b, c ] = @vertex
-        [ x, y, z ] = point
+        Point.isNeighbours this, point
+
+    @isNeighbours : ( p0, p1 ) ->
+        [ a, b, c ] = p0
+        [ x, y, z ] = p1
 
         dx = x - a
         dy = y - b
@@ -294,7 +372,7 @@ export class Point      extends Float32Array
 
         nearest
 
-DRAW_BUFFER         = new Point BUFFER, 0, DRAW_LENGTH * 3
+DRAW_BUFFER         = new Float32Array BUFFER, 0, DRAW_LENGTH * 3
 DRAW_FINISH         = DRAW_BUFFER.byteOffset + DRAW_BUFFER.byteLength
 
 FIRST_TRIANGLES     = 0
@@ -316,59 +394,8 @@ COUNT_LINES         = 0
 HEADERS_OFFSET      = DRAW_FINISH
 HEADERS_INDEX       = DRAW_FINISH / 4
 
-HEADERS_BUFFER      = new Headers BUFFER, HEADERS_OFFSET, 1e6
+HEADERS             = new Int32Array BUFFER, HEADERS_OFFSET, 1e6
 
-Object.defineProperties Headers::,
-    x : 
-        get : -> this[0]
-        set : ->
-            #! position
-            diff = ( @byteOffset - HEADERS_OFFSET ) / 4
-            if (diff % 16) is 12 
-                
-                dx = arguments[0] - this[0]
-                for p in @pobject.points
-                    p[0] += dx
-
-                @pobject.needsUpload = 1
-            #? rotation
-            else
-                cos = Math.cos arguments[0]
-                sin = Math.sin arguments[0]
-
-                for p in @robject.points
-                    [ x, y ] = p
-                    
-                    p.set [
-                        x*cos - y*sin
-                        x*sin + y*cos
-                    ]
-
-                @robject.needsUpload = 1
-                
-            this[0] = arguments[0]
-    y : 
-        get : -> this[1]
-        set : ->
-            dy = arguments[0] - @y
-            this[1] = arguments[0]
-            for p in @object.points
-                p.y += dy
-            @object.needsUpload = 1
-    z : 
-        get : -> this[2]
-        set : ->
-            dz = arguments[0] - @z
-            this[2] = arguments[0]
-            for p in @object.points
-                p.z += dz
-            @object.needsUpload = 1
-
-    pobject : get : ->
-        objects[ ( @byteOffset - HEADERS_OFFSET ) / 4 - 20 ]
-    
-    robject : get : ->
-        objects[ ( @byteOffset - HEADERS_OFFSET ) / 4 - 16 ]
         
 
 COUNT_HEADERS       = 0
@@ -390,54 +417,128 @@ UNUSED  = 0
     m40, m41, m42, m43
 ] = M4.identity
 
-export class RGBA
-    Object.defineProperties this,
 
-        [ Array ]   : value : ->
-            arr = [ 1, 1, 1, 1 ]
 
-            for v, i in this
-                arr[i] = if v > 1 then v/255
-                else v
-            
-            arr
-
-        [ String ]  : value : ->
-            if  "#" is $.at 0
-                return $.substring( 1 ).toRGBA()
-
-            if  "x" is $.at 1
-                return $.substring( 2 ).toRGBA()
-
-            $ = @replace( /\W+/g, '' )
-
-            if  $.length is 3
-                return $.split("").map((i) -> i+i).join("").toRGBA()
-
-            if  $.length <= 5
-                return $.padStart( 6, 0 ).toRGBA()
-
-            $.padEnd( 8, "ff" ).match( /.{1,2}/g )
-                .map( (n) -> parseInt( n, 16 ) / 0xff )
-
-export class XYZ
-
-Object.defineProperties Array::, 
-    toRGBA : value : RGBA[ Array ]
-
-Object.defineProperties String::, 
-    toRGBA : value : RGBA[ String ]
-
-Object.defineProperties Object.getPrototypeOf(Uint8Array::), 
-    toRGBA  : value : RGBA[ Array ]
-
-export class Color      extends Float32Array
-    set : -> super arguments[0].toRGBA()
 export class Vertex     extends Float32Array
-export class Attributes extends Float32Array
 export class Vertices   extends Array
 export class Points     extends Array
 export class Triangle   extends Array
+
+export class Mesh extends Number
+
+    point               : ( i ) ->
+        begin = @begin + ITEMS_PER_VERTEX * i
+        end = begin + ITEMS_PER_VERTEX
+
+        DRAW_BUFFER.subarray begin, end
+
+    triangle            : ( i ) ->
+        [ @point(i), @point(i+1), @point(i+2) ]
+
+    applyMatrix         : ( mat4 ) ->
+        unless mat4
+            @matrix.set M4.identity
+            @matrix.rotate ...@rotation
+            @matrix.translate ...@position
+            mat4 = @matrix
+
+        for p in @points
+            mat4.modifyVertex p.vertex
+
+        @needsUpload = 1 ; @                    
+
+    neighbours          : ( point ) ->
+        neighs = []
+        for i in [ 0 ... @count ]
+            p = @point i
+            if  Point.isNeighbours p, point
+                neighs.push p
+        neighs
+
+    Object.defineProperties this::,
+
+        drawAs          :
+            get : -> GL2::[ @headers.get 7 ]
+            set : -> @headers.put 7, arguments[0]
+
+        byteOffset      :
+            get : -> @headers.get 0
+            set : -> @headers.put 0, arguments[0]
+
+        byteLength      :
+            get : -> @headers.get 1
+            set : -> @headers.put 1, arguments[0]
+        
+        count           :
+            get : -> @headers.get 2
+            set : -> @headers.put 2, arguments[0]
+
+        length          :
+            get : -> @headers.get 3
+            set : -> @headers.put 3, arguments[0]
+
+        begin           :
+            get : -> @headers.get 4
+            set : -> @headers.put 4, arguments[0]
+
+        end             :
+            get : -> @headers.get 5
+            set : -> @headers.put 5, arguments[0]
+
+        hIndex          :
+            get : -> @headers.get 6
+            set : -> @headers.put 6, arguments[0]
+
+        enabled         :
+            get : -> @headers.get 8
+            set : -> @headers.put 8, arguments[0]
+
+        needsUpload     :
+            get : -> @headers.get 9
+            set : -> @headers.put 9, arguments[0]
+            
+        attributes      :
+            get : -> new Attributes BUFFER, @byteOffset, @length
+            set : -> @attributes.set arguments[0]
+
+        color           :
+            get : -> new Color this
+            set : -> @color.set      arguments[0] ; @needsUpload = 1
+
+        headers         :
+            get : -> new Headers this
+            set : -> @headers.set    arguments[0] ; @applyMatrix()
+
+        rotation        :
+            get : -> new Rotation this
+            set : -> @rotation.set   arguments[0] ; @applyMatrix()
+
+        position        :
+            get : -> new Position this 
+            set : -> @position.set   arguments[0] ; @applyMatrix()
+
+        matrix          :
+            get : -> new M4 BUFFER, this + 96, 16
+            set : -> @matrix.set     arguments[0] ; @applyMatrix()
+
+        points          :
+            get : ->
+                @point i for i in [ 0 ... @count ]
+
+        triangles       :
+            get : -> @triangle i for i in [ 0 ... @count/3 ]
+
+        [ Symbol("(dump)") ] :
+            get : -> {
+                @byteOffset, @byteLength,
+                @count, @length,
+                @begin, @end, @id,
+                @drawAs, @enabled, @needsUpload,
+                @color, @rotation, @position, @matrix
+            }
+        
+        [ Symbol.iterator  ] :
+            value : -> yield @point i for i in [ 0 ... @count ]
 
 export class GL2 extends EventTarget
 
@@ -474,7 +575,7 @@ export class GL2 extends EventTarget
 
     @corners    : ( shape ) ->
         points  = []
-        for { vertex: [vx, vy, vz] } in shape.points
+        for [ vx, vy, vz ] in shape.points
             found = no
             for [ px, py, pz ] in points.slice()
                 x = px is vx
@@ -489,7 +590,7 @@ export class GL2 extends EventTarget
         pairs = []
         points = [] 
 
-        for point in shape.points
+        for point, i in shape.points
             neighs = shape.neighbours point
             vertex = point.vertex
                 
@@ -654,11 +755,8 @@ export class GL2 extends EventTarget
 
 
     malloc          : ( count, drawAs = @TRIANGLES ) ->
-        BYTES_PER_ELEMENT   = 4
-        HEADER_ITEM_COUNT   = 40
-        ITEMS_PER_VERTEX    = 7
 
-        if drawAs is @TRIANGLES
+        if      drawAs is @TRIANGLES
             
             begin             = INDEX_TRIANGLES
             length            = ITEMS_PER_VERTEX * count
@@ -696,7 +794,11 @@ export class GL2 extends EventTarget
 
         else throw [ "UNDEFINED_DRAW_METHOD:", drawAs ]
 
-        HEADERS_BUFFER.set [
+        headersOffset = HEADERS_OFFSET + LENGTH_HEADERS * 4
+        LENGTH_HEADERS += HEADER_ITEM_COUNT
+
+        headers = new Headers headersOffset
+        headers.set [
             byteOffset,
             byteLength,
             count,
@@ -713,84 +815,12 @@ export class GL2 extends EventTarget
             rx, ry, rz, UNUSED,
             dx, dy, dz, UNUSED,
 
-            m10, m11, m12, m13,
-            m20, m21, m22, m23,
-            m30, m31, m32, m33,
-            m40, m41, m42, m43
-
-        ], headersIndex = LENGTH_HEADERS
-        LENGTH_HEADERS += HEADER_ITEM_COUNT
-        COUNT_HEADERS += 1
+        ] 
         
-        objects[ headersIndex ] = new ( class Mesh extends Number
+        mesh = new Mesh headersOffset
+        mesh.matrix.set M4.identity
 
-            point               : ( i ) ->
-                begin = @begin + ITEMS_PER_VERTEX * i
-                end = begin + ITEMS_PER_VERTEX
-
-                DRAW_BUFFER.subarray begin, end
-
-            triangle            : ( i ) ->
-                [ @point(i), @point(i+1), @point(i+2) ]
-
-            applyMatrix         : ( mat4 = @matrix ) ->
-                for p in @points
-                    p.applyMatrix mat4
-                @needsUpload = 1 ; @                    
-
-            neighbours          : ( point ) ->
-                [ x, y, z ] = point
-                
-                neighs = []
-                for i in [ 0 ... @count ]
-                    p = @point i
-                    if d = p.isNeighbour point
-                        neighs.push p
-                neighs
-
-            Object.defineProperties this::,
-                byteOffset      : get : -> @headers[0]
-                byteLength      : get : -> @headers[1]
-                
-                count           : get : -> @headers[2]
-                length          : get : -> @headers[3]
-
-                begin           : get : -> @headers[4]
-                end             : get : -> @headers[5]
-                hIndex          : get : -> @headers[6]
-
-                drawAs          : get : -> GL2::[ @headers[7] ]
-                enabled         : get : -> @headers[8]
-                needsUpload     :
-                    get         : -> @headers[9]
-                    set         : -> @headers[9] = arguments[0]
-                    
-                attributes      : get : -> DRAW_BUFFER.subarray @begin, @end
-                headers         : get : -> HEADERS_BUFFER.subarray @, @ + HEADER_ITEM_COUNT
-
-                color           : get : -> @headers.subarray 12, 16
-                rotation        : get : -> @headers.subarray 16, 19
-                position        : get : -> @matrix.position
-
-                matrix          : get : ->
-                    m4 = @headers.subarray( 24, 40 )
-                    new M4 m4.buffer, m4.byteOffset, m4.length
-
-                points          : get : -> @point i for i in [ 0 ... @count ]
-                triangles       : get : -> @triangle i for i in [ 0 ... @count/3 ]
-
-                [ Symbol("(dump)") ]            : get : -> {
-                    @byteOffset, @byteLength,
-                    @count, @length,
-                    @begin, @end, @id,
-                    @drawAs, @enabled, @needsUpload,
-                    @color, @rotation, @position, @matrix
-                }
-                
-                [ Symbol.iterator ] : value : ->
-                    yield @point i for i in [ 0 ... @count ]
-
-        )( headersIndex )
+        objects[ headersOffset ] = mesh
 
     render      : ( t ) =>
 
@@ -835,6 +865,7 @@ export class GL2 extends EventTarget
     queue           : ( fn ) -> @renderQueue.push( fn ) - 1
     
     INDEX_CAMERA    : 2
+
     get_dxCamera    : -> @scene.at @INDEX_CAMERA + 0
     set_dxCamera    : -> @uploadCamera @scene[ @INDEX_CAMERA + 0 ] = arguments[0]
 

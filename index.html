@@ -347,12 +347,9 @@
 
             shape3.points.forEach( (point, i) => {
                 let begin = i * 3;
-                let end = begin + 3;
+                let xyz = pointsCloud.subarray( begin, begin + 3 );
 
-                [ x, y, z ] = pointsCloud.subarray( begin, end );
-
-                point.vertex.set( [ x, y, z ] )
-                point.color.set( [ 0, 1, 0, 1 ] )
+                point.set( [ ...xyz, 0, 1, 0, 1 ] )
             })
 
 
@@ -360,13 +357,12 @@
             let shape4 = gl2.malloc( linesCloud.length/3, gl2.LINES )
 
             for (let k=0; k<linesCloud.length/3; k++ ) {
-                let begin = k * 3;
 
+                let begin = k * 3;
                 let xyz = linesCloud.subarray( begin, begin + 3 );
                 let point = shape4.point( k );
 
-                point.vertex.set( xyz )
-                point.color.set( [0, 1, 1, 1] )
+                point.set( [ ...xyz, 0, 1, 1, 1 ] )
             }
             
             let mat4 = M4.identity
