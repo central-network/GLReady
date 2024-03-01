@@ -4,8 +4,6 @@ Object.defineProperties Math,
     powsum          : value : ( arr, pow = 2 ) ->
         [ ...arr ].flat().reduce (a, b) -> a + Math.pow b, pow
 
-
-
 BYTES_PER_ELEMENT   = 4
 HEADER_ITEM_COUNT   = 40
 ITEMS_PER_VERTEX    = 7
@@ -13,15 +11,16 @@ DRAW_LENGTH         = 3e6 + 4
 BUFFER              = new SharedArrayBuffer 1e8
 DRAW_COUNT          = DRAW_LENGTH / 7
 
-i32 = new Int32Array BUFFER
-f32 = new Float32Array BUFFER
+i32                 = new Int32Array BUFFER
+f32                 = new Float32Array BUFFER
 
-self.objects = new Object()
+self.objects        = new Object()
 
-export class Attribute extends Float32Array
-export class Attributes extends Attribute
+export class Attribute          extends Float32Array
 
-export class Pointer extends Number
+export class Attributes         extends Attribute
+
+export class Pointer            extends Number
     base    : new Float32Array BUFFER
 
     put     : ( index, value ) -> @base[ @begin + index ] = value
@@ -38,19 +37,18 @@ export class Pointer extends Number
         index   : get : -> this / 4
         length  : get : -> @byteLength / 4
 
-export class AtomicPointer extends Pointer
+export class AtomicPointer      extends Pointer
     base        : new Int32Array BUFFER
 
     put     : ( index, value ) -> Atomics.store @base, @begin + index, value
     get     : ( index ) -> Atomics.load @base, @begin + index
     set     : ( array ) -> @put i, array[i] for i in [ 0 ... @length ] ; @
 
-
-export class Headers    extends AtomicPointer
+export class Headers            extends AtomicPointer
     byteOffset  : 0
     byteLength  : 40 * 4
 
-export class Position   extends Pointer
+export class Position           extends Pointer
     byteOffset  : 80
     byteLength  : 12
 
@@ -60,7 +58,7 @@ export class Position   extends Pointer
             set : -> @put i, arguments[0]
         ) index
 
-export class Rotation   extends Pointer
+export class Rotation           extends Pointer
     byteOffset  : 64
     byteLength  : 12
 
@@ -70,7 +68,7 @@ export class Rotation   extends Pointer
             set : -> @put i, arguments[0]
         ) index
 
-export class Color extends Pointer
+export class Color              extends Pointer
     byteOffset  : 48
     byteLength  : 16
 
@@ -124,8 +122,9 @@ export class ColorAttribute     extends Color
 export class PositionAttribute  extends Position
     byteOffset  : 0
 
-#? https://webgl2fundamentals.org/webgl/lessons/webgl-3d-perspective.html
-export class M4 extends Float32Array
+export class M4                 extends Float32Array
+
+    #? https://webgl2fundamentals.org/webgl/lessons/webgl-3d-perspective.html
 
     Object.defineProperty this, "identity", get : ->
         new M4 [
@@ -301,11 +300,9 @@ export class M4 extends Float32Array
     zTranslate  : ( tz ) ->
         @multiply @zTranslation tz
 
+export class Vertex             extends Pointer
 
-
-export class Vertex              extends Pointer
     byteLength : 7 * 4
-    
 
     no and for key, index in [ "x", "y", "z" ]
         Object.defineProperty this::, key, ((i)->
@@ -342,12 +339,17 @@ export class Vertex              extends Pointer
                 object = objects[ byteOffset ]
             null
     
-
     applyMatrix : ( mat4 ) ->
         mat4.modifyVertex [ ...@position ]
 
     isNeighbour : ( vertex ) ->
         Vertex.isNeighbours this, vertex
+
+    isSame      : ( vertex ) ->
+        0 is this - vertex
+
+    getNeighbours : ( vertices ) ->
+        vertices.filter @isNeighbour.bind this
 
     @isNeighbours : ( p0, p1 ) ->
         [ a, b, c ] = p0
@@ -361,10 +363,10 @@ export class Vertex              extends Pointer
         return dy if !dx and  dy and !dz
         return dz if !dx and !dy and  dz
 
-    vectorLength : ->
+    @vec3length : ->
         Math.sqrt Math.powsum @position
 
-    @distance2d  : ( p0, p1 ) ->
+    @distance2d : ( p0, p1 ) ->
         [ a, b, c ] = p0    
         [ x, y, z ] = p1
         
@@ -378,6 +380,16 @@ export class Vertex              extends Pointer
         return dz if dz and !dx and !dy
 
         throw [ "POINTS_ARE_NOT_IN_SAME_PLANE", p0, p1 ]
+
+
+    overlaps3d  : ( vertex ) ->
+        Vertex.overlaps3d this, vertex
+
+    @overlaps3d : ( p0, p1 ) ->
+        return no if p0.get(0) - p1.get(0)
+        return no if p0.get(1) - p1.get(1)
+        return no if p0.get(2) - p1.get(2)
+        yes
 
     nearest     : ( vertices ) ->
         distance = +Infinity
@@ -414,7 +426,6 @@ HEADERS_OFFSET      = DRAW_FINISH
 HEADERS_INDEX       = DRAW_FINISH / 4
 
 HEADERS             = new Int32Array BUFFER, HEADERS_OFFSET, 1e6
-
         
 
 COUNT_HEADERS       = 0
@@ -437,11 +448,6 @@ UNUSED  = 0
 ] = M4.identity
 
 
-
-export class Vertices   extends Array
-export class Points     extends Array
-export class Triangle   extends Array
-
 export class Mesh extends Number
 
     vertex              : ( i ) ->
@@ -451,7 +457,6 @@ export class Mesh extends Number
     paint               : ->
         @vertices.forEach @color.paint.bind @color
         @needsUpload = 1
-
 
     apply               : ( mat4 ) ->
         mat4 ?= M4.identity
@@ -463,7 +468,7 @@ export class Mesh extends Number
         
         ; @
         
-    neighbours          : ( vertex ) ->
+    neighs              : ( vertex ) ->
         @vertices.filter vertex.isNeighbour.bind vertex
 
     Object.defineProperties this::,
@@ -535,6 +540,8 @@ export class Mesh extends Number
         vertices        :
             get : -> @vertex i for i in [ 0 ... @count ]
 
+        filters         : get : -> new VertexFilters this
+
         [ Symbol("(dump)") ] :
             get : -> {
                 @byteOffset, @byteLength,
@@ -546,6 +553,32 @@ export class Mesh extends Number
         
         [ Symbol.iterator  ] :
             value : -> yield @vertex i for i in [ 0 ... @count ]
+
+
+export class VertexFilters
+
+    ptr : "∆"
+
+    constructor : ( ptr ) -> 
+        Object.defineProperty this, @ptr, { value: ptr }
+
+    Object.defineProperties this::,
+
+        vertices        : get : ( ƒvertex = @[@ptr].vertex.bind @[@ptr] ) ->
+            ƒvertex i for i in [ 0 ... @[@ptr].count ]
+
+        cornerVertices  : get : ( _ = [] ) ->
+            @vertices.filter ( vertex ) ->
+                unless _.some vertex.overlaps3d.bind vertex
+                    return _[ _.length ] = vertex
+
+        edgeVertexPairs : get : ( _ = [] ) ->
+            for vertex in corners = @cornerVertices
+                for neighv in vertex.getNeighbours corners
+                    continue if _.includes [ vertex , neighv ]
+                    continue if _.includes [ neighv , vertex ]
+                    _.push [ vertex, neighv ]
+            _
 
 export class GL2 extends EventTarget
 
@@ -581,44 +614,10 @@ export class GL2 extends EventTarget
     zFar        : 1000
 
     @corners    : ( shape ) ->
-        points  = []
-        for point in shape.vertices
-            [ vx, vy, vz ] = point
-            found = no
-            for [ px, py, pz ] in points.slice()
-                x = px is vx
-                y = py is vy
-                z = pz is vz
-                break if found = x and y and z
-            unless found then points.push [ vx, vy, vz ]
-        Float32Array.from points.flat()
+        Float32Array.from shape.filters.cornerVertices.map( (p) -> [ ...p.position ] ).flat()
 
     @edges      : ( shape ) ->
-        i = 0
-        pairs = []
-        points = [] 
-
-        for point, i in shape.vertices
-            neighs = shape.neighbours point
-                
-            for neigh in neighs
-                pair = [ c = neigh.index, d = point.index ]
-                found = no
-
-                for [ a, b ] in pairs
-                    break if found = (c is a) and (d is b)
-                    break if found = (c is b) and (d is a)
-
-                if found then continue
-                else pairs.push pair
-
-                points.push(
-                    ...point.position,  
-                    ...neigh.position
-                )
-
-        Float32Array.from points.flat()
-
+        Float32Array.from shape.filters.edgeVertexPairs.map( ([ p0, p1 ]) -> [ ...p0.position, ...p1.position ] ).flat()
 
     constructor : ( canvas ) ->
 

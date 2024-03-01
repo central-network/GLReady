@@ -290,7 +290,6 @@ export var PositionAttribute = (function() {
 export var M4 = (function() {
   var Camera;
 
-  //? https://webgl2fundamentals.org/webgl/lessons/webgl-3d-perspective.html
   class M4 extends Float32Array {
     static fromVec3(vec3) {
       return new M4([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, ...vec3, 1]);
@@ -424,6 +423,7 @@ export var M4 = (function() {
 
   };
 
+  //? https://webgl2fundamentals.org/webgl/lessons/webgl-3d-perspective.html
   Object.defineProperty(M4, "identity", {
     get: function() {
       return new M4([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]);
@@ -462,6 +462,14 @@ export var Vertex = (function() {
       return Vertex.isNeighbours(this, vertex);
     }
 
+    isSame(vertex) {
+      return 0 === this - vertex;
+    }
+
+    getNeighbours(vertices) {
+      return vertices.filter(this.isNeighbour.bind(this));
+    }
+
     static isNeighbours(p0, p1) {
       var a, b, c, dx, dy, dz, x, y, z;
       [a, b, c] = p0;
@@ -480,7 +488,7 @@ export var Vertex = (function() {
       }
     }
 
-    vectorLength() {
+    static vec3length() {
       return Math.sqrt(Math.powsum(this.position));
     }
 
@@ -504,6 +512,23 @@ export var Vertex = (function() {
         return dz;
       }
       throw ["POINTS_ARE_NOT_IN_SAME_PLANE", p0, p1];
+    }
+
+    overlaps3d(vertex) {
+      return Vertex.overlaps3d(this, vertex);
+    }
+
+    static overlaps3d(p0, p1) {
+      if (p0.get(0) - p1.get(0)) {
+        return false;
+      }
+      if (p0.get(1) - p1.get(1)) {
+        return false;
+      }
+      if (p0.get(2) - p1.get(2)) {
+        return false;
+      }
+      return true;
     }
 
     nearest(vertices) {
@@ -669,12 +694,6 @@ r = g = b = a = rx = ry = rz = dx = dy = dz = UNUSED = 0;
 
 [m10, m11, m12, m13, m20, m21, m22, m23, m30, m31, m32, m33, m40, m41, m42, m43] = M4.identity;
 
-export var Vertices = class Vertices extends Array {};
-
-export var Points = class Points extends Array {};
-
-export var Triangle = class Triangle extends Array {};
-
 export var Mesh = (function() {
   class Mesh extends Number {
     vertex(i) {
@@ -697,7 +716,7 @@ export var Mesh = (function() {
       return this;
     }
 
-    neighbours(vertex) {
+    neighs(vertex) {
       return this.vertices.filter(vertex.isNeighbour.bind(vertex));
     }
 
@@ -847,6 +866,11 @@ export var Mesh = (function() {
         return results;
       }
     },
+    filters: {
+      get: function() {
+        return new VertexFilters(this);
+      }
+    },
     [Symbol("(dump)")]: {
       get: function() {
         return {byteOffset: this.byteOffset, byteLength: this.byteLength, count: this.count, length: this.length, begin: this.begin, end: this.end, id: this.id, drawAs: this.drawAs, enabled: this.enabled, needsUpload: this.needsUpload, color: this.color, rotation: this.rotation, position: this.position, matrix: this.matrix};
@@ -868,66 +892,79 @@ export var Mesh = (function() {
 
 }).call(this);
 
+export var VertexFilters = (function() {
+  class VertexFilters {
+    constructor(ptr) {
+      Object.defineProperty(this, this.ptr, {
+        value: ptr
+      });
+    }
+
+  };
+
+  VertexFilters.prototype.ptr = "∆";
+
+  Object.defineProperties(VertexFilters.prototype, {
+    vertices: {
+      get: function(ƒvertex = this[this.ptr].vertex.bind(this[this.ptr])) {
+        var i, j, ref, results;
+        results = [];
+        for (i = j = 0, ref = this[this.ptr].count; (0 <= ref ? j < ref : j > ref); i = 0 <= ref ? ++j : --j) {
+          results.push(ƒvertex(i));
+        }
+        return results;
+      }
+    },
+    cornerVertices: {
+      get: function(_ = []) {
+        return this.vertices.filter(function(vertex) {
+          if (!_.some(vertex.overlaps3d.bind(vertex))) {
+            return _[_.length] = vertex;
+          }
+        });
+      }
+    },
+    edgeVertexPairs: {
+      get: function(_ = []) {
+        var corners, j, k, len1, len2, neighv, ref, ref1, vertex;
+        ref = corners = this.cornerVertices;
+        for (j = 0, len1 = ref.length; j < len1; j++) {
+          vertex = ref[j];
+          ref1 = vertex.getNeighbours(corners);
+          for (k = 0, len2 = ref1.length; k < len2; k++) {
+            neighv = ref1[k];
+            if (_.includes([vertex, neighv])) {
+              continue;
+            }
+            if (_.includes([neighv, vertex])) {
+              continue;
+            }
+            _.push([vertex, neighv]);
+          }
+        }
+        return _;
+      }
+    }
+  });
+
+  return VertexFilters;
+
+}).call(this);
+
 export var GL2 = (function() {
   var LINES, POINTS, TRIANGLES;
 
   class GL2 extends EventTarget {
     static corners(shape) {
-      var found, j, k, len1, len2, point, points, px, py, pz, ref, ref1, vx, vy, vz, x, y, z;
-      points = [];
-      ref = shape.vertices;
-      for (j = 0, len1 = ref.length; j < len1; j++) {
-        point = ref[j];
-        [vx, vy, vz] = point;
-        found = false;
-        ref1 = points.slice();
-        for (k = 0, len2 = ref1.length; k < len2; k++) {
-          [px, py, pz] = ref1[k];
-          x = px === vx;
-          y = py === vy;
-          z = pz === vz;
-          if (found = x && y && z) {
-            break;
-          }
-        }
-        if (!found) {
-          points.push([vx, vy, vz]);
-        }
-      }
-      return Float32Array.from(points.flat());
+      return Float32Array.from(shape.filters.cornerVertices.map(function(p) {
+        return [...p.position];
+      }).flat());
     }
 
     static edges(shape) {
-      var c, d, found, i, j, k, l, len1, len2, len3, neigh, neighs, pair, pairs, point, points, ref;
-      i = 0;
-      pairs = [];
-      points = [];
-      ref = shape.vertices;
-      for (i = j = 0, len1 = ref.length; j < len1; i = ++j) {
-        point = ref[i];
-        neighs = shape.neighbours(point);
-        for (k = 0, len2 = neighs.length; k < len2; k++) {
-          neigh = neighs[k];
-          pair = [c = neigh.index, d = point.index];
-          found = false;
-          for (l = 0, len3 = pairs.length; l < len3; l++) {
-            [a, b] = pairs[l];
-            if (found = (c === a) && (d === b)) {
-              break;
-            }
-            if (found = (c === b) && (d === a)) {
-              break;
-            }
-          }
-          if (found) {
-            continue;
-          } else {
-            pairs.push(pair);
-          }
-          points.push(...point.position, ...neigh.position);
-        }
-      }
-      return Float32Array.from(points.flat());
+      return Float32Array.from(shape.filters.edgeVertexPairs.map(function([p0, p1]) {
+        return [...p0.position, ...p1.position];
+      }).flat());
     }
 
     constructor(canvas) {
