@@ -468,9 +468,9 @@ Object.defineProperties(Float32Array.prototype, {
 export var Point = (function() {
   var i, j, len1, prop, ref;
 
-  class Point extends Float32Array {
+  class Point extends Pointer {
     applyMatrix(mat4) {
-      return mat4.modifyVertex(this);
+      return mat4.modifyVertex([...this.vertex]);
     }
 
     isNeighbour(point) {
@@ -495,7 +495,7 @@ export var Point = (function() {
       }
     }
 
-    distance2d(p0, p1 = this) {
+    static distance2d(p0, p1) {
       var a, b, c, dx, dy, dz, x, y, z;
       [a, b, c] = p0;
       [x, y, z] = p1;
@@ -523,7 +523,7 @@ export var Point = (function() {
       nearest = null;
       for (k = 0, len2 = points.length; k < len2; k++) {
         point = points[k];
-        if (!(dist = this.distance2d(point))) {
+        if (!(dist = Point.distance2d(this, point))) {
           continue;
         }
         if (distance < dist) {
@@ -537,16 +537,18 @@ export var Point = (function() {
 
   };
 
+  Point.prototype.byteLength = 7 * 4;
+
   ref = ["x", "y", "z", "r", "g", "b", "a"];
   for (i = j = 0, len1 = ref.length; j < len1; i = ++j) {
     prop = ref[i];
     Object.defineProperty(Point.prototype, prop, (function(index) {
       return {
         get: function() {
-          return this[index];
+          return this.get(index);
         },
         set: function() {
-          return this[index] = arguments[0];
+          return this.put(index, arguments[0]);
         }
       };
     })(i));
@@ -555,7 +557,7 @@ export var Point = (function() {
   Object.defineProperties(Point.prototype, {
     color: {
       get: function() {
-        return new ColorAttribute(this.byteOffset);
+        return new ColorAttribute(this);
       },
       set: function() {
         return this.color.set(arguments[0]);
@@ -563,7 +565,7 @@ export var Point = (function() {
     },
     vertex: {
       get: function() {
-        return new PositionAttribute(this.byteOffset);
+        return new PositionAttribute(this);
       },
       set: function() {
         return this.vertex.set(arguments[0]);
@@ -571,12 +573,22 @@ export var Point = (function() {
     },
     vLength: {
       get: function() {
-        return Math.sqrt(Math.powsum(this.subarray(0, 3)));
+        return Math.sqrt(Math.powsum(this.array.sub(0, 3)));
       }
     },
     index: {
       get: function() {
-        return this.byteOffset / this.byteLength % DRAW_COUNT;
+        return (this.byteOffset % DRAW_COUNT) / this.byteLength;
+      }
+    },
+    byteOffset: {
+      get: function() {
+        return this * 1;
+      }
+    },
+    begin: {
+      get: function() {
+        return this.byteOffset / 4;
       }
     }
   });
@@ -638,10 +650,9 @@ export var Triangle = class Triangle extends Array {};
 export var Mesh = (function() {
   class Mesh extends Number {
     point(i) {
-      var begin, end;
+      var begin;
       begin = this.begin + ITEMS_PER_VERTEX * i;
-      end = begin + ITEMS_PER_VERTEX;
-      return DRAW_BUFFER.subarray(begin, end);
+      return new Point(begin * 4);
     }
 
     triangle(i) {
@@ -659,7 +670,7 @@ export var Mesh = (function() {
       ref = this.points;
       for (j = 0, len1 = ref.length; j < len1; j++) {
         p = ref[j];
-        mat4.modifyVertex(p.vertex);
+        mat4.modifyVertex(p.vertex.array);
       }
       this.needsUpload = 1;
       return this;
@@ -670,7 +681,7 @@ export var Mesh = (function() {
       neighs = [];
       for (i = j = 0, ref = this.count; (0 <= ref ? j < ref : j > ref); i = 0 <= ref ? ++j : --j) {
         p = this.point(i);
-        if (Point.isNeighbours(p, point)) {
+        if (Point.isNeighbours(p.vertex.array, point.vertex.array)) {
           neighs.push(p);
         }
       }
@@ -859,11 +870,12 @@ export var GL2 = (function() {
 
   class GL2 extends EventTarget {
     static corners(shape) {
-      var found, j, k, len1, len2, points, px, py, pz, ref, ref1, vx, vy, vz, x, y, z;
+      var found, j, k, len1, len2, point, points, px, py, pz, ref, ref1, vx, vy, vz, x, y, z;
       points = [];
       ref = shape.points;
       for (j = 0, len1 = ref.length; j < len1; j++) {
-        [vx, vy, vz] = ref[j];
+        point = ref[j];
+        [vx, vy, vz] = point;
         found = false;
         ref1 = points.slice();
         for (k = 0, len2 = ref1.length; k < len2; k++) {
@@ -879,7 +891,7 @@ export var GL2 = (function() {
           points.push([vx, vy, vz]);
         }
       }
-      return Point.from(points.flat());
+      return Float32Array.from(points.flat());
     }
 
     static edges(shape) {
@@ -891,7 +903,7 @@ export var GL2 = (function() {
       for (i = j = 0, len1 = ref.length; j < len1; i = ++j) {
         point = ref[i];
         neighs = shape.neighbours(point);
-        vertex = point.vertex;
+        vertex = point.array.sub(0, 3);
         for (k = 0, len2 = neighs.length; k < len2; k++) {
           neigh = neighs[k];
           pair = [c = neigh.index, d = point.index];
@@ -910,10 +922,10 @@ export var GL2 = (function() {
           } else {
             pairs.push(pair);
           }
-          points.push(...vertex, ...neigh.vertex);
+          points.push(...vertex, ...neigh.vertex.array);
         }
       }
-      return Point.from(points.flat());
+      return Float32Array.from(points.flat());
     }
 
     constructor(canvas) {

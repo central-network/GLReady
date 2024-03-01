@@ -301,34 +301,44 @@ export class M4 extends Float32Array
 
 Float32Array::sub = Float32Array::subarray
 Object.defineProperties Float32Array::,
-    sub : value : -> @subarray ...arguments
-    vertex : get : -> @sub 0, 3
-    color : get : -> @sub 3, 7
+    sub     : value : -> @subarray( ...arguments )
+    vertex  : get : -> @sub 0, 3
+    color   : get : -> @sub 3, 7
     index   : get : -> @byteOffset / @byteLength % DRAW_COUNT
-    
-export class Point              extends Float32Array
+
+export class Point              extends Pointer
+    byteLength : 7 * 4
+
     for prop, i in [ "x", "y", "z", "r", "g", "b", "a" ]
         Object.defineProperty this::, prop, ((index)->
-            get : -> this[index]
-            set : -> this[index] = arguments[0]
+            get : -> @get index
+            set : -> @put index, arguments[0]
         )(i)
 
     Object.defineProperties this::,
         color   :
-            get : -> new ColorAttribute @byteOffset
+            get : -> new ColorAttribute this
             set : -> @color.set arguments[0]
 
         vertex  :
-            get : -> new PositionAttribute @byteOffset
+            get : -> new PositionAttribute this
             set : -> @vertex.set arguments[0]
 
         vLength : 
-            get : -> Math.sqrt Math.powsum @subarray 0, 3
+            get : -> Math.sqrt Math.powsum @array.sub 0, 3
 
         index   :
-            get : -> @byteOffset / @byteLength % DRAW_COUNT
+            get : -> ( @byteOffset % DRAW_COUNT ) / @byteLength
 
-    applyMatrix : ( mat4 ) -> mat4.modifyVertex this
+        byteOffset : 
+            get : -> this * 1
+
+        begin   :
+            get : -> @byteOffset / 4
+    
+
+    applyMatrix : ( mat4 ) ->
+        mat4.modifyVertex [ ...@vertex ]
 
     isNeighbour : ( point ) ->
         Point.isNeighbours this, point
@@ -345,7 +355,7 @@ export class Point              extends Float32Array
         return dy if !dx and  dy and !dz
         return dz if !dx and !dy and  dz
 
-    distance2d  : ( p0, p1 = this ) ->
+    @distance2d  : ( p0, p1 ) ->
         [ a, b, c ] = p0    
         [ x, y, z ] = p1
         
@@ -365,7 +375,7 @@ export class Point              extends Float32Array
         nearest = null
 
         for point in points
-            continue if !dist = @distance2d point
+            continue if !dist = Point.distance2d this, point
             continue if distance < dist
             distance = dist
             nearest = point
@@ -428,9 +438,7 @@ export class Mesh extends Number
 
     point               : ( i ) ->
         begin = @begin + ITEMS_PER_VERTEX * i
-        end = begin + ITEMS_PER_VERTEX
-
-        DRAW_BUFFER.subarray begin, end
+        new Point begin * 4
 
     triangle            : ( i ) ->
         [ @point(i), @point(i+1), @point(i+2) ]
@@ -443,7 +451,7 @@ export class Mesh extends Number
             mat4 = @matrix
 
         for p in @points
-            mat4.modifyVertex p.vertex
+            mat4.modifyVertex p.vertex.array
 
         @needsUpload = 1 ; @                    
 
@@ -451,7 +459,7 @@ export class Mesh extends Number
         neighs = []
         for i in [ 0 ... @count ]
             p = @point i
-            if  Point.isNeighbours p, point
+            if  Point.isNeighbours p.vertex.array, point.vertex.array
                 neighs.push p
         neighs
 
@@ -575,7 +583,8 @@ export class GL2 extends EventTarget
 
     @corners    : ( shape ) ->
         points  = []
-        for [ vx, vy, vz ] in shape.points
+        for point in shape.points
+            [ vx, vy, vz ] = point
             found = no
             for [ px, py, pz ] in points.slice()
                 x = px is vx
@@ -583,7 +592,7 @@ export class GL2 extends EventTarget
                 z = pz is vz
                 break if found = x and y and z
             unless found then points.push [ vx, vy, vz ]
-        Point.from points.flat()
+        Float32Array.from points.flat()
 
     @edges      : ( shape ) ->
         i = 0
@@ -592,7 +601,7 @@ export class GL2 extends EventTarget
 
         for point, i in shape.points
             neighs = shape.neighbours point
-            vertex = point.vertex
+            vertex = point.array.sub 0, 3
                 
             for neigh in neighs
                 pair = [ c = neigh.index, d = point.index ]
@@ -607,10 +616,10 @@ export class GL2 extends EventTarget
 
                 points.push(
                     ...vertex,  
-                    ...neigh.vertex
+                    ...neigh.vertex.array
                 )
 
-        Point.from points.flat()
+        Float32Array.from points.flat()
 
 
     constructor : ( canvas ) ->
