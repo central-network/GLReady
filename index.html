@@ -331,12 +331,12 @@
 
             let x, y, z, r = Math.random(), g = Math.random(), b = Math.random(), a;
 
-            shape2.points.forEach( (point, i) => {
-                let begin = i * 3;
-                let end = begin + 3;
+            shape2.vertices.forEach( (vertex, i) => {
 
-                [ x, y, z ] = set.subarray( begin, end )
-                point.set( [ x, y, z, 0, 0, 0, 1 ] )
+                let begin = i * 3;
+                [ x, y, z ] = set.subarray( begin, begin + 3 )
+                vertex.set( [ x, y, z, 0, 0, 0, 1 ] )
+
             })
 
             console.log( shape1 )
@@ -345,11 +345,11 @@
             let pointsCloud = GL2.corners( shape2 );
             let shape3 = gl2.malloc( pointsCloud.length/3, gl2.POINTS )
 
-            shape3.points.forEach( (point, i) => {
+            shape3.vertices.forEach( (vertex, i) => {
                 let begin = i * 3;
                 let xyz = pointsCloud.subarray( begin, begin + 3 );
 
-                point.set( [ ...xyz, 0, 1, 0, 1 ] )
+                vertex.set( [ ...xyz, 0, 1, 0, 1 ] )
             })
 
 
@@ -360,9 +360,9 @@
 
                 let begin = k * 3;
                 let xyz = linesCloud.subarray( begin, begin + 3 );
-                let point = shape4.point( k );
+                let vertex = shape4.vertex( k );
 
-                point.set( [ ...xyz, 0, 1, 1, 1 ] )
+                vertex.set( [ ...xyz, 0, 1, 1, 1 ] )
             }
             
             let mat4 = M4.identity
@@ -371,7 +371,7 @@
             mat4.translate( 0, 0, 100 )
             mat4.scale( 1.2 )
 
-            shape4.applyMatrix( mat4 )
+            shape4.apply( mat4 )
 
             self.shape4 = shape4;
 

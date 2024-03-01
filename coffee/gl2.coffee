@@ -82,6 +82,9 @@ export class Color extends Pointer
 
     set         : ( value ) ->
         super Color.parse value
+
+    paint       : ( vertex ) ->
+        vertex.color.set @array ; vertex
    
     @parse      : ( any ) ->
         if  any instanceof this
@@ -131,7 +134,10 @@ export class M4 extends Float32Array
             0,  0,  1,  0,
             0,  0,  0,  1,
         ] 
-    
+
+    Object.defineProperty this::, "position", get : ->
+        @subarray 12, 15
+        
     @Camera     : class Camera extends this
         constructor : ( yFov, rAspect, zNear, zFar ) ->
 
@@ -153,13 +159,10 @@ export class M4 extends Float32Array
               ... vec3,  1,
         ]
 
-    modifyVertex : ( vec3 ) ->
-        vec3.set M4.multiply( this, Float32Array.from [
-            1,  0,  0,  0,
-            0,  1,  0,  0,
-            0,  0,  1,  0,
-            ...vec3.subarray(0, 3),  1,
-       ] ).subarray( 12, 15 ) ; vec3
+    modifyVertex : ( vertex ) ->
+        vertex.position.set M4.multiply(
+            this, M4::translation ...vertex
+        ).position
 
     multiply    : ( b ) -> @set( M4.multiply @, b ); this
 
@@ -299,49 +302,52 @@ export class M4 extends Float32Array
         @multiply @zTranslation tz
 
 
-Float32Array::sub = Float32Array::subarray
-Object.defineProperties Float32Array::,
-    sub     : value : -> @subarray( ...arguments )
-    vertex  : get : -> @sub 0, 3
-    color   : get : -> @sub 3, 7
-    index   : get : -> @byteOffset / @byteLength % DRAW_COUNT
 
-export class Point              extends Pointer
+export class Vertex              extends Pointer
     byteLength : 7 * 4
+    
 
-    for prop, i in [ "x", "y", "z", "r", "g", "b", "a" ]
-        Object.defineProperty this::, prop, ((index)->
-            get : -> @get index
-            set : -> @put index, arguments[0]
-        )(i)
+    no and for key, index in [ "x", "y", "z" ]
+        Object.defineProperty this::, key, ((i)->
+            get : -> @get i
+            set : -> @put i, arguments[0]
+        ) index
+
+    no and for key, index in [ "r", "g", "b", "a" ]
+        Object.defineProperty this::, key, ((i)->
+            get : -> @get i
+            set : -> @put i, arguments[0]
+        ) index
 
     Object.defineProperties this::,
         color   :
             get : -> new ColorAttribute this
             set : -> @color.set arguments[0]
 
-        vertex  :
+        position  :
             get : -> new PositionAttribute this
-            set : -> @vertex.set arguments[0]
+            set : -> @position.set arguments[0]
 
-        vLength : 
-            get : -> Math.sqrt Math.powsum @array.sub 0, 3
-
-        index   :
-            get : -> ( @byteOffset % DRAW_COUNT ) / @byteLength
-
-        byteOffset : 
-            get : -> this * 1
-
-        begin   :
-            get : -> @byteOffset / 4
+    Object.defineProperties this::,
+        index       : get : -> @byteOffset % DRAW_COUNT / @byteLength
+        begin       : get : -> @byteOffset / 4
+        byteOffset  : get : -> this * 1
+        parent      : get : -> 
+            object = null
+            for byteOffset in Object.keys objects
+                if byteOffset > @byteOffset
+                    #? mesh = objects[ ptr_heaaders ] 
+                    return objects[ object ] 
+                #? headers = objects[ ptr_mesh ]
+                object = objects[ byteOffset ]
+            null
     
 
     applyMatrix : ( mat4 ) ->
-        mat4.modifyVertex [ ...@vertex ]
+        mat4.modifyVertex [ ...@position ]
 
-    isNeighbour : ( point ) ->
-        Point.isNeighbours this, point
+    isNeighbour : ( vertex ) ->
+        Vertex.isNeighbours this, vertex
 
     @isNeighbours : ( p0, p1 ) ->
         [ a, b, c ] = p0
@@ -354,6 +360,9 @@ export class Point              extends Pointer
         return dx if  dx and !dy and !dz
         return dy if !dx and  dy and !dz
         return dz if !dx and !dy and  dz
+
+    vectorLength : ->
+        Math.sqrt Math.powsum @position
 
     @distance2d  : ( p0, p1 ) ->
         [ a, b, c ] = p0    
@@ -370,15 +379,15 @@ export class Point              extends Pointer
 
         throw [ "POINTS_ARE_NOT_IN_SAME_PLANE", p0, p1 ]
 
-    nearest     : ( points ) ->
+    nearest     : ( vertices ) ->
         distance = +Infinity
         nearest = null
 
-        for point in points
-            continue if !dist = Point.distance2d this, point
+        for vertex in vertices
+            continue if !dist = Vertex.distance2d this, vertex
             continue if distance < dist
             distance = dist
-            nearest = point
+            nearest = vertex
 
         nearest
 
@@ -429,39 +438,33 @@ UNUSED  = 0
 
 
 
-export class Vertex     extends Float32Array
 export class Vertices   extends Array
 export class Points     extends Array
 export class Triangle   extends Array
 
 export class Mesh extends Number
 
-    point               : ( i ) ->
+    vertex              : ( i ) ->
         begin = @begin + ITEMS_PER_VERTEX * i
-        new Point begin * 4
+        new Vertex begin * 4
 
-    triangle            : ( i ) ->
-        [ @point(i), @point(i+1), @point(i+2) ]
+    paint               : ->
+        @vertices.forEach @color.paint.bind @color
+        @needsUpload = 1
 
-    applyMatrix         : ( mat4 ) ->
-        unless mat4
-            @matrix.set M4.identity
-            @matrix.rotate ...@rotation
-            @matrix.translate ...@position
-            mat4 = @matrix
 
-        for p in @points
-            mat4.modifyVertex p.vertex.array
+    apply               : ( mat4 ) ->
+        mat4 ?= M4.identity
+            .rotate ...@rotation
+            .translate ...@position
 
-        @needsUpload = 1 ; @                    
-
-    neighbours          : ( point ) ->
-        neighs = []
-        for i in [ 0 ... @count ]
-            p = @point i
-            if  Point.isNeighbours p.vertex.array, point.vertex.array
-                neighs.push p
-        neighs
+        @vertices.forEach mat4.modifyVertex.bind mat4
+        @needsUpload = 1
+        
+        ; @
+        
+    neighbours          : ( vertex ) ->
+        @vertices.filter vertex.isNeighbour.bind vertex
 
     Object.defineProperties this::,
 
@@ -511,30 +514,26 @@ export class Mesh extends Number
 
         color           :
             get : -> new Color this
-            set : -> @color.set      arguments[0] ; @needsUpload = 1
+            set : -> @color.set      arguments[0] ; @paint()
 
         headers         :
             get : -> new Headers this
-            set : -> @headers.set    arguments[0] ; @applyMatrix()
+            set : -> @headers.set    arguments[0] ; @apply()
 
         rotation        :
             get : -> new Rotation this
-            set : -> @rotation.set   arguments[0] ; @applyMatrix()
+            set : -> @rotation.set   arguments[0] ; @apply()
 
         position        :
             get : -> new Position this 
-            set : -> @position.set   arguments[0] ; @applyMatrix()
+            set : -> @position.set   arguments[0] ; @apply()
 
         matrix          :
             get : -> new M4 BUFFER, this + 96, 16
-            set : -> @matrix.set     arguments[0] ; @applyMatrix()
+            set : -> @matrix.set     arguments[0] ; @apply()
 
-        points          :
-            get : ->
-                @point i for i in [ 0 ... @count ]
-
-        triangles       :
-            get : -> @triangle i for i in [ 0 ... @count/3 ]
+        vertices        :
+            get : -> @vertex i for i in [ 0 ... @count ]
 
         [ Symbol("(dump)") ] :
             get : -> {
@@ -546,7 +545,7 @@ export class Mesh extends Number
             }
         
         [ Symbol.iterator  ] :
-            value : -> yield @point i for i in [ 0 ... @count ]
+            value : -> yield @vertex i for i in [ 0 ... @count ]
 
 export class GL2 extends EventTarget
 
@@ -583,7 +582,7 @@ export class GL2 extends EventTarget
 
     @corners    : ( shape ) ->
         points  = []
-        for point in shape.points
+        for point in shape.vertices
             [ vx, vy, vz ] = point
             found = no
             for [ px, py, pz ] in points.slice()
@@ -599,9 +598,8 @@ export class GL2 extends EventTarget
         pairs = []
         points = [] 
 
-        for point, i in shape.points
+        for point, i in shape.vertices
             neighs = shape.neighbours point
-            vertex = point.array.sub 0, 3
                 
             for neigh in neighs
                 pair = [ c = neigh.index, d = point.index ]
@@ -615,8 +613,8 @@ export class GL2 extends EventTarget
                 else pairs.push pair
 
                 points.push(
-                    ...vertex,  
-                    ...neigh.vertex.array
+                    ...point.position,  
+                    ...neigh.position
                 )
 
         Float32Array.from points.flat()
@@ -829,6 +827,7 @@ export class GL2 extends EventTarget
         mesh = new Mesh headersOffset
         mesh.matrix.set M4.identity
 
+        objects[ byteOffset ] = headers
         objects[ headersOffset ] = mesh
 
     render      : ( t ) =>

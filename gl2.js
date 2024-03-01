@@ -204,6 +204,11 @@ export var Color = (function() {
       return super.set(Color.parse(value));
     }
 
+    paint(vertex) {
+      vertex.color.set(this.array);
+      return vertex;
+    }
+
     static parse(any) {
       var arr, i, k, len2, v;
       if (any instanceof this) {
@@ -291,9 +296,8 @@ export var M4 = (function() {
       return new M4([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, ...vec3, 1]);
     }
 
-    modifyVertex(vec3) {
-      vec3.set(M4.multiply(this, Float32Array.from([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, ...vec3.subarray(0, 3), 1])).subarray(12, 15));
-      return vec3;
+    modifyVertex(vertex) {
+      return vertex.position.set(M4.multiply(this, M4.prototype.translation(...vertex)).position);
     }
 
     multiply(b) {
@@ -426,6 +430,12 @@ export var M4 = (function() {
     }
   });
 
+  Object.defineProperty(M4.prototype, "position", {
+    get: function() {
+      return this.subarray(12, 15);
+    }
+  });
+
   M4.Camera = Camera = class Camera extends M4 {
     constructor(yFov, rAspect, zNear, zFar) {
       var f, rangeInv;
@@ -440,41 +450,16 @@ export var M4 = (function() {
 
 }).call(this);
 
-Float32Array.prototype.sub = Float32Array.prototype.subarray;
+export var Vertex = (function() {
+  var index, key;
 
-Object.defineProperties(Float32Array.prototype, {
-  sub: {
-    value: function() {
-      return this.subarray(...arguments);
-    }
-  },
-  vertex: {
-    get: function() {
-      return this.sub(0, 3);
-    }
-  },
-  color: {
-    get: function() {
-      return this.sub(3, 7);
-    }
-  },
-  index: {
-    get: function() {
-      return this.byteOffset / this.byteLength % DRAW_COUNT;
-    }
-  }
-});
-
-export var Point = (function() {
-  var i, j, len1, prop, ref;
-
-  class Point extends Pointer {
+  class Vertex extends Pointer {
     applyMatrix(mat4) {
-      return mat4.modifyVertex([...this.vertex]);
+      return mat4.modifyVertex([...this.position]);
     }
 
-    isNeighbour(point) {
-      return Point.isNeighbours(this, point);
+    isNeighbour(vertex) {
+      return Vertex.isNeighbours(this, vertex);
     }
 
     static isNeighbours(p0, p1) {
@@ -493,6 +478,10 @@ export var Point = (function() {
       if (!dx && !dy && dz) {
         return dz;
       }
+    }
+
+    vectorLength() {
+      return Math.sqrt(Math.powsum(this.position));
     }
 
     static distance2d(p0, p1) {
@@ -517,44 +506,69 @@ export var Point = (function() {
       throw ["POINTS_ARE_NOT_IN_SAME_PLANE", p0, p1];
     }
 
-    nearest(points) {
-      var dist, distance, k, len2, nearest, point;
+    nearest(vertices) {
+      var dist, distance, j, len1, nearest, vertex;
       distance = +2e308;
       nearest = null;
-      for (k = 0, len2 = points.length; k < len2; k++) {
-        point = points[k];
-        if (!(dist = Point.distance2d(this, point))) {
+      for (j = 0, len1 = vertices.length; j < len1; j++) {
+        vertex = vertices[j];
+        if (!(dist = Vertex.distance2d(this, vertex))) {
           continue;
         }
         if (distance < dist) {
           continue;
         }
         distance = dist;
-        nearest = point;
+        nearest = vertex;
       }
       return nearest;
     }
 
   };
 
-  Point.prototype.byteLength = 7 * 4;
+  Vertex.prototype.byteLength = 7 * 4;
 
-  ref = ["x", "y", "z", "r", "g", "b", "a"];
-  for (i = j = 0, len1 = ref.length; j < len1; i = ++j) {
-    prop = ref[i];
-    Object.defineProperty(Point.prototype, prop, (function(index) {
-      return {
-        get: function() {
-          return this.get(index);
-        },
-        set: function() {
-          return this.put(index, arguments[0]);
-        }
-      };
-    })(i));
-  }
+  false && (function() {
+    var j, len1, ref, results;
+    ref = ["x", "y", "z"];
+    results = [];
+    for (index = j = 0, len1 = ref.length; j < len1; index = ++j) {
+      key = ref[index];
+      results.push(Object.defineProperty(Vertex.prototype, key, (function(i) {
+        return {
+          get: function() {
+            return this.get(i);
+          },
+          set: function() {
+            return this.put(i, arguments[0]);
+          }
+        };
+      })(index)));
+    }
+    return results;
+  }).call(this);
 
-  Object.defineProperties(Point.prototype, {
+  false && (function() {
+    var j, len1, ref, results;
+    ref = ["r", "g", "b", "a"];
+    results = [];
+    for (index = j = 0, len1 = ref.length; j < len1; index = ++j) {
+      key = ref[index];
+      results.push(Object.defineProperty(Vertex.prototype, key, (function(i) {
+        return {
+          get: function() {
+            return this.get(i);
+          },
+          set: function() {
+            return this.put(i, arguments[0]);
+          }
+        };
+      })(index)));
+    }
+    return results;
+  }).call(this);
+
+  Object.defineProperties(Vertex.prototype, {
     color: {
       get: function() {
         return new ColorAttribute(this);
@@ -563,22 +577,25 @@ export var Point = (function() {
         return this.color.set(arguments[0]);
       }
     },
-    vertex: {
+    position: {
       get: function() {
         return new PositionAttribute(this);
       },
       set: function() {
-        return this.vertex.set(arguments[0]);
+        return this.position.set(arguments[0]);
       }
-    },
-    vLength: {
-      get: function() {
-        return Math.sqrt(Math.powsum(this.array.sub(0, 3)));
-      }
-    },
+    }
+  });
+
+  Object.defineProperties(Vertex.prototype, {
     index: {
       get: function() {
-        return (this.byteOffset % DRAW_COUNT) / this.byteLength;
+        return this.byteOffset % DRAW_COUNT / this.byteLength;
+      }
+    },
+    begin: {
+      get: function() {
+        return this.byteOffset / 4;
       }
     },
     byteOffset: {
@@ -586,14 +603,27 @@ export var Point = (function() {
         return this * 1;
       }
     },
-    begin: {
+    parent: {
       get: function() {
-        return this.byteOffset / 4;
+        var byteOffset, j, len1, object, ref;
+        object = null;
+        ref = Object.keys(objects);
+        for (j = 0, len1 = ref.length; j < len1; j++) {
+          byteOffset = ref[j];
+          if (byteOffset > this.byteOffset) {
+            //? mesh = objects[ ptr_heaaders ] 
+            return objects[object];
+          }
+          
+          //? headers = objects[ ptr_mesh ]
+          object = objects[byteOffset];
+        }
+        return null;
       }
     }
   });
 
-  return Point;
+  return Vertex;
 
 }).call(this);
 
@@ -639,8 +669,6 @@ r = g = b = a = rx = ry = rz = dx = dy = dz = UNUSED = 0;
 
 [m10, m11, m12, m13, m20, m21, m22, m23, m30, m31, m32, m33, m40, m41, m42, m43] = M4.identity;
 
-export var Vertex = class Vertex extends Float32Array {};
-
 export var Vertices = class Vertices extends Array {};
 
 export var Points = class Points extends Array {};
@@ -649,43 +677,28 @@ export var Triangle = class Triangle extends Array {};
 
 export var Mesh = (function() {
   class Mesh extends Number {
-    point(i) {
+    vertex(i) {
       var begin;
       begin = this.begin + ITEMS_PER_VERTEX * i;
-      return new Point(begin * 4);
+      return new Vertex(begin * 4);
     }
 
-    triangle(i) {
-      return [this.point(i), this.point(i + 1), this.point(i + 2)];
+    paint() {
+      this.vertices.forEach(this.color.paint.bind(this.color));
+      return this.needsUpload = 1;
     }
 
-    applyMatrix(mat4) {
-      var j, len1, p, ref;
-      if (!mat4) {
-        this.matrix.set(M4.identity);
-        this.matrix.rotate(...this.rotation);
-        this.matrix.translate(...this.position);
-        mat4 = this.matrix;
+    apply(mat4) {
+      if (mat4 == null) {
+        mat4 = M4.identity.rotate(...this.rotation).translate(...this.position);
       }
-      ref = this.points;
-      for (j = 0, len1 = ref.length; j < len1; j++) {
-        p = ref[j];
-        mat4.modifyVertex(p.vertex.array);
-      }
+      this.vertices.forEach(mat4.modifyVertex.bind(mat4));
       this.needsUpload = 1;
       return this;
     }
 
-    neighbours(point) {
-      var i, j, neighs, p, ref;
-      neighs = [];
-      for (i = j = 0, ref = this.count; (0 <= ref ? j < ref : j > ref); i = 0 <= ref ? ++j : --j) {
-        p = this.point(i);
-        if (Point.isNeighbours(p.vertex.array, point.vertex.array)) {
-          neighs.push(p);
-        }
-      }
-      return neighs;
+    neighbours(vertex) {
+      return this.vertices.filter(vertex.isNeighbour.bind(vertex));
     }
 
   };
@@ -785,7 +798,7 @@ export var Mesh = (function() {
       },
       set: function() {
         this.color.set(arguments[0]);
-        return this.needsUpload = 1;
+        return this.paint();
       }
     },
     headers: {
@@ -794,7 +807,7 @@ export var Mesh = (function() {
       },
       set: function() {
         this.headers.set(arguments[0]);
-        return this.applyMatrix();
+        return this.apply();
       }
     },
     rotation: {
@@ -803,7 +816,7 @@ export var Mesh = (function() {
       },
       set: function() {
         this.rotation.set(arguments[0]);
-        return this.applyMatrix();
+        return this.apply();
       }
     },
     position: {
@@ -812,7 +825,7 @@ export var Mesh = (function() {
       },
       set: function() {
         this.position.set(arguments[0]);
-        return this.applyMatrix();
+        return this.apply();
       }
     },
     matrix: {
@@ -821,25 +834,15 @@ export var Mesh = (function() {
       },
       set: function() {
         this.matrix.set(arguments[0]);
-        return this.applyMatrix();
+        return this.apply();
       }
     },
-    points: {
+    vertices: {
       get: function() {
         var i, j, ref, results;
         results = [];
         for (i = j = 0, ref = this.count; (0 <= ref ? j < ref : j > ref); i = 0 <= ref ? ++j : --j) {
-          results.push(this.point(i));
-        }
-        return results;
-      }
-    },
-    triangles: {
-      get: function() {
-        var i, j, ref, results;
-        results = [];
-        for (i = j = 0, ref = this.count / 3; (0 <= ref ? j < ref : j > ref); i = 0 <= ref ? ++j : --j) {
-          results.push(this.triangle(i));
+          results.push(this.vertex(i));
         }
         return results;
       }
@@ -854,7 +857,7 @@ export var Mesh = (function() {
         var i, j, ref, results;
         results = [];
         for (i = j = 0, ref = this.count; (0 <= ref ? j < ref : j > ref); i = 0 <= ref ? ++j : --j) {
-          results.push((yield this.point(i)));
+          results.push((yield this.vertex(i)));
         }
         return results;
       }
@@ -872,7 +875,7 @@ export var GL2 = (function() {
     static corners(shape) {
       var found, j, k, len1, len2, point, points, px, py, pz, ref, ref1, vx, vy, vz, x, y, z;
       points = [];
-      ref = shape.points;
+      ref = shape.vertices;
       for (j = 0, len1 = ref.length; j < len1; j++) {
         point = ref[j];
         [vx, vy, vz] = point;
@@ -895,15 +898,14 @@ export var GL2 = (function() {
     }
 
     static edges(shape) {
-      var c, d, found, i, j, k, l, len1, len2, len3, neigh, neighs, pair, pairs, point, points, ref, vertex;
+      var c, d, found, i, j, k, l, len1, len2, len3, neigh, neighs, pair, pairs, point, points, ref;
       i = 0;
       pairs = [];
       points = [];
-      ref = shape.points;
+      ref = shape.vertices;
       for (i = j = 0, len1 = ref.length; j < len1; i = ++j) {
         point = ref[i];
         neighs = shape.neighbours(point);
-        vertex = point.array.sub(0, 3);
         for (k = 0, len2 = neighs.length; k < len2; k++) {
           neigh = neighs[k];
           pair = [c = neigh.index, d = point.index];
@@ -922,7 +924,7 @@ export var GL2 = (function() {
           } else {
             pairs.push(pair);
           }
-          points.push(...vertex, ...neigh.vertex.array);
+          points.push(...point.position, ...neigh.position);
         }
       }
       return Float32Array.from(points.flat());
@@ -1202,6 +1204,7 @@ export var GL2 = (function() {
       headers.set([byteOffset, byteLength, count, length, begin, end = begin + length, hIndex = LENGTH_HEADERS, drawAs, enabled = 1, needsUpload = 1, UNUSED, UNUSED, r, g, b, a, rx, ry, rz, UNUSED, dx, dy, dz, UNUSED]);
       mesh = new Mesh(headersOffset);
       mesh.matrix.set(M4.identity);
+      objects[byteOffset] = headers;
       return objects[headersOffset] = mesh;
     }
 
