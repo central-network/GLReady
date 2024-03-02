@@ -6,13 +6,24 @@ Object.defineProperties Math,
 
 BYTES_PER_ELEMENT   = 4
 HEADER_ITEM_COUNT   = 40
+STRIDE_HEADERS      = HEADER_ITEM_COUNT * BYTES_PER_ELEMENT
 ITEMS_PER_VERTEX    = 7
 DRAW_LENGTH         = 3e6 + 4
 BUFFER              = new SharedArrayBuffer 1e8
 DRAW_COUNT          = DRAW_LENGTH / 7
+HEADERS_OFFSET      = DRAW_LENGTH * 6
+OFFSET_HEADERS      = 160
 
 i32                 = new Int32Array BUFFER
 f32                 = new Float32Array BUFFER
+
+DRAW_ARRAY          = f32.subarray DRAW_LENGTH * 0, DRAW_LENGTH * 3
+TRIANGLES           = f32.subarray DRAW_LENGTH * 0, DRAW_LENGTH
+POINTS              = f32.subarray DRAW_LENGTH * 1, DRAW_LENGTH * 2
+LINES               = f32.subarray DRAW_LENGTH * 2, DRAW_LENGTH * 3
+VERTICES            = f32.subarray DRAW_LENGTH * 3, DRAW_LENGTH * 6
+HEADERS             = i32.subarray DRAW_LENGTH * 6, DRAW_LENGTH * 7
+
 
 self.objects        = new Object()
 
@@ -418,6 +429,12 @@ FIRST_LINES         = DRAW_COUNT  * 2
 INDEX_LINES         = DRAW_LENGTH * 2
 BYTE_LINES          = INDEX_LINES * 4
 
+console.log DRAW_COUNT: DRAW_COUNT
+console.log FIRST_TRIANGLES: FIRST_TRIANGLES,  ATTRIB_BEGIN_TRIANGLES: ATTRIB_BEGIN_TRIANGLES
+console.log FIRST_POINTS: FIRST_POINTS, ATTRIB_BEGIN_POINTS: ATTRIB_BEGIN_POINTS
+console.log FIRST_LINES: FIRST_LINES, ATTRIB_BEGIN_LINES:ATTRIB_BEGIN_LINES
+
+
 COUNT_TRIANGLES     = 0
 COUNT_POINTS        = 0
 COUNT_LINES         = 0
@@ -425,12 +442,115 @@ COUNT_LINES         = 0
 HEADERS_OFFSET      = DRAW_FINISH
 HEADERS_INDEX       = DRAW_FINISH / 4
 
-HEADERS             = new Int32Array BUFFER, HEADERS_OFFSET, 1e6
+HEADERS = new Int32Array BUFFER, HEADERS_OFFSET, 1e6
+console.warn { 0: "drawOffset", 1: "realOffset" }
+
+Object.defineProperties HEADERS,
+
+    BYTES_PER_HEADER            : value : 40 * 4
+    ELEMENTS_PER_ATTRIBUTE      : value : 7
+    BYTES_PER_ATTRIBUTE         : value : 7 * 4
+
+    indexOfHeadersByteOffset : value : 0
+
+    indexOfByteOffset : value : 1
+    indexOfElementsBegin : value : 2
+    indexOfAttributesBegin : value : 3
+    
+    glIndexOfTrianglesByteOffset : value : 4
+    glIndexOfTrianglesElementsBegin : value : 5
+    glIndexOfTrianglesAttributesBegin : value : 6
+
+    glIndexOfPointsByteOffset : value : 7
+    glIndexOfPointsElementsBegin : value : 8
+    glIndexOfPointsAttributesBegin : value : 9
+
+    glIndexOfLinesByteOffset : value : 10
+    glIndexOfLinesElementsBegin : value : 11
+    glIndexOfLinesAttributesBegin : value : 12
+
+    malloc  : value : ( drawAs, count ) ->
+        headersOffset = Atomics.add this, @indexOfHeadersByteOffset, @BYTES_PER_HEADER
+        headersBegin = headersOffset / @BYTES_PER_ELEMENT 
+
+        Atomics.store this, headersBegin + 0, count
+        Atomics.store this, headersBegin + 1, drawAs
         
+        byteLength = count * @BYTES_PER_ATTRIBUTE
+        elementsLength = byteLength / @BYTES_PER_ELEMENT
+        attributesLength = count
+
+        Atomics.store this, headersBegin + 2, byteLength
+        Atomics.store this, headersBegin + 3, elementsLength
+        Atomics.store this, headersBegin + 4, attributesLength
+
+        unless drawAs - WebGL2RenderingContext.TRIANGLES
+            glByteOffset = Atomics.add this, @glIndexOfTrianglesByteOffset, byteLength
+            glElementsBegin = Atomics.add this, @glIndexOfTrianglesElementsBegin, elementsLength
+            glAttributesBegin = Atomics.add this, @glIndexOfTrianglesAttributesBegin, attributesLength
+
+        unless drawAs - WebGL2RenderingContext.POINTS
+            glByteOffset = Atomics.add this, @glIndexOfPointsByteOffset, byteLength
+            glElementsBegin = Atomics.add this, @glIndexOfPointsElementsBegin, elementsLength
+            glAttributesBegin = Atomics.add this, @glIndexOfPointsAttributesBegin, attributesLength
+
+        unless drawAs - WebGL2RenderingContext.LINES
+            glByteOffset = Atomics.add this, @glIndexOfLinesByteOffset, byteLength
+            glElementsBegin = Atomics.add this, @glIndexOfLinesElementsBegin, byteLength / @BYTES_PER_ELEMENT
+            glAttributesBegin = Atomics.add this, @glIndexOfLinesAttributesBegin, attributesLength
+
+        Atomics.store this, headersBegin + 5, glByteOffset
+        Atomics.store this, headersBegin + 6, glElementsBegin
+        Atomics.store this, headersBegin + 7, glAttributesBegin
+
+        byteOffset = Atomics.add this, @indexOfByteOffset, byteLength
+        elementsBegin = Atomics.add this, @indexOfElementsBegin, byteLength / @BYTES_PER_ELEMENT
+        attributesBegin = Atomics.add this, @indexOfAttributesBegin, attributesLength
+
+        console.group drawAs
+        console.warn { drawAs, byteLength, elementsLength, attributesLength }
+        console.table [
+            { byte: glByteOffset, elements: glElementsBegin, attribs: glAttributesBegin },
+            { byte: byteOffset, elements: elementsBegin, attribs: attributesBegin }
+        ]
+        console.groupEnd()
+
+        headersOffset
+
+    get     : value : ( byteOffset , byteLength = @BYTES_PER_HEADER ) -> 
+        begin   = byteOffset / @BYTES_PER_ELEMENT
+        length  = byteLength / @BYTES_PER_ELEMENT
+
+        @subarray begin, begin + length
+
+
+ATTRIB_BEGIN_TRIANGLES  = TRIANGLES.byteOffset / TRIANGLES.BYTES_PER_ELEMENT / ITEMS_PER_VERTEX
+ATTRIB_BEGIN_POINTS     = POINTS.byteOffset  / POINTS.BYTES_PER_ELEMENT  / ITEMS_PER_VERTEX
+ATTRIB_BEGIN_LINES      = LINES.byteOffset / LINES.BYTES_PER_ELEMENT / ITEMS_PER_VERTEX
+
+Atomics.store HEADERS, HEADERS.indexOfHeadersByteOffset, OFFSET_HEADERS
+
+Atomics.store HEADERS, HEADERS.indexOfByteOffset, VERTICES.byteOffset
+Atomics.store HEADERS, HEADERS.indexOfElementsBegin, VERTICES.byteOffset / VERTICES.BYTES_PER_ELEMENT
+Atomics.store HEADERS, HEADERS.indexOfAttributesBegin, VERTICES.byteOffset / VERTICES.BYTES_PER_ELEMENT / ITEMS_PER_VERTEX
+
+Atomics.store HEADERS, HEADERS.glIndexOfTrianglesByteOffset, TRIANGLES.byteOffset
+Atomics.store HEADERS, HEADERS.glIndexOfTrianglesElementsBegin, TRIANGLES.byteOffset / TRIANGLES.BYTES_PER_ELEMENT
+Atomics.store HEADERS, HEADERS.glIndexOfTrianglesAttributesBegin, TRIANGLES.byteOffset / TRIANGLES.BYTES_PER_ELEMENT / ITEMS_PER_VERTEX
+
+Atomics.store HEADERS, HEADERS.glIndexOfPointsByteOffset, POINTS.byteOffset
+Atomics.store HEADERS, HEADERS.glIndexOfPointsElementsBegin, POINTS.byteOffset / POINTS.BYTES_PER_ELEMENT
+Atomics.store HEADERS, HEADERS.glIndexOfPointsAttributesBegin, POINTS.byteOffset / POINTS.BYTES_PER_ELEMENT / ITEMS_PER_VERTEX
+
+Atomics.store HEADERS, HEADERS.glIndexOfLinesByteOffset, LINES.byteOffset
+Atomics.store HEADERS, HEADERS.glIndexOfLinesElementsBegin, LINES.byteOffset / LINES.BYTES_PER_ELEMENT
+Atomics.store HEADERS, HEADERS.glIndexOfLinesAttributesBegin, LINES.byteOffset / LINES.BYTES_PER_ELEMENT / ITEMS_PER_VERTEX
+
+
+
 
 COUNT_HEADERS       = 0
 LENGTH_HEADERS      = 0
-
 
 r  = 
 g  = 
@@ -471,6 +591,10 @@ export class Mesh extends Number
     neighs              : ( vertex ) ->
         @vertices.filter vertex.isNeighbour.bind vertex
 
+
+    getEdgeVertices : -> @filters.edgeVertexPairs        
+
+
     Object.defineProperties this::,
 
         drawAs          :
@@ -501,9 +625,9 @@ export class Mesh extends Number
             get : -> @headers.get 5
             set : -> @headers.put 5, arguments[0]
 
-        hIndex          :
-            get : -> @headers.get 6
-            set : -> @headers.put 6, arguments[0]
+        #hIndex          :
+        #    get : -> @headers.get 6
+        #    set : -> @headers.put 6, arguments[0]
 
         enabled         :
             get : -> @headers.get 8
@@ -557,9 +681,9 @@ export class Mesh extends Number
 
 export class VertexFilters
 
-    ptr : "∆"
+    ptr : String.fromCharCode 8710 #? "∆"
 
-    constructor : ( ptr ) -> 
+    constructor : ( ptr ) ->
         Object.defineProperty this, @ptr, { value: ptr }
 
     Object.defineProperties this::,
@@ -575,10 +699,9 @@ export class VertexFilters
         edgeVertexPairs : get : ( _ = [] ) ->
             for vertex in corners = @cornerVertices
                 for neighv in vertex.getNeighbours corners
-                    continue if _.includes [ vertex , neighv ]
                     continue if _.includes [ neighv , vertex ]
                     _.push [ vertex, neighv ]
-            _
+            return _
 
 export class GL2 extends EventTarget
 
@@ -605,6 +728,9 @@ export class GL2 extends EventTarget
         }
     '
 
+    @BYTES_PER_HEADER : 4 * 40
+    BYTES_PER_HEADER  : @::BYTES_PER_HEADER 
+
     scene       : new Float32Array 256
     count       : 0
     rendering   : yes
@@ -618,6 +744,18 @@ export class GL2 extends EventTarget
 
     @edges      : ( shape ) ->
         Float32Array.from shape.filters.edgeVertexPairs.map( ([ p0, p1 ]) -> [ ...p0.position, ...p1.position ] ).flat()
+
+
+    # @arguments pariedLineVertices = []
+    drawLines   : ->
+        vertices     = [ ...arguments ].flat()
+        count        = vertices.length
+
+        headersOffset = HEADERS.malloc @gl.LINES, count
+
+        console.log 2, new Headers headersOffset
+
+        vertices
 
     constructor : ( canvas ) ->
 
@@ -800,10 +938,11 @@ export class GL2 extends EventTarget
 
         else throw [ "UNDEFINED_DRAW_METHOD:", drawAs ]
 
-        headersOffset = HEADERS_OFFSET + LENGTH_HEADERS * 4
-        LENGTH_HEADERS += HEADER_ITEM_COUNT
+        headersOffset = HEADERS.malloc drawAs, count
+        headers = HEADERS.get headersOffset
 
-        headers = new Headers headersOffset
+        console.warn ...headers
+
         headers.set [
             byteOffset,
             byteLength,
@@ -811,7 +950,7 @@ export class GL2 extends EventTarget
             length,
             begin,
             end         = begin + length, 
-            hIndex      = LENGTH_HEADERS,
+            UNUSED,
             drawAs,
             enabled     = 1,
             needsUpload = 1,
@@ -822,12 +961,13 @@ export class GL2 extends EventTarget
             dx, dy, dz, UNUSED,
 
         ] 
+        console.warn ...headers
         
-        mesh = new Mesh headersOffset
+        mesh = new Mesh headers.byteOffset
         mesh.matrix.set M4.identity
 
-        objects[ byteOffset ] = headers
-        objects[ headersOffset ] = mesh
+        objects[ mesh.byteOffset ] = headers
+        objects[ headers.byteOffset ] = mesh
 
     render      : ( t ) =>
 
@@ -840,7 +980,7 @@ export class GL2 extends EventTarget
             for job in @renderQueue.slice 0
                 job.call this, t
 
-            for hIndex, object of objects
+            for offset, object of objects
                 continue unless object.needsUpload
                 @upload object; object.needsUpload = 0
 

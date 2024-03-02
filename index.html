@@ -353,6 +353,12 @@
             })
 
 
+            let shape2Edge = shape2.getEdgeVertices()
+            let edgeMesh = gl2.drawLines( shape2Edge )
+
+            console.warn({ shape2Edge, edgeMesh })
+
+
             let linesCloud = GL2.edges( shape2 );
             let shape4 = gl2.malloc( linesCloud.length/3, gl2.LINES )
 
