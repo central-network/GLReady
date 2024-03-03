@@ -1,4 +1,4 @@
-var ATTRIB_BEGIN_LINES, ATTRIB_BEGIN_POINTS, ATTRIB_BEGIN_TRIANGLES, BUFFER, BYTES_PER_ELEMENT, BYTE_LINES, BYTE_POINTS, BYTE_TRIANGLES, COUNT_HEADERS, COUNT_LINES, COUNT_POINTS, COUNT_TRIANGLES, DRAW_ARRAY, DRAW_BUFFER, DRAW_COUNT, DRAW_FINISH, DRAW_LENGTH, FIRST_LINES, FIRST_POINTS, FIRST_TRIANGLES, HEADERS, HEADERS_INDEX, HEADERS_OFFSET, HEADER_ITEM_COUNT, INDEX_LINES, INDEX_POINTS, INDEX_TRIANGLES, ITEMS_PER_VERTEX, LENGTH_HEADERS, LINES, OFFSET_HEADERS, POINTS, STRIDE_HEADERS, TRIANGLES, UNUSED, VERTICES, a, b, dx, dy, dz, f32, g, i32, m10, m11, m12, m13, m20, m21, m22, m23, m30, m31, m32, m33, m40, m41, m42, m43, r, rx, ry, rz,
+var ATTRIB_BEGIN_LINES, ATTRIB_BEGIN_POINTS, ATTRIB_BEGIN_TRIANGLES, BUFFER, BYTES_PER_ELEMENT, BYTE_LINES, BYTE_POINTS, BYTE_TRIANGLES, COUNT_HEADERS, COUNT_LINES, COUNT_POINTS, COUNT_TRIANGLES, DRAW_ARRAY, DRAW_BUFFER, DRAW_COUNT, DRAW_FINISH, DRAW_LENGTH, FIRST_LINES, FIRST_POINTS, FIRST_TRIANGLES, HEADERS, HEADERS_INDEX, HEADERS_OFFSET, HEADER_ITEM_COUNT, INDEX_LINES, INDEX_POINTS, INDEX_TRIANGLES, ITEMS_PER_VERTEX, LENGTH_HEADERS, LINES, OFFSET_HEADERS, POINTS, STRIDE_HEADERS, TRIANGLES, UNUSED, VERTICES, a, b, dx, dy, dz, f32, g, i32, m10, m11, m12, m13, m20, m21, m22, m23, m30, m31, m32, m33, m40, m41, m42, m43, r, rx, ry, rz, sab,
   boundMethodCheck = function(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new Error('Bound instance method accessed before binding'); } };
 
 Object.defineProperties(Math, {
@@ -39,9 +39,11 @@ HEADERS_OFFSET = DRAW_LENGTH * 6;
 
 OFFSET_HEADERS = 160;
 
-i32 = new Int32Array(BUFFER);
+sab = new SharedArrayBuffer(1e8);
 
-f32 = new Float32Array(BUFFER);
+i32 = new Int32Array(sab);
+
+f32 = new Float32Array(sab);
 
 DRAW_ARRAY = f32.subarray(DRAW_LENGTH * 0, DRAW_LENGTH * 3);
 
@@ -1426,9 +1428,7 @@ export var GL2 = (function() {
       }
       headersOffset = HEADERS.malloc(drawAs, count);
       headers = HEADERS.get(headersOffset);
-      console.warn(...headers);
       headers.set([byteOffset, byteLength, count, length, begin, end = begin + length, UNUSED, drawAs, enabled = 1, needsUpload = 1, UNUSED, UNUSED, r, g, b, a, rx, ry, rz, UNUSED, dx, dy, dz, UNUSED]);
-      console.warn(...headers);
       mesh = new Mesh(headers.byteOffset);
       mesh.matrix.set(M4.identity);
       objects[mesh.byteOffset] = headers;

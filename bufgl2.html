@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+    <html lang="en">
+
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <style>
+            body, html { 
+                width: 100vw; height: 100vh; overflow: hidden;
+                margin: 0; overscroll-behavior-x: none; }
+
+            canvas { width: 100%; height: 100%; }
+            table {
+                position: fixed;
+                right: 10px;
+                top: 10px;
+                font: 14px/1.38em "Ubuntu Mono";
+            }
+
+            * { border: 0; }
+            td { position: relative; }
+
+            *:focus { outline: 0; }
+            td::before {
+                content: attr(id) ":";
+                position: absolute;
+                right: 100%;
+                pointer-events: none;
+                color: rgb(152, 152, 152);
+            }
+        </style>
+    </head>
+    <body>
+        <canvas id="gl2"></canvas>
+        <table>
+            <tr><td id="dxCamera">   <input type="range" max="500" min="-500" step="1" /></td></tr>
+            <tr><td id="dyCamera">   <input type="range" max="500" min="-500" step="1" /></td></tr>
+            <tr><td id="dzCamera">   <input type="range" max="500" min="-500" step="1" /></td></tr>
+
+            <tr><td id="rxCamera">   <input type="range" max="3.14" min="-3.14" step="0.01" /></td></tr>
+            <tr><td id="ryCamera">   <input type="range" max="3.14" min="-3.14" step="0.01" /></td></tr>
+
+            <tr><td id="sxCamera">   <input type="range" max="3" min="0" step="0.1" /></td></tr>
+            <tr><td id="syCamera">   <input type="range" max="3" min="0" step="0.1" /></td></tr>
+            <tr><td id="szCamera">   <input type="range" max="3" min="0" step="0.1" /></td></tr>
+        </table>
+
+
+        <script type="module">
+            import BufGL2 from "./BufGL2.js"
+            import Bind from "./bind.js"
+
+            self.gl2 = null
+
+            gl2 = new BufGL2();
+            gl2.canvas = document.getElementById('gl2')
+            gl2.background = [
+                15/255, 17/255, 26/255
+            ]
+
+            let bind    = new Bind( gl2.canvas );
+
+
+            let set = new Float32Array([
+                // left column front
+                 0,   0,  0,
+                 0, 150,  0,
+                30,   0,  0,
+                 0, 150,  0,
+                30, 150,  0,
+                30,   0,  0,
+
+                // top rung front
+                 30,   0,  0,
+                 30,  30,  0,
+                100,   0,  0,
+                 30,  30,  0,
+                100,  30,  0,
+                100,   0,  0,
+
+                // middle rung front
+                30,  60,  0,
+                30,  90,  0,
+                67,  60,  0,
+                30,  90,  0,
+                67,  90,  0,
+                67,  60,  0,
+
+                // left column back
+                 0,   0,  30,
+                30,   0,  30,
+                 0, 150,  30,
+                 0, 150,  30,
+                30,   0,  30,
+                30, 150,  30,
+
+                // top rung back
+                 30,   0,  30,
+                100,   0,  30,
+                 30,  30,  30,
+                 30,  30,  30,
+                100,   0,  30,
+                100,  30,  30,
+
+                // middle rung back
+                30,  60,  30,
+                67,  60,  30,
+                30,  90,  30,
+                30,  90,  30,
+                67,  60,  30,
+                67,  90,  30,
+
+                // top
+                  0,   0,   0,
+                100,   0,   0,
+                100,   0,  30,
+                  0,   0,   0,
+                100,   0,  30,
+                  0,   0,  30,
+
+                // top rung right
+                100,   0,   0,
+                100,  30,   0,
+                100,  30,  30,
+                100,   0,   0,
+                100,  30,  30,
+                100,   0,  30,
+
+                // under top rung
+                30,   30,   0,
+                30,   30,  30,
+                100,  30,  30,
+                30,   30,   0,
+                100,  30,  30,
+                100,  30,   0,
+
+                // between top rung and middle
+                30,   30,   0,
+                30,   60,  30,
+                30,   30,  30,
+                30,   30,   0,
+                30,   60,   0,
+                30,   60,  30,
+
+                // top of middle rung
+                30,   60,   0,
+                67,   60,  30,
+                30,   60,  30,
+                30,   60,   0,
+                67,   60,   0,
+                67,   60,  30,
+
+                // right of middle rung
+                67,   60,   0,
+                67,   90,  30,
+                67,   60,  30,
+                67,   60,   0,
+                67,   90,   0,
+                67,   90,  30,
+
+                // bottom of middle rung.
+                30,   90,   0,
+                30,   90,  30,
+                67,   90,  30,
+                30,   90,   0,
+                67,   90,  30,
+                67,   90,   0,
+
+                // right of bottom
+                30,   90,   0,
+                30,  150,  30,
+                30,   90,  30,
+                30,   90,   0,
+                30,  150,   0,
+                30,  150,  30,
+
+                // bottom
+                0,   150,   0,
+                0,   150,  30,
+                30,  150,  30,
+                0,   150,   0,
+                30,  150,  30,
+                30,  150,   0,
+
+                // left side
+                0,   0,   0,
+                0,   0,  30,
+                0, 150,  30,
+                0,   0,   0,
+                0, 150,  30,
+                0, 150,   0,
+            ]);
+
+            let clr = new Float32Array([
+              // left column front
+                200,  70, 120,
+                200,  70, 120,
+                200,  70, 120,
+                200,  70, 120,
+                200,  70, 120,
+                200,  70, 120,
+
+                // top rung front
+                200,  70, 120,
+                200,  70, 120,
+                200,  70, 120,
+                200,  70, 120,
+                200,  70, 120,
+                200,  70, 120,
+
+                // middle rung front
+                200,  70, 120,
+                200,  70, 120,
+                200,  70, 120,
+                200,  70, 120,
+                200,  70, 120,
+                200,  70, 120,
+
+                // left column back
+                80, 70, 200,
+                80, 70, 200,
+                80, 70, 200,
+                80, 70, 200,
+                80, 70, 200,
+                80, 70, 200,
+
+                // top rung back
+                80, 70, 200,
+                80, 70, 200,
+                80, 70, 200,
+                80, 70, 200,
+                80, 70, 200,
+                80, 70, 200,
+
+                // middle rung back
+                80, 70, 200,
+                80, 70, 200,
+                80, 70, 200,
+                80, 70, 200,
+                80, 70, 200,
+                80, 70, 200,
+
+                // top
+                70, 200, 210,
+                70, 200, 210,
+                70, 200, 210,
+                70, 200, 210,
+                70, 200, 210,
+                70, 200, 210,
+
+                // top rung right
+                200, 200, 70,
+                200, 200, 70,
+                200, 200, 70,
+                200, 200, 70,
+                200, 200, 70,
+                200, 200, 70,
+
+                // under top rung
+                210, 100, 70,
+                210, 100, 70,
+                210, 100, 70,
+                210, 100, 70,
+                210, 100, 70,
+                210, 100, 70,
+
+                // between top rung and middle
+                210, 160, 70,
+                210, 160, 70,
+                210, 160, 70,
+                210, 160, 70,
+                210, 160, 70,
+                210, 160, 70,
+
+                // top of middle rung
+                70, 180, 210,
+                70, 180, 210,
+                70, 180, 210,
+                70, 180, 210,
+                70, 180, 210,
+                70, 180, 210,
+
+                // right of middle rung
+                100, 70, 210,
+                100, 70, 210,
+                100, 70, 210,
+                100, 70, 210,
+                100, 70, 210,
+                100, 70, 210,
+
+                // bottom of middle rung.
+                76, 210, 100,
+                76, 210, 100,
+                76, 210, 100,
+                76, 210, 100,
+                76, 210, 100,
+                76, 210, 100,
+
+                // right of bottom
+                140, 210, 80,
+                140, 210, 80,
+                140, 210, 80,
+                140, 210, 80,
+                140, 210, 80,
+                140, 210, 80,
+
+                // bottom
+                90, 130, 110,
+                90, 130, 110,
+                90, 130, 110,
+                90, 130, 110,
+                90, 130, 110,
+                90, 130, 110,
+
+                // left side
+                160, 160, 220,
+                160, 160, 220,
+                160, 160, 220,
+                160, 160, 220,
+                160, 160, 220,
+                160, 160, 220,
+            ]);
+
+
+            self.gl2 = gl2
+            self.bind = bind
+
+            console.log(bind)
+            console.log(gl2)
+        </script>
+        
+    </body>
+</html>

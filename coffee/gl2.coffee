@@ -14,8 +14,9 @@ DRAW_COUNT          = DRAW_LENGTH / 7
 HEADERS_OFFSET      = DRAW_LENGTH * 6
 OFFSET_HEADERS      = 160
 
-i32                 = new Int32Array BUFFER
-f32                 = new Float32Array BUFFER
+sab                 = new SharedArrayBuffer 1e8
+i32                 = new Int32Array sab
+f32                 = new Float32Array sab
 
 DRAW_ARRAY          = f32.subarray DRAW_LENGTH * 0, DRAW_LENGTH * 3
 TRIANGLES           = f32.subarray DRAW_LENGTH * 0, DRAW_LENGTH
@@ -23,7 +24,6 @@ POINTS              = f32.subarray DRAW_LENGTH * 1, DRAW_LENGTH * 2
 LINES               = f32.subarray DRAW_LENGTH * 2, DRAW_LENGTH * 3
 VERTICES            = f32.subarray DRAW_LENGTH * 3, DRAW_LENGTH * 6
 HEADERS             = i32.subarray DRAW_LENGTH * 6, DRAW_LENGTH * 7
-
 
 self.objects        = new Object()
 
@@ -941,8 +941,6 @@ export class GL2 extends EventTarget
         headersOffset = HEADERS.malloc drawAs, count
         headers = HEADERS.get headersOffset
 
-        console.warn ...headers
-
         headers.set [
             byteOffset,
             byteLength,
@@ -961,7 +959,6 @@ export class GL2 extends EventTarget
             dx, dy, dz, UNUSED,
 
         ] 
-        console.warn ...headers
         
         mesh = new Mesh headers.byteOffset
         mesh.matrix.set M4.identity
