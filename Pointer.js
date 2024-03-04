@@ -1,8 +1,10 @@
-var BUFFER, DATAVIEW, OFFSET_BEGIN, OFFSET_BYTEFINISH, OFFSET_BYTELENGTH, OFFSET_BYTEOFFSET, OFFSET_BYTES_PER_ELEMENT, OFFSET_END, OFFSET_LENGTH, OFFSET_TYPED_ARRAY_ID, Pointer, TypedArraysIds;
+var ATOMICU32, BUFFER, DATAVIEW, OFFSET_BEGIN, OFFSET_BYTEFINISH, OFFSET_BYTELENGTH, OFFSET_BYTEOFFSET, OFFSET_BYTES_PER_ELEMENT, OFFSET_END, OFFSET_LENGTH, OFFSET_TYPED_ARRAY_ID, TypedArraysIds;
 
 BUFFER = null;
 
 DATAVIEW = null;
+
+ATOMICU32 = null;
 
 OFFSET_BYTEOFFSET = 0 * 4;
 
@@ -35,7 +37,7 @@ export var byteLength = length * 4;
 
 export var littleEndian = true;
 
-export default Pointer = (function() {
+export var Pointer = (function() {
   class Pointer extends Number {
     * [Symbol.iterator](i = -1) {
       var results;
@@ -46,18 +48,25 @@ export default Pointer = (function() {
       return results;
     }
 
-    static setSourceBuffer(buffer) {
-      BUFFER = buffer;
-      return DATAVIEW = new DataView(buffer);
+    constructor(pointerOffset) {
+      if (isNaN(super(pointerOffset))) {
+        return malloc(this.constructor.byteLength, this.constructor);
+      }
+      this.init();
     }
 
-    update(TypedArray = Float32Array) {
+    init() {
+      return this;
+    }
+
+    updatePointer(TypedArray = this.TypedArray) {
       this.TYPED_ARRAY_ID = TypedArraysIds[TypedArray];
-      this.BYTES_PER_ELEMENT = this.TypedArray.BYTES_PER_ELEMENT;
+      this.BYTES_PER_ELEMENT = TypedArray.BYTES_PER_ELEMENT;
       this.byteFinish = this.byteOffset + this.byteLength;
       this.length = this.byteLength / this.BYTES_PER_ELEMENT;
       this.begin = this.byteOffset / this.BYTES_PER_ELEMENT;
       this.end = this.begin + this.length;
+      this.init();
       return this;
     }
 
@@ -136,6 +145,8 @@ export default Pointer = (function() {
 
   Pointer.byteLength = byteLength;
 
+  Pointer.TypedArray = Float32Array;
+
   Object.defineProperties(Pointer.prototype, {
     byteOffset: {
       get: function() {
@@ -206,17 +217,12 @@ export default Pointer = (function() {
   Object.defineProperties(Pointer.prototype, {
     TypedArray: {
       get: function() {
-        return TypedArraysIds[this.TYPED_ARRAY_ID];
+        return TypedArraysIds[this.TYPED_ARRAY_ID] || this.constructor.TypedArray;
       }
     },
     array: {
       get: function() {
         return new this.TypedArray(BUFFER, this.byteOffset, this.length);
-      }
-    },
-    buffer: {
-      get: function() {
-        return BUFFER.slice(this.byteOffset, this.byteOffset + this.byteLength);
       }
     }
   });
@@ -224,3 +230,35 @@ export default Pointer = (function() {
   return Pointer;
 
 }).call(this);
+
+export default Pointer;
+
+self.memory = function(buffer) {
+  BUFFER = buffer;
+  DATAVIEW = new DataView(buffer);
+  ATOMICU32 = new Uint32Array(buffer);
+  Object.defineProperties(Pointer.prototype, {
+    buffer: {
+      value: buffer
+    }
+  });
+  Atomics.or(ATOMICU32, 1, 4 * 50000);
+  Atomics.or(ATOMICU32, 0, 4 * 4);
+  return this;
+};
+
+self.malloc = function(allocLength, Ptr = Pointer) {
+  var ptr;
+  ptr = new Ptr(Atomics.add(ATOMICU32, 0, byteLength));
+  ptr.byteOffset = Atomics.add(ATOMICU32, 1, allocLength);
+  ptr.byteLength = allocLength;
+  return ptr.updatePointer();
+};
+
+self.realloc = function(allocOffset, allocLength, Ptr = Pointer) {
+  var ptr;
+  ptr = new Ptr(Atomics.add(ATOMICU32, 0, byteLength));
+  ptr.byteOffset = allocOffset;
+  ptr.byteLength = allocLength;
+  return ptr.updatePointer();
+};

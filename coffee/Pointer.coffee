@@ -1,5 +1,6 @@
 BUFFER          = null
 DATAVIEW        = null
+ATOMICU32       = null
 
 OFFSET_BYTEOFFSET            = 0 * 4
 OFFSET_BYTELENGTH            = 1 * 4
@@ -23,12 +24,20 @@ export length               = 16
 export byteLength           = length * 4
 export littleEndian         = yes
 
-export default class Pointer extends Number
+export class Pointer extends Number
 
     @byteLength     : byteLength
+    @TypedArray     : Float32Array
     
     [ Symbol.iterator ] : ( i = -1 ) ->
         yield @at( i ) while i++ < @length
+
+    constructor     : ( pointerOffset ) ->
+        if  isNaN super pointerOffset
+            return malloc @constructor.byteLength, @constructor
+        @init()
+
+    init            : -> this
 
     Object.defineProperties this::,
         byteOffset  :
@@ -65,17 +74,12 @@ export default class Pointer extends Number
 
 
     Object.defineProperties this::,
-        TypedArray  : get : -> TypedArraysIds[ @TYPED_ARRAY_ID ]
+        TypedArray  : get : -> TypedArraysIds[ @TYPED_ARRAY_ID ] or @constructor.TypedArray
         array       : get : -> new this.TypedArray BUFFER, @byteOffset, @length
-        buffer      : get : -> BUFFER.slice @byteOffset, @byteOffset + @byteLength
- 
-    @setSourceBuffer : ( buffer ) ->
-        BUFFER       = buffer
-        DATAVIEW     = new DataView buffer
 
-    update          : ( TypedArray = Float32Array ) ->
-        @TYPED_ARRAY_ID = TypedArraysIds[ TypedArray ]
-        @BYTES_PER_ELEMENT = @TypedArray.BYTES_PER_ELEMENT
+    updatePointer   : ( TypedArray = @TypedArray ) ->
+        @TYPED_ARRAY_ID     = TypedArraysIds[ TypedArray ]
+        @BYTES_PER_ELEMENT  = TypedArray.BYTES_PER_ELEMENT
 
         @byteFinish = @byteOffset + @byteLength
 
@@ -83,7 +87,7 @@ export default class Pointer extends Number
         @begin      = @byteOffset / @BYTES_PER_ELEMENT
         @end        = @begin + @length
         
-        ; @
+        @init() ; @
 
     getUint8        : ( byteOffset ) ->
         DATAVIEW.getUint8 @byteOffset + byteOffset
@@ -135,3 +139,34 @@ export default class Pointer extends Number
 
     at              : ->
         @array.at ...arguments
+
+export default Pointer
+
+self.memory = ( buffer ) ->
+    BUFFER       = buffer
+    DATAVIEW     = new DataView buffer
+    ATOMICU32    = new Uint32Array buffer
+
+    Object.defineProperties Pointer::,
+        buffer : value : buffer
+
+    Atomics.or ATOMICU32, 1, 4 * 50000
+    Atomics.or ATOMICU32, 0, 4 * 4
+
+    this
+
+self.malloc = ( allocLength, Ptr = Pointer ) ->
+    ptr = new Ptr Atomics.add ATOMICU32, 0, byteLength
+
+    ptr.byteOffset  = Atomics.add ATOMICU32, 1, allocLength 
+    ptr.byteLength  = allocLength
+
+    ptr.updatePointer()
+
+self.realloc = ( allocOffset, allocLength, Ptr = Pointer ) ->
+    ptr = new Ptr Atomics.add ATOMICU32, 0, byteLength
+
+    ptr.byteOffset  = allocOffset
+    ptr.byteLength  = allocLength
+
+    ptr.updatePointer()
