@@ -1,4 +1,7 @@
-import CameraServer from "./Camera.coffee"
+import { CameraServer } from "./Camera.coffee"
+import { BindServer } from "./BindServer.js"
+import { ScreenServer } from "./ScreenServer.js"
+
 import Pointer from "./Pointer.coffee"
 import Matrix4 from "./Matrix4.coffee"
 
@@ -74,7 +77,7 @@ export class GLServer   extends Pointer
         }
     '
 
-    init                : ->
+    init            : ->
         @blendEnabled   = WebGL2RenderingContext.BLEND
         @blendFuncSrc   = WebGL2RenderingContext.SRC_COLOR
         @blendFuncDst   = WebGL2RenderingContext.DST_COLOR
@@ -91,41 +94,35 @@ export class GLServer   extends Pointer
 
         @pointSize      = 10
 
+    bind            : ( canvas ) ->
+        gl = canvas.getContext "webgl2"
+
+        Object.defineProperties this,
+            gl          : value : gl
+            glBuffer    : value : gl.createBuffer()
+            glProgram   : value : gl.createProgram()
+            glShaders   : value : [
+                gl.createShader gl.VERTEX_SHADER
+                gl.createShader gl.FRAGMENT_SHADER
+            ]
+
     Object.defineProperties this::,
-    
-        canvas          :
-            get         : -> @gl.canvas
-            set         : ( el ) -> @context = el.getContext "webgl2"
-            
-        context         :
-            get         : -> @gl
-            set         : ( gl ) -> Object.defineProperties this,
-                gl          : value : gl
-                glBuffer    : value : gl.createBuffer()
-                glProgram   : value : gl.createProgram()
-                glShaders   : value : [
-                    gl.createShader gl.VERTEX_SHADER
-                    gl.createShader gl.FRAGMENT_SHADER
-                ]
 
-        screen          :
-            get         : -> @getUint32 OFFSET_PTR_SCREEN
-            set         : -> @setUint32 OFFSET_PTR_SCREEN, arguments[0]
+        ptr_screen      :
+            get         : -> @getPointer OFFSET_PTR_SCREEN, ScreenServer
+            set         : -> @setPointer OFFSET_PTR_SCREEN, arguments[0]
 
-        camera          :
-            get         : -> new @Camera @getUint32 OFFSET_PTR_CAMERA
-            set         : ( ptr_camera ) ->
-                Object.defineProperty this.constructor::,
-                    "Camera", value : ptr_camera.constructor 
-                @setUint32 OFFSET_PTR_CAMERA, ptr_camera
+        ptr_camera      :
+            get         : -> @getPointer OFFSET_PTR_CAMERA, CameraServer
+            set         : -> @setPointer OFFSET_PTR_CAMERA, arguments[0]
 
-        bind            :
-            get         : -> @getUint32 OFFSET_PTR_BIND
-            set         : -> @setUint32 OFFSET_PTR_BIND, arguments[0]
+        ptr_bind        :
+            get         : -> @getPointer OFFSET_PTR_BIND, BindServer
+            set         : -> @setPointer OFFSET_PTR_BIND, arguments[0]
 
         clearColor      :
-            get         : -> realloc @byteOffset + OFFSET_CLEAR_COLOR, LENGTH_CLEAR_COLOR, Color
-            set         : -> @clearColor.set arguments[0]
+            get         : -> @getUint32 OFFSET_CLEAR_COLOR
+            set         : -> @setUint32 OFFSET_CLEAR_COLOR, arguments[0]
 
         clearMask       :
             get         : -> @getUint32 OFFSET_CLEAR_MASK

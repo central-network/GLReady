@@ -47,8 +47,6 @@ export class BindClient extends Pointer
             #don't split in/out, no need to check is reached top
             [ ...[ 0 ... 10 ], ...[ 10 .. 0 ] ].map (d) -> v * d/10 
 
-    constructor : ( ptr ) -> super ptr 
-
     Object.defineProperties this::,
         moving      : get     : -> @getInt32 OFFSET_MOVING 
         jumping     : get     : -> @getInt32 OFFSET_JUMPING 
@@ -90,9 +88,7 @@ export class BindServer extends Pointer
 
     @easing     : BindClient.easing
 
-    constructor : ( ptr, canvas ) ->
-        super ptr
-        
+    bind : ( canvas ) ->
         canvas.addEventListener "pointerup",    @pointerup.bind @
         canvas.addEventListener "pointermove",  @pointermove.bind( @ ), passive: !0
         canvas.addEventListener "pointerdown",  @pointerdown.bind @

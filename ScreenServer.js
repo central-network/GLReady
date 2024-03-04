@@ -106,11 +106,7 @@ export var ScreenClient = (function() {
 
 export var ScreenServer = (function() {
   class ScreenServer extends Pointer {
-    constructor(ptr, canvas) {
-      super(ptr).readCanvas(canvas);
-    }
-
-    readCanvas(canvas) {
+    bind(canvas) {
       var height, left, top, width;
       ({
         width,
@@ -137,6 +133,8 @@ export var ScreenServer = (function() {
   };
 
   ScreenServer.byteLength = byteLength;
+
+  ScreenServer.TypedArray = Float32Array;
 
   Object.defineProperties(ScreenServer.prototype, {
     width: {

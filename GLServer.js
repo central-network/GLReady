@@ -1,6 +1,16 @@
 var LENGTH_CLEAR_COLOR, OFFSET_BLEND_ENABLED, OFFSET_BLEND_EQUATION, OFFSET_BLEND_FUNC_DST, OFFSET_BLEND_FUNC_SRC, OFFSET_CLEAR_COLOR, OFFSET_CLEAR_DEPTH, OFFSET_CLEAR_MASK, OFFSET_CULL_ENABLED, OFFSET_CULL_FACE, OFFSET_DEPTH_ENABLED, OFFSET_DEPTH_FUNCTION, OFFSET_DEPTH_MASK, OFFSET_FRAME, OFFSET_FRONT_FACE, OFFSET_POINT_SIZE, OFFSET_PTR_BIND, OFFSET_PTR_CAMERA, OFFSET_PTR_SCREEN, OFFSET_RENDERING;
 
-import CameraServer from "./Camera.js";
+import {
+  CameraServer
+} from "./Camera.js";
+
+import {
+  BindServer
+} from "./BindServer.js";
+
+import {
+  ScreenServer
+} from "./ScreenServer.js";
 
 import Pointer from "./Pointer.js";
 
@@ -98,6 +108,25 @@ export var GLServer = (function() {
       return this.pointSize = 10;
     }
 
+    bind(canvas) {
+      var gl;
+      gl = canvas.getContext("webgl2");
+      return Object.defineProperties(this, {
+        gl: {
+          value: gl
+        },
+        glBuffer: {
+          value: gl.createBuffer()
+        },
+        glProgram: {
+          value: gl.createProgram()
+        },
+        glShaders: {
+          value: [gl.createShader(gl.VERTEX_SHADER), gl.createShader(gl.FRAGMENT_SHADER)]
+        }
+      });
+    }
+
   };
 
   GLServer.byteLength = byteLength;
@@ -111,68 +140,36 @@ export var GLServer = (function() {
   GLServer.prototype.fShaderSource = 'precision highp    float; varying   vec4     v_Color; void main() { gl_FragColor = v_Color; }';
 
   Object.defineProperties(GLServer.prototype, {
-    canvas: {
+    ptr_screen: {
       get: function() {
-        return this.gl.canvas;
-      },
-      set: function(el) {
-        return this.context = el.getContext("webgl2");
-      }
-    },
-    context: {
-      get: function() {
-        return this.gl;
-      },
-      set: function(gl) {
-        return Object.defineProperties(this, {
-          gl: {
-            value: gl
-          },
-          glBuffer: {
-            value: gl.createBuffer()
-          },
-          glProgram: {
-            value: gl.createProgram()
-          },
-          glShaders: {
-            value: [gl.createShader(gl.VERTEX_SHADER), gl.createShader(gl.FRAGMENT_SHADER)]
-          }
-        });
-      }
-    },
-    screen: {
-      get: function() {
-        return this.getUint32(OFFSET_PTR_SCREEN);
+        return this.getPointer(OFFSET_PTR_SCREEN, ScreenServer);
       },
       set: function() {
-        return this.setUint32(OFFSET_PTR_SCREEN, arguments[0]);
+        return this.setPointer(OFFSET_PTR_SCREEN, arguments[0]);
       }
     },
-    camera: {
+    ptr_camera: {
       get: function() {
-        return new this.Camera(this.getUint32(OFFSET_PTR_CAMERA));
-      },
-      set: function(ptr_camera) {
-        Object.defineProperty(this.constructor.prototype, "Camera", {
-          value: ptr_camera.constructor
-        });
-        return this.setUint32(OFFSET_PTR_CAMERA, ptr_camera);
-      }
-    },
-    bind: {
-      get: function() {
-        return this.getUint32(OFFSET_PTR_BIND);
+        return this.getPointer(OFFSET_PTR_CAMERA, CameraServer);
       },
       set: function() {
-        return this.setUint32(OFFSET_PTR_BIND, arguments[0]);
+        return this.setPointer(OFFSET_PTR_CAMERA, arguments[0]);
+      }
+    },
+    ptr_bind: {
+      get: function() {
+        return this.getPointer(OFFSET_PTR_BIND, BindServer);
+      },
+      set: function() {
+        return this.setPointer(OFFSET_PTR_BIND, arguments[0]);
       }
     },
     clearColor: {
       get: function() {
-        return realloc(this.byteOffset + OFFSET_CLEAR_COLOR, LENGTH_CLEAR_COLOR, Color);
+        return this.getUint32(OFFSET_CLEAR_COLOR);
       },
       set: function() {
-        return this.clearColor.set(arguments[0]);
+        return this.setUint32(OFFSET_CLEAR_COLOR, arguments[0]);
       }
     },
     clearMask: {

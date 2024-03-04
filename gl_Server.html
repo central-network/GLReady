@@ -49,7 +49,6 @@
         <script type="module">
             let canvas  = document.getElementById( 'bgl2' );
             let buffer  = new SharedArrayBuffer( 1e8 );
-            let context = canvas.getContext("webgl2"); 
 
             import { Matrix4 } from "./Matrix4.js"
             import { Pointer } from "./Pointer.js"
@@ -60,22 +59,21 @@
 
             memory( buffer );
 
-            let ptr_bind = malloc( BindServer.byteLength )
-            let ptr_screen = malloc( ScreenServer.byteLength )
-            let screenServer = new ScreenServer( ptr_screen, canvas )
+            self.screenServer = new ScreenServer()
+            self.bindServer = new BindServer()
+            self.glServer = new GLServer()
 
-            let glServer = new GLServer()
+            glServer.bind( canvas )
+            bindServer.bind( canvas )
+            screenServer.bind( canvas )
 
-            glServer.canvas = canvas
-            glServer.camera = Perspective.create(
-                Math.rad( 80 ), innerWidth / innerHeight, .001, 1e3
+            glServer.ptr_bind   = bindServer
+            glServer.ptr_screen = screenServer
+            glServer.ptr_camera = Perspective.create(
+                Math.rad( 80 ), screenServer.aspectRatio, .001, 1e3
             )
 
-            let bindServer = new BindServer( ptr_bind, canvas )
-
-
-            console.log(bindServer)
-            console.log(glServer)
+            console.log({glServer, bindServer})
             
         </script>
         

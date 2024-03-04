@@ -41,11 +41,9 @@ export class ScreenClient extends Pointer
 export class ScreenServer extends Pointer
 
     @byteLength     : byteLength
+    @TypedArray     : Float32Array
 
-    constructor     : ( ptr, canvas ) ->
-        super( ptr ).readCanvas canvas
-    
-    readCanvas      : ( canvas ) ->
+    bind            : ( canvas ) ->
 
         { width, height, x: left, y: top } =
             canvas.getBoundingClientRect()

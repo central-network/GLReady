@@ -73,12 +73,7 @@ export var length = 1 * 64;
 export var byteLength = 4 * length;
 
 export var BindClient = (function() {
-  class BindClient extends Pointer {
-    constructor(ptr) {
-      super(ptr);
-    }
-
-  };
+  class BindClient extends Pointer {};
 
   BindClient.byteLength = byteLength;
 
@@ -264,9 +259,8 @@ export var BindClient = (function() {
 
 export var BindServer = (function() {
   class BindServer extends Pointer {
-    constructor(ptr, canvas) {
+    bind(canvas) {
       var document;
-      super(ptr);
       canvas.addEventListener("pointerup", this.pointerup.bind(this));
       canvas.addEventListener("pointermove", this.pointermove.bind(this), {
         passive: !0
@@ -281,7 +275,7 @@ export var BindServer = (function() {
       document.addEventListener("keyup", this.keyup.bind(this));
       document.addEventListener("keydown", this.keydown.bind(this));
       this.factor = 5;
-      null;
+      return null;
     }
 
     contextmenu(e) {
