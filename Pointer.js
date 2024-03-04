@@ -1,4 +1,4 @@
-var BUFFER, DATAVIEW, INDEX_BEGIN, INDEX_BYTEFINISH, INDEX_BYTELENGTH, INDEX_BYTEOFFSET, INDEX_BYTES_PER_ELEMENT, INDEX_END, INDEX_LENGTH, INDEX_PTR_CHILDREN, INDEX_PTR_PARENT, INDEX_TYPED_ARRAY_ID, OFFSET_BEGIN, OFFSET_BYTEFINISH, OFFSET_BYTELENGTH, OFFSET_BYTEOFFSET, OFFSET_BYTES_PER_ELEMENT, OFFSET_END, OFFSET_LENGTH, OFFSET_PTR_CHILDREN, OFFSET_PTR_PARENT, OFFSET_TYPED_ARRAY_ID, POINTERS_BEGIN, POINTER_BYTELENGTH, POINTER_LENGTH, TypedArraysIds, U32ARRAY;
+var BUFFER, DATAVIEW, INDEX_BEGIN, INDEX_BYTEFINISH, INDEX_BYTELENGTH, INDEX_BYTEOFFSET, INDEX_BYTES_PER_ELEMENT, INDEX_END, INDEX_LENGTH, INDEX_PTR_CLASS_ID, INDEX_PTR_PARENT, INDEX_TYPED_ARRAY_ID, OFFSET_BEGIN, OFFSET_BYTEFINISH, OFFSET_BYTELENGTH, OFFSET_BYTEOFFSET, OFFSET_BYTES_PER_ELEMENT, OFFSET_END, OFFSET_LENGTH, OFFSET_PTR_CLASSID, OFFSET_PTR_PARENT, OFFSET_TYPED_ARRAY_ID, POINTERS_BEGIN, POINTER_BYTELENGTH, POINTER_LENGTH, PTR_PROTOTYPE, TypedArraysIds, U32ARRAY;
 
 BUFFER = null;
 
@@ -24,7 +24,7 @@ INDEX_BYTES_PER_ELEMENT = 8;
 
 INDEX_PTR_PARENT = 9;
 
-INDEX_PTR_CHILDREN = 10;
+INDEX_PTR_CLASS_ID = 10;
 
 OFFSET_BYTEOFFSET = 0 * 4;
 
@@ -44,13 +44,15 @@ OFFSET_BYTES_PER_ELEMENT = 8 * 4;
 
 OFFSET_PTR_PARENT = 9 * 4;
 
-OFFSET_PTR_CHILDREN = 10 * 4;
+OFFSET_PTR_CLASSID = 10 * 4;
 
 POINTERS_BEGIN = 8;
 
 POINTER_LENGTH = 16;
 
 POINTER_BYTELENGTH = 4 * POINTER_LENGTH;
+
+PTR_PROTOTYPE = [null];
 
 TypedArraysIds = {
   [Float32Array]: 1,
@@ -232,25 +234,51 @@ export var Pointer = (function() {
     },
     parent: {
       get: function() {
-        var ptr;
+        var classId, ptr, ptrClassId;
         if (ptr = DATAVIEW.getUint32(this + OFFSET_PTR_PARENT, LE)) {
-          return new Pointer(ptr);
+          classId = ptr + OFFSET_PTR_CLASSID;
+          ptrClassId = DATAVIEW.getUint32(classId, LE);
+          return new PTR_PROTOTYPE[ptrClassId](ptr);
         }
       },
+      set: function(ptr) {
+        var id;
+        if (!ptr) {
+          return DATAVIEW.setUint32(this + OFFSET_PTR_PARENT, 0, LE);
+        }
+        if (-1 === (id = PTR_PROTOTYPE.indexOf(this.constructor))) {
+          id = -1 + PTR_PROTOTYPE.push(this.constructor);
+        }
+        DATAVIEW.setUint32(this + OFFSET_PTR_CLASSID, id, LE);
+        DATAVIEW.setUint32(this + OFFSET_PTR_PARENT, ptr, LE);
+        if (-1 === (id = PTR_PROTOTYPE.indexOf(ptr.constructor))) {
+          id = -1 + PTR_PROTOTYPE.push(ptr.constructor);
+        }
+        return DATAVIEW.setUint32(ptr + OFFSET_PTR_CLASSID, id, LE);
+      }
+    },
+    ptrClassId: {
+      get: function() {
+        return DATAVIEW.getUint32(this + OFFSET_PTR_CLASSID, LE);
+      },
       set: function() {
-        return DATAVIEW.setUint32(this + OFFSET_PTR_PARENT, arguments[0], LE);
+        return DATAVIEW.setUint32(this + OFFSET_PTR_CLASSID, arguments[0], LE);
       }
     },
     children: {
       get: function() {
-        var childs, offset;
+        var childs, classId, offset, ptr, ptrClassId;
         offset = POINTERS_BEGIN + OFFSET_PTR_PARENT - POINTER_BYTELENGTH;
         length = -8 + Atomics.load(U32ARRAY, 0);
         childs = [];
         while (length > (offset += POINTER_BYTELENGTH)) {
-          if (!(this - DATAVIEW.getUint32(offset, LE))) {
-            childs.push(new Pointer(offset - OFFSET_PTR_PARENT));
+          if (this - DATAVIEW.getUint32(offset, LE)) {
+            continue;
           }
+          ptr = offset - OFFSET_PTR_PARENT;
+          classId = ptr + OFFSET_PTR_CLASSID;
+          ptrClassId = DATAVIEW.getUint32(classId, LE);
+          childs.push(new PTR_PROTOTYPE[ptrClassId](ptr));
         }
         return childs;
       }
@@ -271,6 +299,16 @@ export var Pointer = (function() {
     add: {
       value: function(ptr) {
         return ptr.parent = this;
+      }
+    },
+    del: {
+      value: function(ptr) {
+        return ptr.parent = 0;
+      }
+    },
+    remove: {
+      value: function() {
+        return this.children.forEach(this.del.bind(this));
       }
     },
     grow: {

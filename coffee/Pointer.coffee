@@ -12,7 +12,7 @@ INDEX_END                    =  6
 INDEX_TYPED_ARRAY_ID         =  7
 INDEX_BYTES_PER_ELEMENT      =  8
 INDEX_PTR_PARENT             =  9
-INDEX_PTR_CHILDREN           = 10
+INDEX_PTR_CLASS_ID           = 10
 
 OFFSET_BYTEOFFSET            =  0 * 4
 OFFSET_BYTELENGTH            =  1 * 4
@@ -23,12 +23,14 @@ OFFSET_END                   =  6 * 4
 OFFSET_TYPED_ARRAY_ID        =  7 * 4
 OFFSET_BYTES_PER_ELEMENT     =  8 * 4
 OFFSET_PTR_PARENT            =  9 * 4
-OFFSET_PTR_CHILDREN          = 10 * 4
+OFFSET_PTR_CLASSID           = 10 * 4
 
 
 POINTERS_BEGIN               = 8
 POINTER_LENGTH               = 16
 POINTER_BYTELENGTH           =  4 * POINTER_LENGTH
+
+PTR_PROTOTYPE = [ null ]
 
 TypedArraysIds =
     [ Float32Array ] : 1
@@ -56,6 +58,7 @@ export class Pointer extends Number
         if  0 > super offset then return new @constructor(
             mallocAtomic @constructor.byteLength
         )
+
         @init()
 
     init            : -> this
@@ -86,8 +89,31 @@ export class Pointer extends Number
             set     : -> DATAVIEW.setUint32 this + OFFSET_END, arguments[ 0 ], LE
 
         parent      :
-            get     : -> new Pointer ptr if ptr = DATAVIEW.getUint32 this + OFFSET_PTR_PARENT, LE
-            set     : -> DATAVIEW.setUint32 this + OFFSET_PTR_PARENT, arguments[ 0 ], LE
+            get     : ->
+                if  ptr = DATAVIEW.getUint32 this + OFFSET_PTR_PARENT, LE
+                    classId = ptr + OFFSET_PTR_CLASSID
+                    ptrClassId = DATAVIEW.getUint32 classId, LE
+                    return new PTR_PROTOTYPE[ ptrClassId ]( ptr ) 
+
+            set     : ( ptr ) ->
+                if !ptr then return DATAVIEW.setUint32(
+                    this + OFFSET_PTR_PARENT, 0, LE
+                )
+
+                if -1 is id = PTR_PROTOTYPE.indexOf @constructor
+                    id = -1 + PTR_PROTOTYPE.push @constructor
+
+                DATAVIEW.setUint32 this + OFFSET_PTR_CLASSID, id, LE
+                DATAVIEW.setUint32 this + OFFSET_PTR_PARENT, ptr, LE
+
+                if -1 is id = PTR_PROTOTYPE.indexOf ptr.constructor
+                    id = -1 + PTR_PROTOTYPE.push ptr.constructor
+
+                DATAVIEW.setUint32 ptr + OFFSET_PTR_CLASSID, id, LE
+
+        ptrClassId  :
+            get     : -> DATAVIEW.getUint32 this + OFFSET_PTR_CLASSID, LE
+            set     : -> DATAVIEW.setUint32 this + OFFSET_PTR_CLASSID, arguments[ 0 ], LE
 
         children    :
             get     : ->
@@ -96,10 +122,12 @@ export class Pointer extends Number
                 childs = []
 
                 while length > offset += POINTER_BYTELENGTH
-                    unless this - DATAVIEW.getUint32 offset, LE
-                        childs.push new Pointer offset - OFFSET_PTR_PARENT
-                
-                childs
+                    continue if this - DATAVIEW.getUint32 offset, LE
+                    ptr = offset - OFFSET_PTR_PARENT
+                    classId = ptr + OFFSET_PTR_CLASSID
+                    ptrClassId = DATAVIEW.getUint32 classId, LE
+                    childs.push new PTR_PROTOTYPE[ ptrClassId ] ptr
+                return childs
 
         getPointer  :
             value   : ( offset, Ptr ) ->
@@ -110,8 +138,13 @@ export class Pointer extends Number
                 @setUint32 offset, ptr * 1, LE
 
         add         :
-            value   : ( ptr ) ->
-                ptr.parent = this
+            value   : ( ptr ) -> ptr.parent = this
+
+        del         :
+            value   : ( ptr ) -> ptr.parent = 0
+
+        remove      :
+            value   : -> @children.forEach @del.bind this
 
         grow        :
             value   : ( byteLength ) ->
