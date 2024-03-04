@@ -26,7 +26,7 @@ OFFSET_PTR_PARENT            =  9 * 4
 OFFSET_PTR_CHILDREN          = 10 * 4
 
 
-
+POINTERS_BEGIN               = 8
 POINTER_LENGTH               = 16
 POINTER_BYTELENGTH           =  4 * POINTER_LENGTH
 
@@ -86,12 +86,20 @@ export class Pointer extends Number
             set     : -> DATAVIEW.setUint32 this + OFFSET_END, arguments[ 0 ], LE
 
         parent      :
-            get     : -> DATAVIEW.getUint32 this + OFFSET_PTR_PARENT, LE
+            get     : -> new Pointer DATAVIEW.getUint32 this + OFFSET_PTR_PARENT, LE
             set     : -> DATAVIEW.setUint32 this + OFFSET_PTR_PARENT, arguments[ 0 ], LE
 
         children    :
-            get     : -> DATAVIEW.getUint32 this + OFFSET_PTR_CHILDREN, LE
-            set     : -> DATAVIEW.setUint32 this + OFFSET_PTR_CHILDREN, arguments[ 0 ], LE
+            get     : ->
+                offset = POINTERS_BEGIN + OFFSET_PTR_PARENT - POINTER_BYTELENGTH
+                length = -8 + Atomics.load U32ARRAY, 0
+                childs = []
+
+                while length > offset += POINTER_BYTELENGTH
+                    unless this - DATAVIEW.getUint32 offset, LE
+                        childs.push new Pointer offset - OFFSET_PTR_PARENT
+                
+                childs
 
         getPointer  :
             value   : ( offset, Ptr ) ->
@@ -100,6 +108,10 @@ export class Pointer extends Number
         setPointer  :
             value   : ( offset, ptr ) ->
                 @setUint32 offset, ptr * 1, LE
+
+        add         :
+            value   : ( ptr ) ->
+                ptr.parent = this
 
         grow        :
             value   : ( byteLength ) ->
@@ -123,6 +135,7 @@ export class Pointer extends Number
         array               : get : -> new this.TypedArray BUFFER, @byteOffset, @length
         TypedArray          : get : -> @constructor.TypedArray
         BYTES_PER_ELEMENT   : get : -> @TypedArray.BYTES_PER_ELEMENT
+        [ "ƒ -> pointer" ]  : get : -> U32ARRAY.subarray this/4, this/4 + POINTER_LENGTH
 
     reloadPointer   : ->
         @byteFinish = @byteOffset + @byteLength
@@ -182,7 +195,7 @@ export class Pointer extends Number
 
 export default self.Pointer = Pointer
 
-self.memory = ( buffer ) ->
+self.memory  = ( buffer ) ->
     BUFFER   = buffer
     DATAVIEW = new DataView buffer
     U32ARRAY = new Uint32Array buffer
@@ -191,43 +204,41 @@ self.memory = ( buffer ) ->
         buffer : value : buffer
 
     Atomics.or U32ARRAY, 1, 4 * 50000
-    Atomics.or U32ARRAY, 0, 8
+    Atomics.or U32ARRAY, 0, POINTERS_BEGIN
 
     this
 
-self.alloc = ( allocLength ) ->
-    Atomics.add U32ARRAY, 1, allocLength
+self.alloc = ( allocByteLength ) ->
+    Atomics.add U32ARRAY, 1, allocByteLength
 
-self.palloc = ( allocOffset, allocLength, Ptr = Pointer ) ->
+self.palloc = ( allocByteOffset, allocByteLength, Ptr = Pointer ) ->
     ptr = new Ptr Atomics.add U32ARRAY, 0, POINTER_BYTELENGTH
 
-    ptr.byteOffset = allocOffset
-    ptr.byteLength = allocLength
+    ptr.byteOffset = allocByteOffset
+    ptr.byteLength = allocByteLength
 
     ptr.reloadPointer()
 
-self.malloc = ( allocLength, Ptr = Pointer ) ->
+self.malloc = ( allocByteLength, Ptr = Pointer ) ->
     ptr = new Ptr Atomics.add U32ARRAY, 0, POINTER_BYTELENGTH
 
-    
-    ptr.byteOffset = Atomics.add U32ARRAY, 1, allocLength
-    ptr.byteLength = allocLength
+    ptr.byteOffset = Atomics.add U32ARRAY, 1, allocByteLength
+    ptr.byteLength = allocByteLength
 
     ptr.reloadPointer()
 
-self.mallocAtomic = ( allocLength, Ptr = Pointer ) ->
-
+self.mallocAtomic = ( allocByteLength, Ptr = Pointer ) ->
     iptr = .25 * Atomics.add U32ARRAY, 0, POINTER_BYTELENGTH
     BPel = Ptr.TypedArray.BYTES_PER_ELEMENT
 
-    allocOffset = Atomics.add U32ARRAY, 1, allocLength
-    allocFinish = allocOffset + allocLength
+    allocByteOffset = Atomics.add U32ARRAY, 1, allocByteLength
+    allocByteFinish = allocByteOffset + allocByteLength
 
-    Atomics.store U32ARRAY, iptr + INDEX_BYTEOFFSET , allocOffset
-    Atomics.store U32ARRAY, iptr + INDEX_BYTELENGTH , allocLength
-    Atomics.store U32ARRAY, iptr + INDEX_BYTEFINISH , allocFinish 
-    Atomics.store U32ARRAY, iptr + INDEX_LENGTH     , allocLength / BPel
-    Atomics.store U32ARRAY, iptr + INDEX_BEGIN      , allocOffset / BPel
-    Atomics.store U32ARRAY, iptr + INDEX_END        , allocFinish / BPel
+    Atomics.store U32ARRAY, iptr + INDEX_BYTEOFFSET , allocByteOffset
+    Atomics.store U32ARRAY, iptr + INDEX_BYTELENGTH , allocByteLength
+    Atomics.store U32ARRAY, iptr + INDEX_BYTEFINISH , allocByteFinish 
+    Atomics.store U32ARRAY, iptr + INDEX_LENGTH     , allocByteLength / BPel
+    Atomics.store U32ARRAY, iptr + INDEX_BEGIN      , allocByteOffset / BPel
+    Atomics.store U32ARRAY, iptr + INDEX_END        , allocByteFinish / BPel
 
     new Ptr iptr * 4
