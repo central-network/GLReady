@@ -1,5 +1,7 @@
 export default class Bind extends EventTarget
 
+    @byteLength : 256
+
     #don't split in/out, no need to check is reached top
     linearInOut : ( v ) -> [ ...[ 0 ... 10 ], ...[ 10 .. 0 ] ].map (d) -> v * d/10
 
@@ -7,9 +9,13 @@ export default class Bind extends EventTarget
 
         super()
 
-        events = new Uint8Array buffer, 0, 24       #? 24 bytes
-        values = new Float32Array buffer, 24, 14    #? 56 bytes
-                                                    #> 80 bytes
+        if !isNaN buffer.byteOffset
+            { buffer, byteOffset } = buffer
+        else byteOffset = 0
+
+        @events = events = new Uint32Array buffer, byteOffset, 24       #? 96 bytes
+        @values = values = new Float32Array buffer, byteOffset + 96, 14    #? 56 bytes
+                                                    #> 152 bytes
         
         Object.defineProperties this,
 
@@ -268,3 +274,6 @@ export default class Bind extends EventTarget
         @vy *= @factor
 
         null
+
+
+

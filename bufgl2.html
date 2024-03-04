@@ -31,7 +31,7 @@
         </style>
     </head>
     <body>
-        <canvas id="gl2"></canvas>
+        <canvas id="bgl2"></canvas>
         <table>
             <tr><td id="dxCamera">   <input type="range" max="500" min="-500" step="1" /></td></tr>
             <tr><td id="dyCamera">   <input type="range" max="500" min="-500" step="1" /></td></tr>
@@ -47,19 +47,24 @@
 
 
         <script type="module">
+            let canvas = document.getElementById('bgl2')
+
             import BufGL2 from "./BufGL2.js"
-            import Bind from "./bind.js"
+            import { BindServer } from "./BindServer.js"
+            import { ScreenServer } from "./ScreenServer.js"
 
-            self.gl2 = null
+            self.bgl2 = null
+            self.bind = null
+            self.disp = null
 
-            gl2 = new BufGL2();
-            gl2.canvas = document.getElementById('gl2')
-            gl2.background = [
-                15/255, 17/255, 26/255
-            ]
 
-            let bind    = new Bind( gl2.canvas );
+            bgl2 = new BufGL2();
+            bind = new BindServer( bgl2.malloc( BindServer.byteLength ), canvas )
+            disp = new ScreenServer( bgl2.malloc( ScreenServer.byteLength ), canvas )
 
+            bgl2.context = canvas.getContext( "webgl2" )
+            disp.background = [ 15/255, 17/255, 26/255 ]
+            disp.update()
 
             let set = new Float32Array([
                 // left column front
@@ -322,11 +327,7 @@
             ]);
 
 
-            self.gl2 = gl2
-            self.bind = bind
-
-            console.log(bind)
-            console.log(gl2)
+            console.log({ disp, bind, bgl2 })
         </script>
         
     </body>

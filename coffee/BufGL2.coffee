@@ -1,23 +1,34 @@
-import { BufGL2Screen } from "./BufGL2Screen.coffee"
+import Pointer from "./Pointer.js"
 
+ARRAY_UINT32 = null
 export class BufGL2 extends EventTarget
 
     constructor : ( buffer = new SharedArrayBuffer 1e8 ) ->
-        Object.defineProperties super( "BufGL2" ),
-            screen : value : new BufGL2Screen buffer
+        super( "BufGL2" )
+
+        Pointer.setSourceBuffer buffer
+
+        ARRAY_UINT32 = new Uint32Array buffer
+
+        Atomics.add ARRAY_UINT32, 0, 1e6
+        Atomics.add ARRAY_UINT32, 1, 24
+
+    malloc      : ( byteLength ) ->
+        byteOffset = Atomics.add ARRAY_UINT32, 0, byteLength 
+        pointerOffset = Atomics.add ARRAY_UINT32, 1, Pointer.byteLength
+
+        ptr = new Pointer pointerOffset
+
+        ptr.byteOffset  = byteOffset
+        ptr.byteLength  = byteLength
+
+        ptr.update()
+
+        ptr
 
 Object.defineProperties BufGL2::,
-    canvas      :
-        get     : -> @gl.canvas
-        set     : ->
-            canvas = arguments[ 0 ]
-            context = value : canvas.getContext "webgl2"
-
-            Object.defineProperty this, "gl", context
-                .screen.readCanvas canvas
-
-    background  :
-        get     : -> @screen.background
-        set     : -> @screen.background = arguments[0]
+    context     :
+        get     : -> @gl
+        set     : -> Object.defineProperty this, "gl", { value: arguments[0] }
 
 export default BufGL2

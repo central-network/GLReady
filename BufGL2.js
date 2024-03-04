@@ -1,38 +1,40 @@
-import {
-  BufGL2Screen
-} from "./BufGL2Screen.js";
+var ARRAY_UINT32;
+
+import Pointer from "./Pointer.js";
+
+ARRAY_UINT32 = null;
 
 export var BufGL2 = class BufGL2 extends EventTarget {
   constructor(buffer = new SharedArrayBuffer(1e8)) {
-    Object.defineProperties(super("BufGL2"), {
-      screen: {
-        value: new BufGL2Screen(buffer)
-      }
-    });
+    super("BufGL2");
+    Pointer.setSourceBuffer(buffer);
+    ARRAY_UINT32 = new Uint32Array(buffer);
+    Atomics.add(ARRAY_UINT32, 0, 1e6);
+    Atomics.add(ARRAY_UINT32, 1, 24);
+  }
+
+  malloc(byteLength) {
+    var byteOffset, pointerOffset, ptr;
+    byteOffset = Atomics.add(ARRAY_UINT32, 0, byteLength);
+    pointerOffset = Atomics.add(ARRAY_UINT32, 1, Pointer.byteLength);
+    ptr = new Pointer(pointerOffset);
+    ptr.byteOffset = byteOffset;
+    ptr.byteLength = byteLength;
+    ptr.update();
+    return ptr;
   }
 
 };
 
 Object.defineProperties(BufGL2.prototype, {
-  canvas: {
+  context: {
     get: function() {
-      return this.gl.canvas;
+      return this.gl;
     },
     set: function() {
-      var canvas, context;
-      canvas = arguments[0];
-      context = {
-        value: canvas.getContext("webgl2")
-      };
-      return Object.defineProperty(this, "gl", context).screen.readCanvas(canvas);
-    }
-  },
-  background: {
-    get: function() {
-      return this.screen.background;
-    },
-    set: function() {
-      return this.screen.background = arguments[0];
+      return Object.defineProperty(this, "gl", {
+        value: arguments[0]
+      });
     }
   }
 });
