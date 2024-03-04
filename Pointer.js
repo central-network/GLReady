@@ -232,7 +232,10 @@ export var Pointer = (function() {
     },
     parent: {
       get: function() {
-        return new Pointer(DATAVIEW.getUint32(this + OFFSET_PTR_PARENT, LE));
+        var ptr;
+        if (ptr = DATAVIEW.getUint32(this + OFFSET_PTR_PARENT, LE)) {
+          return new Pointer(ptr);
+        }
       },
       set: function() {
         return DATAVIEW.setUint32(this + OFFSET_PTR_PARENT, arguments[0], LE);

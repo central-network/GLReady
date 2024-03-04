@@ -86,7 +86,7 @@ export class Pointer extends Number
             set     : -> DATAVIEW.setUint32 this + OFFSET_END, arguments[ 0 ], LE
 
         parent      :
-            get     : -> new Pointer DATAVIEW.getUint32 this + OFFSET_PTR_PARENT, LE
+            get     : -> new Pointer ptr if ptr = DATAVIEW.getUint32 this + OFFSET_PTR_PARENT, LE
             set     : -> DATAVIEW.setUint32 this + OFFSET_PTR_PARENT, arguments[ 0 ], LE
 
         children    :
