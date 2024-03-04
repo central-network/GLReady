@@ -48,7 +48,7 @@ export class ScreenServer extends Pointer
     readCanvas      : ( canvas ) ->
 
         { width, height, x: left, y: top } =
-            ( @canvas = canvas ).getBoundingClientRect()
+            canvas.getBoundingClientRect()
 
         [
             @left, @top, @width, @height,  
@@ -58,6 +58,8 @@ export class ScreenServer extends Pointer
             width / height , width / 2 , 
             devicePixelRatio ? 1,
         ]
+
+        Object.defineProperty this, "canvas", get : -> canvas
 
         @update()
 

@@ -117,8 +117,13 @@ export var ScreenServer = (function() {
         height,
         x: left,
         y: top
-      } = (this.canvas = canvas).getBoundingClientRect());
+      } = canvas.getBoundingClientRect());
       [this.left, this.top, this.width, this.height, this.aspectRatio, this.depth, this.pixelRatio] = [left, top, width, height, width / height, width / 2, typeof devicePixelRatio !== "undefined" && devicePixelRatio !== null ? devicePixelRatio : 1];
+      Object.defineProperty(this, "canvas", {
+        get: function() {
+          return canvas;
+        }
+      });
       return this.update();
     }
 
