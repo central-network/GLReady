@@ -63,17 +63,15 @@
             self.bindServer = new BindServer()
             self.glServer = new GLServer()
 
-            glServer.bind( canvas )
             bindServer.bind( canvas )
             screenServer.bind( canvas )
+            
+            glServer.bind( canvas )
+            glServer.setViewPort( screenServer.width, screenServer.height )
 
             let camera = Perspective.create(
                 Math.rad( 80 ), screenServer.aspectRatio, .001, 1e3
             )
-
-            glServer.clearColor = 0x0f111aff
-
-            //glServer.clearColor.toRGBA()
 
             glServer.add( bindServer )
             glServer.add( screenServer )

@@ -72,10 +72,10 @@ getCaller = ( val ) ->
 export class Pointer extends Number
 
 
-    @byteLength     : byteLength
-    @TypedArray     : Uint32Array
-    @BYTES_PER_ELEMENT : 4
-    
+    @byteLength         : byteLength
+    @TypedArray         : Uint32Array
+    @BYTES_PER_ELEMENT  : 4
+
     [ Symbol.iterator ] : ( i = -1 ) ->
         yield @at( i ) while i++ < @length
 
@@ -193,7 +193,7 @@ export class Pointer extends Number
         array               : get : -> new this.TypedArray BUFFER, @byteOffset, @length
         TypedArray          : get : -> @constructor.TypedArray
         BYTES_PER_ELEMENT   : get : -> @TypedArray.BYTES_PER_ELEMENT
-        [ "ƒ -> pointer" ]  : get : -> U32ARRAY.subarray this/4, this/4 + POINTER_LENGTH
+        [ "∆" ]  : get : -> U32ARRAY.subarray this/4, this/4 + POINTER_LENGTH
 
     reloadPointer   : ->
         @byteFinish = @byteOffset + @byteLength

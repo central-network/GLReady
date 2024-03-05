@@ -387,7 +387,7 @@ export var Pointer = (function() {
         return this.TypedArray.BYTES_PER_ELEMENT;
       }
     },
-    ["ƒ -> pointer"]: {
+    ["∆"]: {
       get: function() {
         return U32ARRAY.subarray(this / 4, this / 4 + POINTER_LENGTH);
       }

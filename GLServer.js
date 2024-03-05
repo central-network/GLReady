@@ -1,4 +1,4 @@
-var LENGTH_CLEAR_COLOR, OFFSET_BLEND_ENABLED, OFFSET_BLEND_EQUATION, OFFSET_BLEND_FUNC_DST, OFFSET_BLEND_FUNC_SRC, OFFSET_CLEAR_COLOR, OFFSET_CLEAR_DEPTH, OFFSET_CLEAR_MASK, OFFSET_CULL_ENABLED, OFFSET_CULL_FACE, OFFSET_DEPTH_ENABLED, OFFSET_DEPTH_FUNCTION, OFFSET_DEPTH_MASK, OFFSET_FRAME, OFFSET_FRONT_FACE, OFFSET_POINT_SIZE, OFFSET_RENDERING;
+var LENGTH_CLEAR_COLOR, OFFSET_BIND_TARGET, OFFSET_BLEND_ENABLED, OFFSET_BLEND_EQUATION, OFFSET_BLEND_FUNC_DST, OFFSET_BLEND_FUNC_SRC, OFFSET_CLEAR_COLOR, OFFSET_CLEAR_DEPTH, OFFSET_CLEAR_MASK, OFFSET_CULL_ENABLED, OFFSET_CULL_FACE, OFFSET_DEPTH_ENABLED, OFFSET_DEPTH_FUNCTION, OFFSET_DEPTH_MASK, OFFSET_FRAME, OFFSET_FRONT_FACE, OFFSET_POINT_SIZE, OFFSET_RENDERING;
 
 import {
   CameraServer
@@ -21,6 +21,8 @@ OFFSET_RENDERING = 4 * 0;
 OFFSET_FRAME = 4 * 1;
 
 LENGTH_CLEAR_COLOR = 4 * 4;
+
+OFFSET_BIND_TARGET = 4 * 9;
 
 OFFSET_CLEAR_COLOR = 4 * 10;
 
@@ -96,16 +98,19 @@ export var GLServer = (function() {
       this.depthFunc = WebGL2RenderingContext.LEQUAL;
       this.depthMask = false;
       this.clearDepth = 1;
+      this.clearColor = 0x0f111aff;
+      this.clearMask = WebGL2RenderingContext.DEPTH_BUFFER_BIT | WebGL2RenderingContext.COLOR_BUFFER_BIT;
       this.cullEnabled = WebGL2RenderingContext.CULL_FACE;
       this.cullFace = WebGL2RenderingContext.BACK;
       this.frontFace = WebGL2RenderingContext.CCW;
+      this.bindTarget = WebGL2RenderingContext.ARRAY_BUFFER;
       return this.pointSize = 10;
     }
 
     bind(canvas) {
       var gl;
       gl = canvas.getContext("webgl2");
-      return Object.defineProperties(this, {
+      Object.defineProperties(this, {
         gl: {
           value: gl
         },
@@ -119,6 +124,84 @@ export var GLServer = (function() {
           value: [gl.createShader(gl.VERTEX_SHADER), gl.createShader(gl.FRAGMENT_SHADER)]
         }
       });
+      this.setVertexShader(this.vShaderSource);
+      this.setFragmentShader(this.fShaderSource);
+      this.updateCull();
+      this.updateDepth();
+      this.updateBlend();
+      this.runProgram();
+      this.bindBuffer();
+      this.clearSpace();
+      this.gl.drawArrays(this.gl.POINTS, 0, 3);
+      return this.gl.finish();
+    }
+
+    downloadParameter(parameter) {
+      return this.gl.getParameter(parameter);
+    }
+
+    clearSpace([r, g, b, a] = this.clearColor.toRGBA(this)) {
+      this.gl.clearColor(r, g, b, a);
+      this.gl.clear(this.clearMask);
+      return this;
+    }
+
+    bindBuffer() {
+      this.gl.bindBuffer(this.bindTarget, this.glBuffer);
+      return this;
+    }
+
+    runProgram() {
+      this.gl.linkProgram(this.glProgram);
+      this.gl.useProgram(this.glProgram);
+      return this;
+    }
+
+    setVertexShader(source) {
+      this.gl.shaderSource(this.glShaders[0], source);
+      this.gl.compileShader(this.glShaders[0]);
+      this.gl.attachShader(this.glProgram, this.glShaders[0]);
+      return this;
+    }
+
+    setFragmentShader(source) {
+      this.gl.shaderSource(this.glShaders[1], source);
+      this.gl.compileShader(this.glShaders[1]);
+      this.gl.attachShader(this.glProgram, this.glShaders[1]);
+      return this;
+    }
+
+    updateCull() {
+      if (this.cullEnabled) {
+        this.gl.cullFace(this.cullFace);
+        this.gl.enable(this.cullEnabled);
+        this.gl.frontFace(this.frontFace);
+      }
+      return this;
+    }
+
+    updateDepth() {
+      if (this.depthEnabled) {
+        this.gl.enable(this.depthEnabled);
+        this.gl.depthFunc(this.depthFunc);
+        this.gl.depthMask(this.depthMask);
+        this.gl.clearDepth(this.clearDepth);
+      }
+      return this;
+    }
+
+    updateBlend() {
+      if (this.blendEnabled) {
+        this.gl.enable(this.blendEnabled);
+        this.gl.blendFunc(this.blendFuncSrc, this.blendFuncDst);
+        this.gl.blendEquation(this.blendEquation);
+      }
+      return this;
+    }
+
+    setViewPort(width, height, left = 0, top = 0) {
+      this.gl.viewport(left, top, width, height);
+      return this;
     }
 
   };
@@ -134,6 +217,24 @@ export var GLServer = (function() {
   GLServer.prototype.fShaderSource = 'precision highp    float; varying   vec4     v_Color; void main() { gl_FragColor = v_Color; }';
 
   Object.defineProperties(GLServer.prototype, {
+    COLOR_CLEAR_VALUE: {
+      get: function() {
+        return this.gl.getParameter(this.gl.COLOR_CLEAR_VALUE);
+      }
+    },
+    COLOR_WRITEMASK: {
+      get: function() {
+        return this.gl.getParameter(this.gl.COLOR_WRITEMASK);
+      }
+    },
+    bindTarget: {
+      get: function() {
+        return this.keyUint32(OFFSET_BIND_TARGET);
+      },
+      set: function() {
+        return this.setUint32(OFFSET_BIND_TARGET, arguments[0]);
+      }
+    },
     clearColor: {
       get: function() {
         return this.getUint32(OFFSET_CLEAR_COLOR);
@@ -144,7 +245,7 @@ export var GLServer = (function() {
     },
     clearMask: {
       get: function() {
-        return this.keyUint32(OFFSET_CLEAR_MASK);
+        return this.getUint32(OFFSET_CLEAR_MASK);
       },
       set: function() {
         return this.setUint32(OFFSET_CLEAR_MASK, arguments[0]);

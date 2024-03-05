@@ -9,6 +9,7 @@ OFFSET_RENDERING        = 4 * 0
 OFFSET_FRAME            = 4 * 1
 LENGTH_CLEAR_COLOR      = 4 * 4
 
+OFFSET_BIND_TARGET      = 4 * 9
 OFFSET_CLEAR_COLOR      = 4 * 10
 OFFSET_CLEAR_MASK       = 4 * 11
 OFFSET_POINT_SIZE       = 4 * 12
@@ -83,10 +84,15 @@ export class GLServer   extends Pointer
         @depthFunc      = WebGL2RenderingContext.LEQUAL
         @depthMask      = no
         @clearDepth     = 1
+        @clearColor     = 0x0f111aff
+        @clearMask      =
+            WebGL2RenderingContext.DEPTH_BUFFER_BIT |
+            WebGL2RenderingContext.COLOR_BUFFER_BIT
 
         @cullEnabled    = WebGL2RenderingContext.CULL_FACE
         @cullFace       = WebGL2RenderingContext.BACK
         @frontFace      = WebGL2RenderingContext.CCW
+        @bindTarget     = WebGL2RenderingContext.ARRAY_BUFFER
 
         @pointSize      = 10
 
@@ -102,14 +108,89 @@ export class GLServer   extends Pointer
                 gl.createShader gl.FRAGMENT_SHADER
             ]
 
+        @setVertexShader @vShaderSource
+        @setFragmentShader @fShaderSource
+
+        @updateCull()
+        @updateDepth()
+        @updateBlend()
+
+        @runProgram()
+        @bindBuffer()
+        @clearSpace()
+
+        @gl.drawArrays @gl.POINTS, 0, 3
+        @gl.finish()
+
+    downloadParameter   : ( parameter ) ->
+        @gl.getParameter parameter
+
+    clearSpace          : ( [ r, g, b, a ] = @clearColor.toRGBA @ ) ->
+        @gl.clearColor                      r, g, b, a
+        @gl.clear                           @clearMask
+        ; @
+
+    bindBuffer          : ->
+        @gl.bindBuffer                      @bindTarget, @glBuffer
+        ; @
+
+    runProgram          : ->
+        @gl.linkProgram                     @glProgram
+        @gl.useProgram                      @glProgram
+        ; @
+
+    setVertexShader     : ( source ) ->
+        @gl.shaderSource                    @glShaders[0], source
+        @gl.compileShader                   @glShaders[0]
+        @gl.attachShader                    @glProgram, @glShaders[0]
+        ; @
+
+    setFragmentShader   : ( source ) ->
+        @gl.shaderSource                    @glShaders[1], source
+        @gl.compileShader                   @glShaders[1]
+        @gl.attachShader                    @glProgram, @glShaders[1]
+        ; @
+
+    updateCull          : ->
+        if  @cullEnabled
+            @gl.cullFace                    @cullFace
+            @gl.enable                      @cullEnabled
+            @gl.frontFace                   @frontFace
+        ; @
+
+    updateDepth         : ->
+        if  @depthEnabled
+            @gl.enable                      @depthEnabled
+            @gl.depthFunc                   @depthFunc
+            @gl.depthMask                   @depthMask
+            @gl.clearDepth                  @clearDepth
+        ; @
+
+    updateBlend         : ->
+        if  @blendEnabled
+            @gl.enable                      @blendEnabled
+            @gl.blendFunc                   @blendFuncSrc, @blendFuncDst
+            @gl.blendEquation               @blendEquation
+        ; @
+
+    setViewPort         : ( width, height, left = 0, top = 0 ) ->
+        @gl.viewport left, top, width, height ; @
+
     Object.defineProperties this::,
+
+        COLOR_CLEAR_VALUE : get : -> @gl.getParameter @gl.COLOR_CLEAR_VALUE
+        COLOR_WRITEMASK : get : -> @gl.getParameter @gl.COLOR_WRITEMASK
+
+        bindTarget      :
+            get         : -> @keyUint32 OFFSET_BIND_TARGET
+            set         : -> @setUint32 OFFSET_BIND_TARGET, arguments[0]
 
         clearColor      :
             get         : -> @getUint32 OFFSET_CLEAR_COLOR
             set         : -> @setUint32 OFFSET_CLEAR_COLOR, arguments[0]
 
         clearMask       :
-            get         : -> @keyUint32 OFFSET_CLEAR_MASK
+            get         : -> @getUint32 OFFSET_CLEAR_MASK
             set         : -> @setUint32 OFFSET_CLEAR_MASK, arguments[0]
 
         pointSize       :
