@@ -45,7 +45,32 @@ export length     = 16
 export byteLength = length * 4
 export LE         = yes
 
+vals = Object.values WebGL2RenderingContext
+keys = Object.keys WebGL2RenderingContext
+vars = {}
+
+for val, i in vals
+    key = keys.at i
+    cls = eval("(class #{key} extends Number {})")
+    vars[ val ] = new cls(val)
+
+keyOf = ( val ) ->
+    vars[ val ] or val
+
+getCaller = ( val ) ->
+    stack = new Error().stack.toString()#* 3 -> 2 -> 1 : fn.called
+    [ , js, line ] = stack.split(/\n/g).at(3).split(":")
+    line *= 1
+    lines = (await (await fetch(js)).text()).split(/\n/g, line)
+    for l in lines.slice( -10 )
+        continue if /return|get|set/.test l
+        continue unless l.match /\:/
+        break if name = l.replace(/\W+/gui, "")
+    cls = eval("(class #{name} extends Number {})")
+    val = new cls val
+
 export class Pointer extends Number
+
 
     @byteLength     : byteLength
     @TypedArray     : Uint32Array
@@ -202,6 +227,9 @@ export class Pointer extends Number
     getUint32       : ( byteOffset ) ->
         DATAVIEW.getUint32 @byteOffset + byteOffset, LE
 
+    keyUint32       : ( byteOffset ) ->
+        keyOf DATAVIEW.getUint32 @byteOffset + byteOffset, LE
+
     setUint32       : ( byteOffset, value ) ->
         DATAVIEW.setUint32 @byteOffset + byteOffset, value, LE
 
@@ -222,8 +250,60 @@ export class Pointer extends Number
 
     subarray        : -> @array.subarray( ...arguments )
     fill            : -> @array    .fill( ...arguments ); @
-    set             : -> @array     .set( ...arguments ); @
     at              : -> @array      .at( ...arguments )
+    set             : -> @array.set( ...arguments ); @
+
+
+Object.defineProperties Float32Array::,
+    toUint32        : value : ->
+        new Uint32Array( Uint8Array.of(
+            @at(0) * 0xff, @at(1) * 0xff, @at(2) * 0xff, @at(3) * 0xff
+        ).buffer ).at( 0 )
+
+    toRGBAHex       : value : ->
+        "#" + [ ...new Uint8Array( [ ...this ].map (n) -> n * 255 ) ].map (n) ->
+            n.toString(16).padStart(2,0)
+        .join ""
+
+    toRGBA255       : value : ->
+        new Uint8Array( @toRGBA0x1().map (n) -> n * 255 )
+
+    toRGBA0x1       : value : ->
+        [ ...this ]
+
+    toRGBAcss       : value : ->
+        [ r, g, b, a ] = @toRGBA255()
+        ( a = ( a / 2.55 ).toFixed(2) )
+        "rgba( #{r} #{g} #{b} / #{a}% )"
+
+Object.defineProperties Float32Array,
+    fromUint32      : value : -> arguments[0].toFloat32Array()
+
+
+Object.defineProperties Number::,
+    toUint32Number  : value : ->
+        
+        new DataView buf = new ArrayBuffer 4
+            .setUint32 0, this, LE
+
+        parseInt "0x" + [ 
+            ...new Uint8Array( buf )
+        ].map( (m) -> m.toString(16).padStart(2, 0) ).join("")
+
+    toFloat32Array  : value : ( normalized = yes )  ->
+        dv = new DataView new ArrayBuffer 4
+        dv.setUint32 0, this, LE
+
+        i8 = new Uint8Array dv.buffer
+        i8.reverse() if LE 
+
+        di = 1
+        di = 255 if normalized
+
+        Float32Array.of ...[ ...i8 ].map (n) -> n/di
+
+    toRGBA          : value : ->
+        @toFloat32Array ...arguments
 
 
 export default self.Pointer = Pointer

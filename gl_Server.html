@@ -32,7 +32,7 @@
     </head>
     <body>
         <canvas id="bgl2"></canvas>
-        <table>
+        <table id="tbl">
             <tr><td id="dxCamera">   <input type="range" max="500" min="-500" step="1" /></td></tr>
             <tr><td id="dyCamera">   <input type="range" max="500" min="-500" step="1" /></td></tr>
             <tr><td id="dzCamera">   <input type="range" max="500" min="-500" step="1" /></td></tr>
@@ -67,16 +67,19 @@
             bindServer.bind( canvas )
             screenServer.bind( canvas )
 
-            glServer.ptr_bind   = bindServer
-            glServer.ptr_screen = screenServer
-            glServer.ptr_camera = Perspective.create(
+            let camera = Perspective.create(
                 Math.rad( 80 ), screenServer.aspectRatio, .001, 1e3
             )
 
+            glServer.clearColor = 0x0f111aff
+
+            //glServer.clearColor.toRGBA()
+
             glServer.add( bindServer )
             glServer.add( screenServer )
+            glServer.add( camera )
 
-            console.log({glServer, bindServer})
+            console.warn(glServer)
             
         </script>
         

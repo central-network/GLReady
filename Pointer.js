@@ -1,4 +1,4 @@
-var BUFFER, DATAVIEW, INDEX_BEGIN, INDEX_BYTEFINISH, INDEX_BYTELENGTH, INDEX_BYTEOFFSET, INDEX_BYTES_PER_ELEMENT, INDEX_END, INDEX_LENGTH, INDEX_PTR_CLASS_ID, INDEX_PTR_PARENT, INDEX_TYPED_ARRAY_ID, OFFSET_BEGIN, OFFSET_BYTEFINISH, OFFSET_BYTELENGTH, OFFSET_BYTEOFFSET, OFFSET_BYTES_PER_ELEMENT, OFFSET_END, OFFSET_LENGTH, OFFSET_PTR_CLASSID, OFFSET_PTR_PARENT, OFFSET_TYPED_ARRAY_ID, POINTERS_BEGIN, POINTER_BYTELENGTH, POINTER_LENGTH, PTR_PROTOTYPE, TypedArraysIds, U32ARRAY;
+var BUFFER, DATAVIEW, INDEX_BEGIN, INDEX_BYTEFINISH, INDEX_BYTELENGTH, INDEX_BYTEOFFSET, INDEX_BYTES_PER_ELEMENT, INDEX_END, INDEX_LENGTH, INDEX_PTR_CLASS_ID, INDEX_PTR_PARENT, INDEX_TYPED_ARRAY_ID, OFFSET_BEGIN, OFFSET_BYTEFINISH, OFFSET_BYTELENGTH, OFFSET_BYTEOFFSET, OFFSET_BYTES_PER_ELEMENT, OFFSET_END, OFFSET_LENGTH, OFFSET_PTR_CLASSID, OFFSET_PTR_PARENT, OFFSET_TYPED_ARRAY_ID, POINTERS_BEGIN, POINTER_BYTELENGTH, POINTER_LENGTH, PTR_PROTOTYPE, TypedArraysIds, U32ARRAY, cls, getCaller, i, j, key, keyOf, keys, len, val, vals, vars;
 
 BUFFER = null;
 
@@ -69,6 +69,46 @@ export var byteLength = length * 4;
 
 export var LE = true;
 
+vals = Object.values(WebGL2RenderingContext);
+
+keys = Object.keys(WebGL2RenderingContext);
+
+vars = {};
+
+for (i = j = 0, len = vals.length; j < len; i = ++j) {
+  val = vals[i];
+  key = keys.at(i);
+  cls = eval(`(class ${key} extends Number {})`);
+  vars[val] = new cls(val);
+}
+
+keyOf = function(val) {
+  return vars[val] || val;
+};
+
+getCaller = async function(val) {
+  var js, k, l, len1, line, lines, name, ref, stack;
+  stack = new Error().stack.toString(); //* 3 -> 2 -> 1 : fn.called
+  [, js, line] = stack.split(/\n/g).at(3).split(":");
+  line *= 1;
+  lines = ((await ((await fetch(js))).text())).split(/\n/g, line);
+  ref = lines.slice(-10);
+  for (k = 0, len1 = ref.length; k < len1; k++) {
+    l = ref[k];
+    if (/return|get|set/.test(l)) {
+      continue;
+    }
+    if (!l.match(/\:/)) {
+      continue;
+    }
+    if (name = l.replace(/\W+/gui, "")) {
+      break;
+    }
+  }
+  cls = eval(`(class ${name} extends Number {})`);
+  return val = new cls(val);
+};
+
 export var Pointer = (function() {
   class Pointer extends Number {
     * [Symbol.iterator](i = -1) {
@@ -132,6 +172,10 @@ export var Pointer = (function() {
       return DATAVIEW.getUint32(this.byteOffset + byteOffset, LE);
     }
 
+    keyUint32(byteOffset) {
+      return keyOf(DATAVIEW.getUint32(this.byteOffset + byteOffset, LE));
+    }
+
     setUint32(byteOffset, value) {
       return DATAVIEW.setUint32(this.byteOffset + byteOffset, value, LE);
     }
@@ -166,13 +210,13 @@ export var Pointer = (function() {
       return this;
     }
 
+    at() {
+      return this.array.at(...arguments);
+    }
+
     set() {
       this.array.set(...arguments);
       return this;
-    }
-
-    at() {
-      return this.array.at(...arguments);
     }
 
   };
@@ -353,6 +397,88 @@ export var Pointer = (function() {
   return Pointer;
 
 }).call(this);
+
+Object.defineProperties(Float32Array.prototype, {
+  toUint32: {
+    value: function() {
+      return new Uint32Array(Uint8Array.of(this.at(0) * 0xff, this.at(1) * 0xff, this.at(2) * 0xff, this.at(3) * 0xff).buffer).at(0);
+    }
+  },
+  toRGBAHex: {
+    value: function() {
+      return "#" + [
+        ...new Uint8Array([...this].map(function(n) {
+          return n * 255;
+        }))
+      ].map(function(n) {
+        return n.toString(16).padStart(2, 0);
+      }).join("");
+    }
+  },
+  toRGBA255: {
+    value: function() {
+      return new Uint8Array(this.toRGBA0x1().map(function(n) {
+        return n * 255;
+      }));
+    }
+  },
+  toRGBA0x1: {
+    value: function() {
+      return [...this];
+    }
+  },
+  toRGBAcss: {
+    value: function() {
+      var a, b, g, r;
+      [r, g, b, a] = this.toRGBA255();
+      (a = (a / 2.55).toFixed(2));
+      return `rgba( ${r} ${g} ${b} / ${a}% )`;
+    }
+  }
+});
+
+Object.defineProperties(Float32Array, {
+  fromUint32: {
+    value: function() {
+      return arguments[0].toFloat32Array();
+    }
+  }
+});
+
+Object.defineProperties(Number.prototype, {
+  toUint32Number: {
+    value: function() {
+      var buf;
+      new DataView(buf = new ArrayBuffer(4)).setUint32(0, this, LE);
+      return parseInt("0x" + [...new Uint8Array(buf)].map(function(m) {
+        return m.toString(16).padStart(2, 0);
+      }).join(""));
+    }
+  },
+  toFloat32Array: {
+    value: function(normalized = true) {
+      var di, dv, i8;
+      dv = new DataView(new ArrayBuffer(4));
+      dv.setUint32(0, this, LE);
+      i8 = new Uint8Array(dv.buffer);
+      if (LE) {
+        i8.reverse();
+      }
+      di = 1;
+      if (normalized) {
+        di = 255;
+      }
+      return Float32Array.of(...[...i8].map(function(n) {
+        return n / di;
+      }));
+    }
+  },
+  toRGBA: {
+    value: function() {
+      return this.toFloat32Array(...arguments);
+    }
+  }
+});
 
 export default self.Pointer = Pointer;
 

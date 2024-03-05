@@ -1,4 +1,4 @@
-var LENGTH_CLEAR_COLOR, OFFSET_BLEND_ENABLED, OFFSET_BLEND_EQUATION, OFFSET_BLEND_FUNC_DST, OFFSET_BLEND_FUNC_SRC, OFFSET_CLEAR_COLOR, OFFSET_CLEAR_DEPTH, OFFSET_CLEAR_MASK, OFFSET_CULL_ENABLED, OFFSET_CULL_FACE, OFFSET_DEPTH_ENABLED, OFFSET_DEPTH_FUNCTION, OFFSET_DEPTH_MASK, OFFSET_FRAME, OFFSET_FRONT_FACE, OFFSET_POINT_SIZE, OFFSET_PTR_BIND, OFFSET_PTR_CAMERA, OFFSET_PTR_SCREEN, OFFSET_RENDERING;
+var LENGTH_CLEAR_COLOR, OFFSET_BLEND_ENABLED, OFFSET_BLEND_EQUATION, OFFSET_BLEND_FUNC_DST, OFFSET_BLEND_FUNC_SRC, OFFSET_CLEAR_COLOR, OFFSET_CLEAR_DEPTH, OFFSET_CLEAR_MASK, OFFSET_CULL_ENABLED, OFFSET_CULL_FACE, OFFSET_DEPTH_ENABLED, OFFSET_DEPTH_FUNCTION, OFFSET_DEPTH_MASK, OFFSET_FRAME, OFFSET_FRONT_FACE, OFFSET_POINT_SIZE, OFFSET_RENDERING;
 
 import {
   CameraServer
@@ -19,12 +19,6 @@ import Matrix4 from "./Matrix4.js";
 OFFSET_RENDERING = 4 * 0;
 
 OFFSET_FRAME = 4 * 1;
-
-OFFSET_PTR_SCREEN = 4 * 2;
-
-OFFSET_PTR_CAMERA = 4 * 3;
-
-OFFSET_PTR_BIND = 4 * 4;
 
 LENGTH_CLEAR_COLOR = 4 * 4;
 
@@ -140,30 +134,6 @@ export var GLServer = (function() {
   GLServer.prototype.fShaderSource = 'precision highp    float; varying   vec4     v_Color; void main() { gl_FragColor = v_Color; }';
 
   Object.defineProperties(GLServer.prototype, {
-    ptr_screen: {
-      get: function() {
-        return this.getPointer(OFFSET_PTR_SCREEN, ScreenServer);
-      },
-      set: function() {
-        return this.setPointer(OFFSET_PTR_SCREEN, arguments[0]);
-      }
-    },
-    ptr_camera: {
-      get: function() {
-        return this.getPointer(OFFSET_PTR_CAMERA, CameraServer);
-      },
-      set: function() {
-        return this.setPointer(OFFSET_PTR_CAMERA, arguments[0]);
-      }
-    },
-    ptr_bind: {
-      get: function() {
-        return this.getPointer(OFFSET_PTR_BIND, BindServer);
-      },
-      set: function() {
-        return this.setPointer(OFFSET_PTR_BIND, arguments[0]);
-      }
-    },
     clearColor: {
       get: function() {
         return this.getUint32(OFFSET_CLEAR_COLOR);
@@ -174,7 +144,7 @@ export var GLServer = (function() {
     },
     clearMask: {
       get: function() {
-        return this.getUint32(OFFSET_CLEAR_MASK);
+        return this.keyUint32(OFFSET_CLEAR_MASK);
       },
       set: function() {
         return this.setUint32(OFFSET_CLEAR_MASK, arguments[0]);
@@ -190,7 +160,7 @@ export var GLServer = (function() {
     },
     blendEnabled: {
       get: function() {
-        return this.getUint32(OFFSET_BLEND_ENABLED);
+        return this.keyUint32(OFFSET_BLEND_ENABLED);
       },
       set: function() {
         return this.setUint32(OFFSET_BLEND_ENABLED, arguments[0]);
@@ -198,7 +168,7 @@ export var GLServer = (function() {
     },
     blendFuncSrc: {
       get: function() {
-        return this.getUint32(OFFSET_BLEND_FUNC_SRC);
+        return this.keyUint32(OFFSET_BLEND_FUNC_SRC);
       },
       set: function() {
         return this.setUint32(OFFSET_BLEND_FUNC_SRC, arguments[0]);
@@ -206,7 +176,7 @@ export var GLServer = (function() {
     },
     blendFuncDst: {
       get: function() {
-        return this.getUint32(OFFSET_BLEND_FUNC_DST);
+        return this.keyUint32(OFFSET_BLEND_FUNC_DST);
       },
       set: function() {
         return this.setUint32(OFFSET_BLEND_FUNC_DST, arguments[0]);
@@ -214,7 +184,7 @@ export var GLServer = (function() {
     },
     blendEquation: {
       get: function() {
-        return this.getUint32(OFFSET_BLEND_EQUATION);
+        return this.keyUint32(OFFSET_BLEND_EQUATION);
       },
       set: function() {
         return this.setUint32(OFFSET_BLEND_EQUATION, arguments[0]);
@@ -222,7 +192,7 @@ export var GLServer = (function() {
     },
     depthEnabled: {
       get: function() {
-        return this.getUint32(OFFSET_DEPTH_ENABLED);
+        return this.keyUint32(OFFSET_DEPTH_ENABLED);
       },
       set: function() {
         return this.setUint32(OFFSET_DEPTH_ENABLED, arguments[0]);
@@ -230,7 +200,7 @@ export var GLServer = (function() {
     },
     depthFunc: {
       get: function() {
-        return this.getUint32(OFFSET_DEPTH_FUNCTION);
+        return this.keyUint32(OFFSET_DEPTH_FUNCTION);
       },
       set: function() {
         return this.setUint32(OFFSET_DEPTH_FUNCTION, arguments[0]);
@@ -238,7 +208,7 @@ export var GLServer = (function() {
     },
     depthMask: {
       get: function() {
-        return this.getUint32(OFFSET_DEPTH_MASK);
+        return this.keyUint32(OFFSET_DEPTH_MASK);
       },
       set: function() {
         return this.setUint32(OFFSET_DEPTH_MASK, arguments[0]);
@@ -254,7 +224,7 @@ export var GLServer = (function() {
     },
     cullEnabled: {
       get: function() {
-        return this.getUint32(OFFSET_CULL_ENABLED);
+        return this.keyUint32(OFFSET_CULL_ENABLED);
       },
       set: function() {
         return this.setUint32(OFFSET_CULL_ENABLED, arguments[0]);
@@ -262,7 +232,7 @@ export var GLServer = (function() {
     },
     cullFace: {
       get: function() {
-        return this.getUint32(OFFSET_CULL_FACE);
+        return this.keyUint32(OFFSET_CULL_FACE);
       },
       set: function() {
         return this.setUint32(OFFSET_CULL_FACE, arguments[0]);
@@ -270,7 +240,7 @@ export var GLServer = (function() {
     },
     frontFace: {
       get: function() {
-        return this.getUint32(OFFSET_FRONT_FACE);
+        return this.keyUint32(OFFSET_FRONT_FACE);
       },
       set: function() {
         return this.setUint32(OFFSET_FRONT_FACE, arguments[0]);

@@ -7,10 +7,6 @@ import Matrix4 from "./Matrix4.coffee"
 
 OFFSET_RENDERING        = 4 * 0
 OFFSET_FRAME            = 4 * 1
-OFFSET_PTR_SCREEN       = 4 * 2
-OFFSET_PTR_CAMERA       = 4 * 3
-OFFSET_PTR_BIND         = 4 * 4
-
 LENGTH_CLEAR_COLOR      = 4 * 4
 
 OFFSET_CLEAR_COLOR      = 4 * 10
@@ -108,24 +104,12 @@ export class GLServer   extends Pointer
 
     Object.defineProperties this::,
 
-        ptr_screen      :
-            get         : -> @getPointer OFFSET_PTR_SCREEN, ScreenServer
-            set         : -> @setPointer OFFSET_PTR_SCREEN, arguments[0]
-
-        ptr_camera      :
-            get         : -> @getPointer OFFSET_PTR_CAMERA, CameraServer
-            set         : -> @setPointer OFFSET_PTR_CAMERA, arguments[0]
-
-        ptr_bind        :
-            get         : -> @getPointer OFFSET_PTR_BIND, BindServer
-            set         : -> @setPointer OFFSET_PTR_BIND, arguments[0]
-
         clearColor      :
             get         : -> @getUint32 OFFSET_CLEAR_COLOR
             set         : -> @setUint32 OFFSET_CLEAR_COLOR, arguments[0]
 
         clearMask       :
-            get         : -> @getUint32 OFFSET_CLEAR_MASK
+            get         : -> @keyUint32 OFFSET_CLEAR_MASK
             set         : -> @setUint32 OFFSET_CLEAR_MASK, arguments[0]
 
         pointSize       :
@@ -133,31 +117,31 @@ export class GLServer   extends Pointer
             set         : -> @setFloat32 OFFSET_POINT_SIZE, arguments[0]
 
         blendEnabled    :
-            get         : -> @getUint32 OFFSET_BLEND_ENABLED
+            get         : -> @keyUint32 OFFSET_BLEND_ENABLED
             set         : -> @setUint32 OFFSET_BLEND_ENABLED, arguments[0]
 
         blendFuncSrc    :
-            get         : -> @getUint32 OFFSET_BLEND_FUNC_SRC
+            get         : -> @keyUint32 OFFSET_BLEND_FUNC_SRC
             set         : -> @setUint32 OFFSET_BLEND_FUNC_SRC, arguments[0]
 
         blendFuncDst    :
-            get         : -> @getUint32 OFFSET_BLEND_FUNC_DST
+            get         : -> @keyUint32 OFFSET_BLEND_FUNC_DST
             set         : -> @setUint32 OFFSET_BLEND_FUNC_DST, arguments[0]
 
         blendEquation   :
-            get         : -> @getUint32 OFFSET_BLEND_EQUATION
+            get         : -> @keyUint32 OFFSET_BLEND_EQUATION
             set         : -> @setUint32 OFFSET_BLEND_EQUATION, arguments[0]
             
         depthEnabled    :
-            get         : -> @getUint32 OFFSET_DEPTH_ENABLED
+            get         : -> @keyUint32 OFFSET_DEPTH_ENABLED
             set         : -> @setUint32 OFFSET_DEPTH_ENABLED, arguments[0]
 
         depthFunc       :
-            get         : -> @getUint32 OFFSET_DEPTH_FUNCTION
+            get         : -> @keyUint32 OFFSET_DEPTH_FUNCTION
             set         : -> @setUint32 OFFSET_DEPTH_FUNCTION, arguments[0]
 
         depthMask       :
-            get         : -> @getUint32 OFFSET_DEPTH_MASK
+            get         : -> @keyUint32 OFFSET_DEPTH_MASK
             set         : -> @setUint32 OFFSET_DEPTH_MASK, arguments[0]
             
         clearDepth      :
@@ -165,15 +149,15 @@ export class GLServer   extends Pointer
             set         : -> @setFloat32 OFFSET_CLEAR_DEPTH, arguments[0]
 
         cullEnabled     :
-            get         : -> @getUint32 OFFSET_CULL_ENABLED
+            get         : -> @keyUint32 OFFSET_CULL_ENABLED
             set         : -> @setUint32 OFFSET_CULL_ENABLED, arguments[0]
 
         cullFace        :
-            get         : -> @getUint32 OFFSET_CULL_FACE
+            get         : -> @keyUint32 OFFSET_CULL_FACE
             set         : -> @setUint32 OFFSET_CULL_FACE, arguments[0]
 
         frontFace       :
-            get         : -> @getUint32 OFFSET_FRONT_FACE
+            get         : -> @keyUint32 OFFSET_FRONT_FACE
             set         : -> @setUint32 OFFSET_FRONT_FACE, arguments[0]
 
             
