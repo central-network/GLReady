@@ -286,19 +286,20 @@ export class IndexPointer extends Pointer
         [ $ptr ]         : configurable: yes
 
     @of : ( ptr ) ->
-        return Ptr if Ptr = ptr[ name ]
+        return Ptr if Ptr = ptr[ @name ]
 
-        fnCount = name + "Count"
-        fnElements = name + "Elements"
+        count = ptr.byteLength / @byteLength
+        items = [ 0 ... count ]
+        label = @name + "Elements"
 
         Object.defineProperties ptr.constructor::,
-            [ fnCount ]    : get : -> @byteLength / @[ name ].byteLength
-            [ fnElements ] : get : -> new this[ name ] i for i in [ 0 ... @[ fnCount ] ]
-            [ name ]       : value : Ptr = class at extends this
-                parent     : ptr
-                @at        : ( i ) -> new this( i )
-
-        return Ptr
+            [ @name ]  : value  : Ptr = class at extends this
+                parent : ptr
+                @at    : (i) ->
+                    return new Ptr i unless i >= count
+                    throw "Index is out of bounds #{i} of #{count}." 
+            [ label ]  : get    : -> items.map Ptr.at 
+        Ptr
     
     Reflect.deleteProperty this, $ptr
     Reflect.deleteProperty this, 'children'

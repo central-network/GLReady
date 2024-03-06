@@ -158,8 +158,8 @@ export var Vertices = (function() {
       return this.fromVertexCount * 6;
     }
 
-    getVertex(index) {
-      return Vertex.of(this).at(index);
+    getVertex(i) {
+      return Vertex.of(this).at(i);
     }
 
   };

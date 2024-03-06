@@ -94,8 +94,8 @@ export class Vertices extends Pointer
     @fromRectCount      : ( count ) ->
         @fromVertexCount * 6
 
-    getVertex       : ( index ) ->
-        Vertex.of( this ).at( index )
+    getVertex       : ( i ) ->
+        Vertex.of( this ).at( i )
 
     Object.defineProperties this::,
 

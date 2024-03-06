@@ -432,33 +432,26 @@ export var Pointer = (function() {
 export var IndexPointer = (function() {
   class IndexPointer extends Pointer {
     static of(ptr) {
-      var Ptr, at, fnCount, fnElements;
-      if (Ptr = ptr[name]) {
+      var Ptr, at, count, items, label;
+      if (Ptr = ptr[this.name]) {
         return Ptr;
       }
-      fnCount = name + "Count";
-      fnElements = name + "Elements";
+      count = ptr.byteLength / this.byteLength;
+      items = (function() {
+        var results = [];
+        for (var k = 0; 0 <= count ? k < count : k > count; 0 <= count ? k++ : k--){ results.push(k); }
+        return results;
+      }).apply(this);
+      label = this.name + "Elements";
       Object.defineProperties(ptr.constructor.prototype, {
-        [fnCount]: {
-          get: function() {
-            return this.byteLength / this[name].byteLength;
-          }
-        },
-        [fnElements]: {
-          get: function() {
-            var k, ref, results;
-            results = [];
-            for (i = k = 0, ref = this[fnCount]; (0 <= ref ? k < ref : k > ref); i = 0 <= ref ? ++k : --k) {
-              results.push(new this[name](i));
-            }
-            return results;
-          }
-        },
-        [name]: {
+        [this.name]: {
           value: Ptr = at = (function() {
             class at extends this {
               static at(i) {
-                return new this(i);
+                if (!(i >= count)) {
+                  return new Ptr(i);
+                }
+                throw `Index is out of bounds ${i} of ${count}.`;
               }
 
             };
@@ -468,6 +461,11 @@ export var IndexPointer = (function() {
             return at;
 
           }).call(this)
+        },
+        [label]: {
+          get: function() {
+            return items.map(Ptr.at);
+          }
         }
       });
       return Ptr;
