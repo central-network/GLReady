@@ -1,10 +1,10 @@
-var BUFFER, DATAVIEW, INDEX_BEGIN, INDEX_BYTEFINISH, INDEX_BYTELENGTH, INDEX_BYTEOFFSET, INDEX_BYTES_PER_ELEMENT, INDEX_END, INDEX_LENGTH, INDEX_PTR_CLASS_ID, INDEX_PTR_PARENT, INDEX_TYPED_ARRAY_ID, OFFSET_BEGIN, OFFSET_BYTEFINISH, OFFSET_BYTELENGTH, OFFSET_BYTEOFFSET, OFFSET_BYTES_PER_ELEMENT, OFFSET_END, OFFSET_LENGTH, OFFSET_PTR_CLASSID, OFFSET_PTR_PARENT, OFFSET_TYPED_ARRAY_ID, POINTERS_BEGIN, POINTER_BYTELENGTH, POINTER_LENGTH, PTR_PROTOTYPE, TypedArraysIds, U32ARRAY, cls, getCaller, i, j, key, keyOf, keys, len, val, vals, vars;
+var INDEX_BEGIN, INDEX_BYTEFINISH, INDEX_BYTELENGTH, INDEX_BYTEOFFSET, INDEX_BYTES_PER_ELEMENT, INDEX_END, INDEX_LENGTH, INDEX_PTR_CLASS_ID, INDEX_PTR_PARENT, INDEX_TYPED_ARRAY_ID, OFFSET_BEGIN, OFFSET_BYTEFINISH, OFFSET_BYTELENGTH, OFFSET_BYTEOFFSET, OFFSET_END, OFFSET_LENGTH, OFFSET_PTR_CLASSID, OFFSET_PTR_PARENT, POINTERS_BEGIN, POINTER_BYTELENGTH, POINTER_LENGTH, PTR_PROTOTYPE, TypedArraysIds, cls, getCaller, i, j, key, keyOf, keys, len, val, vals, vars;
 
-BUFFER = null;
+export var BUFFER = null;
 
-DATAVIEW = null;
+export var DATAVIEW = null;
 
-U32ARRAY = null;
+export var U32ARRAY = null;
 
 INDEX_BYTEOFFSET = 0;
 
@@ -38,13 +38,23 @@ OFFSET_BEGIN = 5 * 4;
 
 OFFSET_END = 6 * 4;
 
-OFFSET_TYPED_ARRAY_ID = 7 * 4;
+OFFSET_PTR_PARENT = 7 * 4;
 
-OFFSET_BYTES_PER_ELEMENT = 8 * 4;
+OFFSET_PTR_CLASSID = 8 * 4;
 
-OFFSET_PTR_PARENT = 9 * 4;
+export var OFFSET_OBJECT_0 = 9 * 4;
 
-OFFSET_PTR_CLASSID = 10 * 4;
+export var OFFSET_OBJECT_1 = 10 * 4;
+
+export var OFFSET_OBJECT_2 = 11 * 4;
+
+export var OFFSET_OBJECT_3 = 12 * 4;
+
+export var OFFSET_OBJECT_4 = 13 * 4;
+
+export var OFFSET_OBJECT_5 = 14 * 4;
+
+export var OFFSET_OBJECT_6 = 15 * 4;
 
 POINTERS_BEGIN = 8;
 
@@ -68,6 +78,8 @@ export var length = 16;
 export var byteLength = length * 4;
 
 export var LE = true;
+
+export var $ptr = '∆';
 
 vals = Object.values(WebGL2RenderingContext);
 
@@ -125,6 +137,14 @@ export var Pointer = (function() {
         return new this.constructor(mallocAtomic(this.constructor.byteLength));
       }
       this.init();
+    }
+
+    static maybePointer(offset, pointer = this) {
+      var ptr;
+      if (!(ptr = DATAVIEW.getUint32(pointer + offset))) {
+        DATAVIEW.setUint32(pointer + offset, ptr = mallocAtomic(this.byteLength));
+      }
+      return new this(ptr);
     }
 
     init() {
@@ -215,7 +235,7 @@ export var Pointer = (function() {
     }
 
     set() {
-      this.array.set(...arguments);
+      this.array.set([...arguments].flat());
       return this;
     }
 
@@ -277,6 +297,7 @@ export var Pointer = (function() {
       }
     },
     parent: {
+      configurable: true,
       get: function() {
         var classId, ptr, ptrClassId;
         if (ptr = DATAVIEW.getUint32(this + OFFSET_PTR_PARENT, LE)) {
@@ -302,6 +323,7 @@ export var Pointer = (function() {
       }
     },
     ptrClassId: {
+      configurable: true,
       get: function() {
         return DATAVIEW.getUint32(this + OFFSET_PTR_CLASSID, LE);
       },
@@ -310,6 +332,7 @@ export var Pointer = (function() {
       }
     },
     children: {
+      configurable: true,
       get: function() {
         var childs, classId, offset, ptr, ptrClassId;
         offset = POINTERS_BEGIN + OFFSET_PTR_PARENT - POINTER_BYTELENGTH;
@@ -371,6 +394,14 @@ export var Pointer = (function() {
     }
   });
 
+  Object.defineProperties(Pointer, {
+    BYTES_PER_ELEMENT: {
+      get: function() {
+        return this.TypedArray.BYTES_PER_ELEMENT;
+      }
+    }
+  });
+
   Object.defineProperties(Pointer.prototype, {
     array: {
       get: function() {
@@ -395,6 +426,108 @@ export var Pointer = (function() {
   });
 
   return Pointer;
+
+}).call(this);
+
+export var IndexPointer = (function() {
+  class IndexPointer extends Pointer {
+    static of(ptr) {
+      var Ptr, at, fnCount, fnElements;
+      if (Ptr = ptr[name]) {
+        return Ptr;
+      }
+      fnCount = name + "Count";
+      fnElements = name + "Elements";
+      Object.defineProperties(ptr.constructor.prototype, {
+        [fnCount]: {
+          get: function() {
+            return this.byteLength / this[name].byteLength;
+          }
+        },
+        [fnElements]: {
+          get: function() {
+            var k, ref, results;
+            results = [];
+            for (i = k = 0, ref = this[fnCount]; (0 <= ref ? k < ref : k > ref); i = 0 <= ref ? ++k : --k) {
+              results.push(new this[name](i));
+            }
+            return results;
+          }
+        },
+        [name]: {
+          value: Ptr = at = (function() {
+            class at extends this {
+              static at(i) {
+                return new this(i);
+              }
+
+            };
+
+            at.prototype.parent = ptr;
+
+            return at;
+
+          }).call(this)
+        }
+      });
+      return Ptr;
+    }
+
+  };
+
+  Object.defineProperties(IndexPointer.prototype, {
+    ["begin"]: {
+      get: function() {
+        return this.parent.begin + (this * this.length);
+      }
+    },
+    ["end"]: {
+      get: function() {
+        return this.length + this.begin;
+      }
+    },
+    ["byteOffset"]: {
+      get: function() {
+        return this.parent.byteOffset + (this * this.byteLength);
+      }
+    },
+    ["byteFinish"]: {
+      get: function() {
+        return this.byteOffset + this.byteLength;
+      }
+    },
+    ["byteLength"]: {
+      get: function() {
+        return this.constructor.byteLength;
+      }
+    },
+    ["length"]: {
+      get: function() {
+        return this.byteLength / this.BYTES_PER_ELEMENT;
+      }
+    },
+    ["parent"]: {
+      configurable: true,
+      writable: true
+    },
+    ["children"]: {
+      configurable: true
+    },
+    ["ptrClassId"]: {
+      configurable: true
+    },
+    [$ptr]: {
+      configurable: true
+    }
+  });
+
+  Reflect.deleteProperty(IndexPointer, $ptr);
+
+  Reflect.deleteProperty(IndexPointer, 'children');
+
+  Reflect.deleteProperty(IndexPointer, 'ptrClassId');
+
+  return IndexPointer;
 
 }).call(this);
 

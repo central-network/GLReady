@@ -1,7 +1,6 @@
-BUFFER   = null
-DATAVIEW = null
-U32ARRAY = null
-
+export BUFFER   = null
+export DATAVIEW = null
+export U32ARRAY = null
 
 INDEX_BYTEOFFSET             =  0
 INDEX_BYTELENGTH             =  1
@@ -20,10 +19,16 @@ OFFSET_BYTEFINISH            =  2 * 4
 OFFSET_LENGTH                =  3 * 4
 OFFSET_BEGIN                 =  5 * 4
 OFFSET_END                   =  6 * 4
-OFFSET_TYPED_ARRAY_ID        =  7 * 4
-OFFSET_BYTES_PER_ELEMENT     =  8 * 4
-OFFSET_PTR_PARENT            =  9 * 4
-OFFSET_PTR_CLASSID           = 10 * 4
+OFFSET_PTR_PARENT            =  7 * 4
+OFFSET_PTR_CLASSID           =  8 * 4
+
+export OFFSET_OBJECT_0       =  9 * 4
+export OFFSET_OBJECT_1       = 10 * 4
+export OFFSET_OBJECT_2       = 11 * 4
+export OFFSET_OBJECT_3       = 12 * 4
+export OFFSET_OBJECT_4       = 13 * 4
+export OFFSET_OBJECT_5       = 14 * 4
+export OFFSET_OBJECT_6       = 15 * 4
 
 
 POINTERS_BEGIN               = 8
@@ -44,6 +49,7 @@ TypedArraysIds =
 export length     = 16
 export byteLength = length * 4
 export LE         = yes
+export $ptr       = '∆'
 
 vals = Object.values WebGL2RenderingContext
 keys = Object.keys WebGL2RenderingContext
@@ -71,7 +77,6 @@ getCaller = ( val ) ->
 
 export class Pointer extends Number
 
-
     @byteLength         : byteLength
     @TypedArray         : Uint32Array
     @BYTES_PER_ELEMENT  : 4
@@ -85,6 +90,13 @@ export class Pointer extends Number
         )
 
         @init()
+
+    @maybePointer  : ( offset, pointer = this ) ->
+        unless ptr = DATAVIEW.getUint32 pointer + offset
+            DATAVIEW.setUint32 pointer + offset, ptr =
+                mallocAtomic this.byteLength
+                
+        new this ptr
 
     init            : -> this
 
@@ -114,6 +126,7 @@ export class Pointer extends Number
             set     : -> DATAVIEW.setUint32 this + OFFSET_END, arguments[ 0 ], LE
 
         parent      :
+            configurable: yes
             get     : ->
                 if  ptr = DATAVIEW.getUint32 this + OFFSET_PTR_PARENT, LE
                     classId = ptr + OFFSET_PTR_CLASSID
@@ -137,10 +150,12 @@ export class Pointer extends Number
                 DATAVIEW.setUint32 ptr + OFFSET_PTR_CLASSID, id, LE
 
         ptrClassId  :
+            configurable: yes
             get     : -> DATAVIEW.getUint32 this + OFFSET_PTR_CLASSID, LE
             set     : -> DATAVIEW.setUint32 this + OFFSET_PTR_CLASSID, arguments[ 0 ], LE
 
         children    :
+            configurable: yes
             get     : ->
                 offset = POINTERS_BEGIN + OFFSET_PTR_PARENT - POINTER_BYTELENGTH
                 length = -8 + Atomics.load U32ARRAY, 0
@@ -189,12 +204,15 @@ export class Pointer extends Number
                     .copyBytesFrom begin, end
 
 
+    Object.defineProperties this,
+        BYTES_PER_ELEMENT   : get : -> @TypedArray.BYTES_PER_ELEMENT
+
     Object.defineProperties this::,
         array               : get : -> new this.TypedArray BUFFER, @byteOffset, @length
         TypedArray          : get : -> @constructor.TypedArray
         BYTES_PER_ELEMENT   : get : -> @TypedArray.BYTES_PER_ELEMENT
-        [ "∆" ]  : get : -> U32ARRAY.subarray this/4, this/4 + POINTER_LENGTH
-
+        [ "∆" ]             : get : -> U32ARRAY.subarray this/4, this/4 + POINTER_LENGTH
+    
     reloadPointer   : ->
         @byteFinish = @byteOffset + @byteLength
 
@@ -251,7 +269,40 @@ export class Pointer extends Number
     subarray        : -> @array.subarray( ...arguments )
     fill            : -> @array    .fill( ...arguments ); @
     at              : -> @array      .at( ...arguments )
-    set             : -> @array.set( ...arguments ); @
+    set             : -> @array.set( [ ...arguments ].flat() ); @
+
+export class IndexPointer extends Pointer
+
+    Object.defineProperties this::,
+        [ "begin" ]      : get : -> @parent . begin + ( this * @length )
+        [ "end" ]        : get : -> @length + @begin
+        [ "byteOffset" ] : get : -> @parent . byteOffset + ( this * @byteLength )
+        [ "byteFinish" ] : get : -> @byteOffset + @byteLength
+        [ "byteLength" ] : get : -> @constructor . byteLength
+        [ "length" ]     : get : -> @byteLength / @BYTES_PER_ELEMENT        
+        [ "parent" ]     : configurable: yes, writable: yes
+        [ "children" ]   : configurable: yes
+        [ "ptrClassId" ] : configurable: yes
+        [ $ptr ]         : configurable: yes
+
+    @of : ( ptr ) ->
+        return Ptr if Ptr = ptr[ name ]
+
+        fnCount = name + "Count"
+        fnElements = name + "Elements"
+
+        Object.defineProperties ptr.constructor::,
+            [ fnCount ]    : get : -> @byteLength / @[ name ].byteLength
+            [ fnElements ] : get : -> new this[ name ] i for i in [ 0 ... @[ fnCount ] ]
+            [ name ]       : value : Ptr = class at extends this
+                parent     : ptr
+                @at        : ( i ) -> new this( i )
+
+        return Ptr
+    
+    Reflect.deleteProperty this, $ptr
+    Reflect.deleteProperty this, 'children'
+    Reflect.deleteProperty this, 'ptrClassId'
 
 
 Object.defineProperties Float32Array::,
@@ -278,7 +329,6 @@ Object.defineProperties Float32Array::,
 
 Object.defineProperties Float32Array,
     fromUint32      : value : -> arguments[0].toFloat32Array()
-
 
 Object.defineProperties Number::,
     toUint32Number  : value : ->
