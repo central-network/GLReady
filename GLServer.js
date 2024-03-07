@@ -1,4 +1,4 @@
-var LENGTH_CLEAR_COLOR, LENGTH_SHADER_SOURCE, OFFSET_ATTACHED_STAT, OFFSET_BIND_TARGET, OFFSET_BLEND_ENABLED, OFFSET_BLEND_EQUATION, OFFSET_BLEND_FUNC_DST, OFFSET_BLEND_FUNC_SRC, OFFSET_CLEAR_COLOR, OFFSET_CLEAR_DEPTH, OFFSET_CLEAR_MASK, OFFSET_COMPILED_STAT, OFFSET_CULL_ENABLED, OFFSET_CULL_FACE, OFFSET_DEPTH_ENABLED, OFFSET_DEPTH_FUNCTION, OFFSET_DEPTH_MASK, OFFSET_FRAME, OFFSET_FRONT_FACE, OFFSET_POINT_SIZE, OFFSET_RENDERING, OFFSET_SHADER_ACTIVE, OFFSET_SHADER_GLTYPE, OFFSET_SHADER_SOURCE, OFFSET_SOURCE_LENGTH, OFFSET_UPLOADED_STAT;
+var LENGTH_CLEAR_COLOR, LENGTH_SHADER_SOURCE, OFFSET_ATTACHED_STAT, OFFSET_BIND_TARGET, OFFSET_BLEND_ENABLED, OFFSET_BLEND_EQUATION, OFFSET_BLEND_FUNC_DST, OFFSET_BLEND_FUNC_SRC, OFFSET_CLEAR_COLOR, OFFSET_CLEAR_DEPTH, OFFSET_CLEAR_MASK, OFFSET_COMPILED_STAT, OFFSET_CULL_ENABLED, OFFSET_CULL_FACE, OFFSET_DEPTH_ENABLED, OFFSET_DEPTH_FUNCTION, OFFSET_DEPTH_MASK, OFFSET_FRAME, OFFSET_FRONT_FACE, OFFSET_POINT_SIZE, OFFSET_PROGRAM_ACTIVE, OFFSET_PROGRAM_INUSE, OFFSET_PROGRAM_LINKED, OFFSET_RENDERING, OFFSET_SHADER_ACTIVE, OFFSET_SHADER_GLTYPE, OFFSET_SHADER_SOURCE, OFFSET_SOURCE_LENGTH, OFFSET_UPLOADED_STAT;
 
 import {
   CameraServer
@@ -68,6 +68,12 @@ OFFSET_SHADER_SOURCE = 4 * 9;
 
 LENGTH_SHADER_SOURCE = 1e5 - OFFSET_SHADER_SOURCE;
 
+OFFSET_PROGRAM_INUSE = 4 * 0;
+
+OFFSET_PROGRAM_LINKED = 4 * 1;
+
+OFFSET_PROGRAM_ACTIVE = 4 * 2;
+
 export var length = 1 * 30;
 
 export var byteLength = 4 * length;
@@ -104,7 +110,26 @@ export var GLClient = (function() {
 }).call(this);
 
 export var GLProgram = (function() {
-  class GLProgram extends Pointer {};
+  class GLProgram extends Pointer {
+    link() {
+      if (this.isLinked) {
+        return this;
+      }
+      this.gl.linkProgram(this.glProgram);
+      this.isLinked = 1;
+      return this;
+    }
+
+    use() {
+      if (this.isInUse) {
+        return this;
+      }
+      this.gl.useProgram(this.glProgram);
+      this.isInUse = 1;
+      return this;
+    }
+
+  };
 
   GLProgram.byteLength = 48;
 
@@ -114,9 +139,12 @@ export var GLProgram = (function() {
         return this.parent.gl;
       }
     },
-    program: {
+    glProgram: {
+      configurable: true,
       get: function() {
-        return this.glProgram != null ? this.glProgram : this.glProgram = this.gl.createProgram();
+        return Object.defineProperty(this, "glProgram", {
+          value: this.gl.createProgram()
+        }).glProgram;
       }
     },
     shaders: {
@@ -171,6 +199,36 @@ export var GLProgram = (function() {
         }
         return s.isActive = true;
       }
+    },
+    isInUse: {
+      get: function() {
+        return this.getUint32(OFFSET_PROGRAM_INUSE);
+      },
+      set: function() {
+        if (this.setUint32(OFFSET_PROGRAM_INUSE, arguments[0])) {
+          return this.use();
+        }
+      }
+    },
+    isLinked: {
+      get: function() {
+        return this.getUint32(OFFSET_PROGRAM_LINKED);
+      },
+      set: function() {
+        if (this.setUint32(OFFSET_PROGRAM_LINKED, arguments[0])) {
+          return this.link();
+        }
+      }
+    },
+    isActive: {
+      get: function() {
+        return this.getUint32(OFFSET_PROGRAM_ACTIVE);
+      },
+      set: function() {
+        if (this.setUint32(OFFSET_PROGRAM_ACTIVE, arguments[0])) {
+          return this.link().use();
+        }
+      }
     }
   });
 
@@ -184,7 +242,7 @@ export var GLShader = (function() {
       if (this.isUploaded) {
         return this;
       }
-      this.gl.shaderSource(this.shader, this.source);
+      this.gl.shaderSource(this.glShader, this.source);
       this.isUploaded = 1;
       return this;
     }
@@ -193,7 +251,7 @@ export var GLShader = (function() {
       if (this.isCompiled) {
         return this;
       }
-      this.gl.compileShader(this.shader);
+      this.gl.compileShader(this.glShader);
       this.isCompiled = 1;
       return this;
     }
@@ -202,7 +260,7 @@ export var GLShader = (function() {
       if (this.isAttached) {
         return this;
       }
-      this.gl.attachShader(this.program, this.shader);
+      this.gl.attachShader(this.glProgram, this.glShader);
       this.isAttached = 1;
       return this;
     }
@@ -225,14 +283,25 @@ export var GLShader = (function() {
         return this.parent.gl;
       }
     },
-    shader: {
+    glProgram: {
       get: function() {
-        return this.glShader != null ? this.glShader : this.glShader = this.gl.createShader(this.shaderType);
+        return this.parent.glProgram;
       }
     },
-    program: {
+    glBuffer: {
+      configurable: true,
       get: function() {
-        return this.parent.program;
+        return Object.defineProperty(this, "glBuffer", {
+          value: this.gl.createBuffer()
+        }).glBuffer;
+      }
+    },
+    glShader: {
+      configurable: true,
+      get: function() {
+        return Object.defineProperty(this, "glShader", {
+          value: this.gl.createShader(this.shaderType)
+        }).glShader;
       }
     },
     isVertex: {
@@ -247,12 +316,10 @@ export var GLShader = (function() {
     },
     source: {
       get: function() {
-        var tarray;
         if (!(length = this.charLength)) {
           return "";
         }
-        tarray = this.subUint8(OFFSET_SHADER_SOURCE, this.charLength);
-        return this.decoder.decode(tarray.slice(0));
+        return this.decoder.decode(this.subUint8(OFFSET_SHADER_SOURCE, this.charLength).slice(0));
       },
       set: function(source) {
         var tarray;
@@ -348,40 +415,24 @@ export var GLServer = (function() {
       return this.pointSize = 10;
     }
 
-    bind(canvas) {
-      var gl;
-      gl = canvas.getContext("webgl2");
-      Object.defineProperties(this, {
-        gl: {
-          value: gl
-        },
-        glBuffer: {
-          value: gl.createBuffer()
-        },
-        glProgram: {
-          value: gl.createProgram()
-        },
-        glShaders: {
-          value: [gl.createShader(gl.VERTEX_SHADER), gl.createShader(gl.FRAGMENT_SHADER)]
-        }
-      });
-      this.setVertexShader(this.vShaderSource);
-      this.setFragmentShader(this.fShaderSource);
+    nextTick(pnow) {
+      this.ticks++;
+      this.gl.clear(this.clearMask);
+      return this.gl.drawArrays(this.gl.POINTS, 0, 3);
+    }
+
+    prepareCanvas() {
       this.updateCull();
       this.updateDepth();
       this.updateBlend();
-      this.runProgram();
-      this.bindBuffer();
-      this.clearSpace();
-      this.gl.drawArrays(this.gl.POINTS, 0, 3);
-      return this.gl.finish();
+      return this.clear();
     }
 
     downloadParameter(parameter) {
       return this.gl.getParameter(parameter);
     }
 
-    clearSpace([r, g, b, a] = this.clearColor.toRGBA(this)) {
+    clear([r, g, b, a] = this.clearColor.toRGBA(this)) {
       this.gl.clearColor(r, g, b, a);
       this.gl.clear(this.clearMask);
       return this;
@@ -457,6 +508,8 @@ export var GLServer = (function() {
 
   GLServer.prototype.fShaderSource = 'precision highp    float; varying   vec4     v_Color; void main() { gl_FragColor = v_Color; }';
 
+  GLServer.prototype.ticks = 0;
+
   Object.defineProperties(GLServer.prototype, {
     COLOR_CLEAR_VALUE: {
       get: function() {
@@ -466,6 +519,16 @@ export var GLServer = (function() {
     COLOR_WRITEMASK: {
       get: function() {
         return this.gl.getParameter(this.gl.COLOR_WRITEMASK);
+      }
+    },
+    canvas: {
+      get: function() {
+        return this.gl.canvas;
+      },
+      set: function() {
+        return Object.defineProperty(this, "gl", {
+          value: arguments[0].getContext("webgl2")
+        }).prepareCanvas();
       }
     },
     bindTarget: {

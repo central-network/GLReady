@@ -37,6 +37,11 @@ OFFSET_SOURCE_LENGTH    = 4 * 8
 OFFSET_SHADER_SOURCE    = 4 * 9
 LENGTH_SHADER_SOURCE    = 1e5 - OFFSET_SHADER_SOURCE
 
+
+OFFSET_PROGRAM_INUSE    = 4 * 0
+OFFSET_PROGRAM_LINKED   = 4 * 1
+OFFSET_PROGRAM_ACTIVE   = 4 * 2
+
 export length       = 1 * 30
 export byteLength   = 4 * length
 
@@ -61,7 +66,11 @@ export class GLProgram  extends Pointer
 
         gl              : get : -> @parent.gl
 
-        program         : get : -> @glProgram ?= @gl.createProgram()
+        glProgram       :
+            configurable: yes
+            get : -> Object.defineProperty( this, "glProgram",
+                value : @gl.createProgram()
+            ).glProgram
 
         shaders         : get : -> @children.filter (v) -> v instanceof GLShader
 
@@ -81,6 +90,33 @@ export class GLProgram  extends Pointer
                 unless has then @add s
                 s.isActive = yes
 
+        isInUse         :
+            get         : -> @getUint32 OFFSET_PROGRAM_INUSE
+            set         : ->
+                @use() if @setUint32 OFFSET_PROGRAM_INUSE, arguments[0]
+
+        isLinked        :
+            get         : -> @getUint32 OFFSET_PROGRAM_LINKED
+            set         : ->
+                @link() if @setUint32 OFFSET_PROGRAM_LINKED, arguments[0]
+
+        isActive        :
+            get         : -> @getUint32 OFFSET_PROGRAM_ACTIVE
+            set         : ->
+                if  @setUint32 OFFSET_PROGRAM_ACTIVE, arguments[0]
+                    @link().use()
+
+    link            : ->
+        return this if @isLinked
+        @gl.linkProgram @glProgram
+        @isLinked = 1 ; this
+
+    use             : ->
+        return this if @isInUse
+        @gl.useProgram @glProgram
+        @isInUse = 1 ; this
+
+
 export class GLShader   extends Pointer
 
     @byteLength     : 1e5
@@ -97,9 +133,19 @@ export class GLShader   extends Pointer
 
         gl              : get : -> @parent.gl
 
-        shader          : get : -> @glShader ?= @gl.createShader @shaderType
+        glProgram       : get : -> @parent.glProgram
 
-        program         : get : -> @parent.program
+        glBuffer        :
+            configurable: yes
+            get : -> Object.defineProperty( this, "glBuffer",
+                value : @gl.createBuffer()
+            ).glBuffer
+
+        glShader        :
+            configurable: yes
+            get : -> Object.defineProperty( this, "glShader",
+                value : @gl.createShader @shaderType
+            ).glShader
 
         isVertex        : get : -> /gl_Pos/.test( @source ) and @VERTEX_SHADER or no
 
@@ -110,9 +156,10 @@ export class GLShader   extends Pointer
                 unless length = @charLength
                     return ""
                 
-                tarray = @subUint8 OFFSET_SHADER_SOURCE, @charLength
-
-                @decoder.decode tarray.slice 0
+                @decoder.decode(
+                    @subUint8( OFFSET_SHADER_SOURCE, @charLength )
+                        .slice( 0 )
+                )
                 
             set         : ( source ) ->
                 unless source instanceof Uint8Array
@@ -156,17 +203,17 @@ export class GLShader   extends Pointer
 
     upload : ->
         return this if @isUploaded
-        @gl.shaderSource @shader, @source
+        @gl.shaderSource @glShader, @source
         @isUploaded = 1 ; this
 
     compile : ->
         return this if @isCompiled
-        @gl.compileShader @shader
+        @gl.compileShader @glShader
         @isCompiled = 1 ; this
 
     attach : ->
         return this if @isAttached
-        @gl.attachShader @program, @shader
+        @gl.attachShader @glProgram, @glShader
         @isAttached = 1 ; this
 
 export class GLServer   extends Pointer
@@ -221,37 +268,23 @@ export class GLServer   extends Pointer
         @bindTarget     = WebGL2RenderingContext.ARRAY_BUFFER
 
         @pointSize      = 10
+        
+    ticks : 0
+    nextTick            : ( pnow ) ->
+        @ticks++
+        @gl.clear @clearMask
+        @gl.drawArrays @gl.POINTS, 0, 3
 
-    bind            : ( canvas ) ->
-        gl = canvas.getContext "webgl2"
-
-        Object.defineProperties this,
-            gl          : value : gl
-            glBuffer    : value : gl.createBuffer()
-            glProgram   : value : gl.createProgram()
-            glShaders   : value : [
-                gl.createShader gl.VERTEX_SHADER
-                gl.createShader gl.FRAGMENT_SHADER
-            ]
-
-        @setVertexShader @vShaderSource
-        @setFragmentShader @fShaderSource
-
+    prepareCanvas       : ->
         @updateCull()
         @updateDepth()
         @updateBlend()
-
-        @runProgram()
-        @bindBuffer()
-        @clearSpace()
-
-        @gl.drawArrays @gl.POINTS, 0, 3
-        @gl.finish()
+        @clear()
 
     downloadParameter   : ( parameter ) ->
         @gl.getParameter parameter
 
-    clearSpace          : ( [ r, g, b, a ] = @clearColor.toRGBA @ ) ->
+    clear               : ( [ r, g, b, a ] = @clearColor.toRGBA @ ) ->
         @gl.clearColor                      r, g, b, a
         @gl.clear                           @clearMask
         ; @
@@ -305,7 +338,14 @@ export class GLServer   extends Pointer
     Object.defineProperties this::,
 
         COLOR_CLEAR_VALUE : get : -> @gl.getParameter @gl.COLOR_CLEAR_VALUE
-        COLOR_WRITEMASK : get : -> @gl.getParameter @gl.COLOR_WRITEMASK
+        COLOR_WRITEMASK   : get : -> @gl.getParameter @gl.COLOR_WRITEMASK
+
+        canvas          :
+            get : -> @gl.canvas
+            set : -> Object.defineProperty( this, "gl",
+                value : arguments[0].getContext "webgl2"
+            ).prepareCanvas()
+
 
         bindTarget      :
             get         : -> @keyUint32 OFFSET_BIND_TARGET

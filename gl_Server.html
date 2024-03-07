@@ -67,7 +67,8 @@
             bindServer.bind( canvas )
             screenServer.bind( canvas )
 
-            glServer.bind( canvas )
+            glServer.canvas = canvas
+
             glServer.setViewPort( screenServer.width, screenServer.height )
 
             let camera = Perspective.create(
@@ -78,8 +79,9 @@
             glServer.add( screenServer )
             glServer.add( camera )
             
-            console.log( self.vtx = Vertices.fromVertexCount( 3 ) )
-            console.log( vtx.getVertex(2) )
+            console.log( "array:", self.vtx = Vertices.fromVertexCount( 3 ) )
+            console.log( "at(2):", vtx.getVertex(2) )
+            console.log("".padEnd(100, "-"))
             vtx.drawMode = WebGL2RenderingContext.TRIANGLES
 
             let program = new GLProgram()
@@ -115,13 +117,19 @@
             program.vertexShader = vShader
             program.fragmentShader = fShader
 
-            console.log( vShader, vShader.isActive )
-            console.log( fShader, fShader.isActive )
+            console.log( "vert:", vShader )
+            console.log( "frag:", fShader )
+            console.log( "prog:", program )
+            console.log( "core:", glServer )
 
-            console.log( program )
-            console.log( vtx.drawMode )
+            program.isActive = true;
 
-            console.log( glServer )
+            (ƒ => ƒ = function (µ) {
+                void glServer.nextTick(µ);
+                //void requestAnimationFrame(ƒ);
+            })()()
+
+            
             
         </script>
         
