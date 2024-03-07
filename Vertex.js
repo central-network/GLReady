@@ -83,12 +83,42 @@ export var Vertex = (function() {
 }).call(this);
 
 export var Attribute = (function() {
-  class Attribute extends Vertex {};
+  class Attribute extends IndexPointer {};
 
-  Attribute.byteLength = VALUES_PER_VERTEX * BYTES_PER_VALUE;
+  Attribute.byteLength = 9 * Float32Array.BYTES_PER_ELEMENT;
+
+  Attribute.TypedArray = Float32Array;
 
   Object.defineProperties(Attribute.prototype, {
+    x: {
+      enumerable: true,
+      get: function() {
+        return this.getFloat32(OFFSET_X);
+      },
+      set: function() {
+        return this.setFloat32(OFFSET_X, arguments[0]);
+      }
+    },
+    y: {
+      enumerable: true,
+      get: function() {
+        return this.getFloat32(OFFSET_Y);
+      },
+      set: function() {
+        return this.setFloat32(OFFSET_Y, arguments[0]);
+      }
+    },
+    z: {
+      enumerable: true,
+      get: function() {
+        return this.getFloat32(OFFSET_Z);
+      },
+      set: function() {
+        return this.setFloat32(OFFSET_Z, arguments[0]);
+      }
+    },
     r: {
+      enumerable: true,
       get: function() {
         return this.getFloat32(OFFSET_R);
       },
@@ -97,6 +127,7 @@ export var Attribute = (function() {
       }
     },
     g: {
+      enumerable: true,
       get: function() {
         return this.getFloat32(OFFSET_G);
       },
@@ -105,6 +136,7 @@ export var Attribute = (function() {
       }
     },
     b: {
+      enumerable: true,
       get: function() {
         return this.getFloat32(OFFSET_B);
       },
@@ -113,6 +145,7 @@ export var Attribute = (function() {
       }
     },
     a: {
+      enumerable: true,
       get: function() {
         return this.getFloat32(OFFSET_A);
       },
@@ -121,6 +154,7 @@ export var Attribute = (function() {
       }
     },
     sx: {
+      enumerable: true,
       get: function() {
         return this.getFloat32(OFFSET_SX);
       },
@@ -129,6 +163,7 @@ export var Attribute = (function() {
       }
     },
     sy: {
+      enumerable: true,
       get: function() {
         return this.getFloat32(OFFSET_SY);
       },
@@ -139,6 +174,130 @@ export var Attribute = (function() {
   });
 
   return Attribute;
+
+}).call(this);
+
+export var DrawBuffer = (function() {
+  class DrawBuffer extends Pointer {
+    malloc(ptr) {
+      var allocByteLength;
+      ptr.attribBegin = this.attribCount;
+      ptr.allocOffset = this.allocLength;
+      allocByteLength = ptr.byteLength;
+      ptr.attribCount = allocByteLength / this.BYTES_PER_ATTRIBUTE;
+      ptr.typedOffset = ptr.allocOffset / this.BYTES_PER_ATTRIBUTE;
+      ptr.typedLength = allocByteLength / this.BYTES_PER_ELEMENT;
+      this.allocLength += allocByteLength;
+      this.attribCount += ptr.attribCount;
+      return ptr;
+    }
+
+  };
+
+  DrawBuffer.byteLength = 3e7;
+
+  DrawBuffer.prototype.COUNT_PER_ATTRIBUTE = 9;
+
+  DrawBuffer.prototype.BYTES_PER_ATTRIBUTE = 9 * 4;
+
+  Object.defineProperties(DrawBuffer.prototype, {
+    //? one big buffer's start point 
+    //* TRIANGLES | POINTS | LINES
+    drawMode: {
+      get: function() {
+        return DATAVIEW.getUint32(this + OFFSET_OBJECT_0, LE);
+      },
+      set: function() {
+        return DATAVIEW.setUint32(this + OFFSET_OBJECT_0, arguments[0], LE);
+      }
+    },
+    //? one big buffer's start point 
+    //* TRIANGLES = <--->
+    //* POINTS    =      <--->
+    //* LINES     =           <--->
+    //?          -> N    2N   3N
+    //# N = @byteLength / BYTES_PER_ATTRIBUTE
+    attribFirst: {
+      get: function() {
+        return DATAVIEW.getUint32(this + OFFSET_OBJECT_1, LE);
+      },
+      set: function() {
+        return DATAVIEW.setUint32(this + OFFSET_OBJECT_1, arguments[0], LE);
+      }
+    },
+    //? allocated attibutes total type length in mode
+    //?                                 / 
+    //?                     typed length per attibute 
+    attribCount: {
+      get: function() {
+        return DATAVIEW.getUint32(this + OFFSET_OBJECT_2, LE);
+      },
+      set: function() {
+        return DATAVIEW.setUint32(this + OFFSET_OBJECT_2, arguments[0], LE);
+      }
+    },
+    //? total allocated bytes in one big draw buffer
+    allocLength: {
+      get: function() {
+        return DATAVIEW.getUint32(this + OFFSET_OBJECT_3, LE);
+      },
+      set: function() {
+        return DATAVIEW.setUint32(this + OFFSET_OBJECT_3, arguments[0], LE);
+      }
+    }
+  });
+
+  return DrawBuffer;
+
+}).call(this);
+
+export var Attributes = (function() {
+  class Attributes extends Pointer {};
+
+  Object.defineProperties(Attributes.prototype, {
+    attribBegin: {
+      get: function() {
+        return DATAVIEW.getUint32(this + OFFSET_OBJECT_0, LE);
+      },
+      set: function() {
+        return DATAVIEW.setUint32(this + OFFSET_OBJECT_0, arguments[0], LE);
+      }
+    },
+    attribCount: {
+      get: function() {
+        return DATAVIEW.getUint32(this + OFFSET_OBJECT_1, LE);
+      },
+      set: function() {
+        return DATAVIEW.setUint32(this + OFFSET_OBJECT_1, arguments[0], LE);
+      }
+    },
+    allocOffset: {
+      get: function() {
+        return DATAVIEW.getUint32(this + OFFSET_OBJECT_2, LE);
+      },
+      set: function() {
+        return DATAVIEW.setUint32(this + OFFSET_OBJECT_2, arguments[0], LE);
+      }
+    },
+    typedOffset: {
+      get: function() {
+        return DATAVIEW.getUint32(this + OFFSET_OBJECT_3, LE);
+      },
+      set: function() {
+        return DATAVIEW.setUint32(this + OFFSET_OBJECT_3, arguments[0], LE);
+      }
+    },
+    typedLength: {
+      get: function() {
+        return DATAVIEW.getUint32(this + OFFSET_OBJECT_4, LE);
+      },
+      set: function() {
+        return DATAVIEW.setUint32(this + OFFSET_OBJECT_4, arguments[0], LE);
+      }
+    }
+  });
+
+  return Attributes;
 
 }).call(this);
 
@@ -173,7 +332,7 @@ export var Vertices = (function() {
         return DATAVIEW.setUint32(this + OFFSET_OBJECT_0, arguments[0], LE);
       }
     },
-    drawBegin: {
+    attrLength: {
       get: function() {
         return DATAVIEW.getUint32(this + OFFSET_OBJECT_1, LE);
       },
@@ -181,7 +340,7 @@ export var Vertices = (function() {
         return DATAVIEW.setUint32(this + OFFSET_OBJECT_1, arguments[0], LE);
       }
     },
-    drawOffset: {
+    drawPointer: {
       get: function() {
         return DATAVIEW.getUint32(this + OFFSET_OBJECT_2, LE);
       },
@@ -189,7 +348,7 @@ export var Vertices = (function() {
         return DATAVIEW.setUint32(this + OFFSET_OBJECT_2, arguments[0], LE);
       }
     },
-    drawLength: {
+    drawMode: {
       get: function() {
         return DATAVIEW.getUint32(this + OFFSET_OBJECT_3, LE);
       },
@@ -197,7 +356,7 @@ export var Vertices = (function() {
         return DATAVIEW.setUint32(this + OFFSET_OBJECT_3, arguments[0], LE);
       }
     },
-    drawMode: {
+    rotation: {
       get: function() {
         return DATAVIEW.getUint32(this + OFFSET_OBJECT_4, LE);
       },
@@ -205,7 +364,7 @@ export var Vertices = (function() {
         return DATAVIEW.setUint32(this + OFFSET_OBJECT_4, arguments[0], LE);
       }
     },
-    rotation: {
+    position: {
       get: function() {
         return DATAVIEW.getUint32(this + OFFSET_OBJECT_5, LE);
       },
@@ -213,19 +372,13 @@ export var Vertices = (function() {
         return DATAVIEW.setUint32(this + OFFSET_OBJECT_5, arguments[0], LE);
       }
     },
-    position: {
+    scale: {
       get: function() {
-        return Vertex.maybePointer(OFFSET_OBJECT_6, this);
+        return DATAVIEW.getUint32(this + OFFSET_OBJECT_6, LE);
       },
       set: function() {
-        return this.position.set(arguments[0]);
+        return DATAVIEW.setUint32(this + OFFSET_OBJECT_6, arguments[0], LE);
       }
-    },
-    VALUES_PER_VERTEX: {
-      value: VALUES_PER_VERTEX
-    },
-    BYTES_PER_VALUE: {
-      value: BYTES_PER_VALUE
     }
   });
 

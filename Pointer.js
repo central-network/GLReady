@@ -431,19 +431,19 @@ export var Pointer = (function() {
 
 export var IndexPointer = (function() {
   class IndexPointer extends Pointer {
-    static of(ptr) {
+    static of(parent) {
       var Ptr, at, count, items, label;
-      if (Ptr = ptr[this.name]) {
+      if (Ptr = parent[this.name]) {
         return Ptr;
       }
-      count = ptr.byteLength / this.byteLength;
+      count = parent.byteLength / this.byteLength;
       items = (function() {
         var results = [];
         for (var k = 0; 0 <= count ? k < count : k > count; 0 <= count ? k++ : k--){ results.push(k); }
         return results;
       }).apply(this);
       label = this.name + "Elements";
-      Object.defineProperties(ptr.constructor.prototype, {
+      Object.defineProperties(parent.constructor.prototype, {
         [this.name]: {
           value: Ptr = at = (function() {
             class at extends this {
@@ -456,7 +456,7 @@ export var IndexPointer = (function() {
 
             };
 
-            at.prototype.parent = ptr;
+            at.prototype.parent = parent;
 
             return at;
 
