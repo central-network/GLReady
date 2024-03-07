@@ -52,7 +52,7 @@
 
             import { Matrix4 } from "./Matrix4.js"
             import { Pointer } from "./Pointer.js"
-            import { GLServer } from "./GLServer.js"
+            import { GLServer, GLProgram, GLShader } from "./GLServer.js"
             import { BindServer } from "./BindServer.js"
             import { ScreenServer } from "./ScreenServer.js"
             import { Perspective } from "./Camera.js"
@@ -77,12 +77,51 @@
             glServer.add( bindServer )
             glServer.add( screenServer )
             glServer.add( camera )
-
+            
             console.log( self.vtx = Vertices.fromVertexCount( 3 ) )
             console.log( vtx.getVertex(2) )
-            console.log( vtx.getVertex(7) )
+            vtx.drawMode = WebGL2RenderingContext.TRIANGLES
 
-            console.warn(glServer)
+            let program = new GLProgram()
+            let vShader = new GLShader()
+            let fShader = new GLShader()
+
+            vShader.source = `
+                attribute vec4     a_Vertex;
+                attribute vec4     a_Color;
+                uniform   float    u_PointSize;
+                uniform   mat4     u_Camera;
+                varying   vec4     v_Color;
+
+                void main() {
+                    gl_Position  =  u_Camera * a_Vertex;
+                    gl_PointSize =  u_PointSize;
+                    v_Color      =  a_Color;
+                }
+            `;
+
+            fShader.source = `
+                precision highp    float;
+                varying   vec4     v_Color;
+
+                void main() {
+                    gl_FragColor = v_Color;
+                }
+            `;
+
+
+            glServer.add( program )
+
+            program.vertexShader = vShader
+            program.fragmentShader = fShader
+
+            console.log( vShader, vShader.isActive )
+            console.log( fShader, fShader.isActive )
+
+            console.log( program )
+            console.log( vtx.drawMode )
+
+            console.log( glServer )
             
         </script>
         

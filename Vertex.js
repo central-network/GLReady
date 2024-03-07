@@ -179,7 +179,7 @@ export var Attribute = (function() {
 
 export var DrawBuffer = (function() {
   class DrawBuffer extends Pointer {
-    malloc(ptr) {
+    malloc(modeBufferPtr) {
       var allocByteLength;
       ptr.attribBegin = this.attribCount;
       ptr.allocOffset = this.allocLength;
@@ -201,6 +201,39 @@ export var DrawBuffer = (function() {
   DrawBuffer.prototype.BYTES_PER_ATTRIBUTE = 9 * 4;
 
   Object.defineProperties(DrawBuffer.prototype, {
+    //? total allocated bytes in one big draw buffer
+    allocLength: {
+      get: function() {
+        return DATAVIEW.getUint32(this + OFFSET_OBJECT_3, LE);
+      },
+      set: function() {
+        return DATAVIEW.setUint32(this + OFFSET_OBJECT_3, arguments[0], LE);
+      }
+    }
+  });
+
+  return DrawBuffer;
+
+}).call(this);
+
+export var ModeBuffer = (function() {
+  class ModeBuffer extends Pointer {
+    malloc(ptr) {
+      var allocByteLength;
+      ptr.attribBegin = this.attribCount;
+      ptr.allocOffset = this.allocLength;
+      allocByteLength = ptr.byteLength;
+      ptr.attribCount = allocByteLength / this.BYTES_PER_ATTRIBUTE;
+      ptr.typedOffset = ptr.allocOffset / this.BYTES_PER_ATTRIBUTE;
+      ptr.typedLength = allocByteLength / this.BYTES_PER_ELEMENT;
+      this.allocLength += allocByteLength;
+      this.attribCount += ptr.attribCount;
+      return ptr;
+    }
+
+  };
+
+  Object.defineProperties(ModeBuffer.prototype, {
     //? one big buffer's start point 
     //* TRIANGLES | POINTS | LINES
     drawMode: {
@@ -236,7 +269,7 @@ export var DrawBuffer = (function() {
         return DATAVIEW.setUint32(this + OFFSET_OBJECT_2, arguments[0], LE);
       }
     },
-    //? total allocated bytes in one big draw buffer
+    //? total allocated bytes in mode buffer
     allocLength: {
       get: function() {
         return DATAVIEW.getUint32(this + OFFSET_OBJECT_3, LE);
@@ -247,7 +280,7 @@ export var DrawBuffer = (function() {
     }
   });
 
-  return DrawBuffer;
+  return ModeBuffer;
 
 }).call(this);
 
@@ -350,7 +383,7 @@ export var Vertices = (function() {
     },
     drawMode: {
       get: function() {
-        return DATAVIEW.getUint32(this + OFFSET_OBJECT_3, LE);
+        return keyOf(DATAVIEW.getUint32(this + OFFSET_OBJECT_3, LE));
       },
       set: function() {
         return DATAVIEW.setUint32(this + OFFSET_OBJECT_3, arguments[0], LE);

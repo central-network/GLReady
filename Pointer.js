@@ -1,4 +1,4 @@
-var INDEX_BEGIN, INDEX_BYTEFINISH, INDEX_BYTELENGTH, INDEX_BYTEOFFSET, INDEX_BYTES_PER_ELEMENT, INDEX_END, INDEX_LENGTH, INDEX_PTR_CLASS_ID, INDEX_PTR_PARENT, INDEX_TYPED_ARRAY_ID, OFFSET_BEGIN, OFFSET_BYTEFINISH, OFFSET_BYTELENGTH, OFFSET_BYTEOFFSET, OFFSET_END, OFFSET_LENGTH, OFFSET_PTR_CLASSID, OFFSET_PTR_PARENT, POINTERS_BEGIN, POINTER_BYTELENGTH, POINTER_LENGTH, PTR_PROTOTYPE, TypedArraysIds, cls, getCaller, i, j, key, keyOf, keys, len, val, vals, vars;
+var INDEX_BEGIN, INDEX_BYTEFINISH, INDEX_BYTELENGTH, INDEX_BYTEOFFSET, INDEX_BYTES_PER_ELEMENT, INDEX_END, INDEX_LENGTH, INDEX_PTR_CLASS_ID, INDEX_PTR_PARENT, INDEX_TYPED_ARRAY_ID, OBJECTS_ARRAY, OFFSET_BEGIN, OFFSET_BYTEFINISH, OFFSET_BYTELENGTH, OFFSET_BYTEOFFSET, OFFSET_END, OFFSET_LENGTH, OFFSET_PTR_CLASSID, OFFSET_PTR_PARENT, POINTERS_BEGIN, POINTER_BYTELENGTH, POINTER_LENGTH, PTR_PROTOTYPE, TypedArraysIds, cls, getCaller, i, j, key, keys, len, val, vals, vars;
 
 export var BUFFER = null;
 
@@ -64,6 +64,8 @@ POINTER_BYTELENGTH = 4 * POINTER_LENGTH;
 
 PTR_PROTOTYPE = [null];
 
+OBJECTS_ARRAY = {};
+
 TypedArraysIds = {
   [Float32Array]: 1,
   [Uint32Array]: 2,
@@ -94,7 +96,7 @@ for (i = j = 0, len = vals.length; j < len; i = ++j) {
   vars[val] = new cls(val);
 }
 
-keyOf = function(val) {
+self.keyOf = function(val) {
   return vars[val] || val;
 };
 
@@ -169,7 +171,8 @@ export var Pointer = (function() {
     }
 
     setUint8(byteOffset, value) {
-      return DATAVIEW.setUint8(this.byteOffset + byteOffset, value);
+      DATAVIEW.setUint8(this.byteOffset + byteOffset, value);
+      return value;
     }
 
     subUint8(byteOffset, length) {
@@ -181,7 +184,8 @@ export var Pointer = (function() {
     }
 
     setInt32(byteOffset, value) {
-      return DATAVIEW.setInt32(this.byteOffset + byteOffset, value, LE);
+      DATAVIEW.setInt32(this.byteOffset + byteOffset, value, LE);
+      return value;
     }
 
     subInt32(byteOffset, length) {
@@ -197,7 +201,8 @@ export var Pointer = (function() {
     }
 
     setUint32(byteOffset, value) {
-      return DATAVIEW.setUint32(this.byteOffset + byteOffset, value, LE);
+      DATAVIEW.setUint32(this.byteOffset + byteOffset, value, LE);
+      return value;
     }
 
     subUint32(byteOffset, length) {
@@ -209,7 +214,8 @@ export var Pointer = (function() {
     }
 
     setFloat32(byteOffset, value) {
-      return DATAVIEW.setFloat32(this.byteOffset + byteOffset, value, LE);
+      DATAVIEW.setFloat32(this.byteOffset + byteOffset, value, LE);
+      return value;
     }
 
     subFloat32(byteOffset, length) {
@@ -299,15 +305,25 @@ export var Pointer = (function() {
     parent: {
       configurable: true,
       get: function() {
-        var classId, ptr, ptrClassId;
+        var Ptr, classIdPtr, ptr, ptrClassId;
         if (ptr = DATAVIEW.getUint32(this + OFFSET_PTR_PARENT, LE)) {
-          classId = ptr + OFFSET_PTR_CLASSID;
-          ptrClassId = DATAVIEW.getUint32(classId, LE);
-          return new PTR_PROTOTYPE[ptrClassId](ptr);
+          if (Ptr = OBJECTS_ARRAY[ptr * 1]) {
+            return Ptr;
+          }
+          classIdPtr = ptr + OFFSET_PTR_CLASSID;
+          ptrClassId = DATAVIEW.getUint32(classIdPtr, LE);
+          return Ptr = new PTR_PROTOTYPE[ptrClassId](ptr);
         }
       },
       set: function(ptr) {
-        var id;
+        var id, p0, p1;
+        [p0, p1] = [this * 1, ptr * 1];
+        if (!OBJECTS_ARRAY[p0]) {
+          OBJECTS_ARRAY[p0] = this;
+        }
+        if (!OBJECTS_ARRAY[p1]) {
+          OBJECTS_ARRAY[p1] = ptr;
+        }
         if (!ptr) {
           return DATAVIEW.setUint32(this + OFFSET_PTR_PARENT, 0, LE);
         }

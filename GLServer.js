@@ -1,4 +1,4 @@
-var LENGTH_CLEAR_COLOR, OFFSET_BIND_TARGET, OFFSET_BLEND_ENABLED, OFFSET_BLEND_EQUATION, OFFSET_BLEND_FUNC_DST, OFFSET_BLEND_FUNC_SRC, OFFSET_CLEAR_COLOR, OFFSET_CLEAR_DEPTH, OFFSET_CLEAR_MASK, OFFSET_CULL_ENABLED, OFFSET_CULL_FACE, OFFSET_DEPTH_ENABLED, OFFSET_DEPTH_FUNCTION, OFFSET_DEPTH_MASK, OFFSET_FRAME, OFFSET_FRONT_FACE, OFFSET_POINT_SIZE, OFFSET_RENDERING;
+var LENGTH_CLEAR_COLOR, LENGTH_SHADER_SOURCE, OFFSET_ATTACHED_STAT, OFFSET_BIND_TARGET, OFFSET_BLEND_ENABLED, OFFSET_BLEND_EQUATION, OFFSET_BLEND_FUNC_DST, OFFSET_BLEND_FUNC_SRC, OFFSET_CLEAR_COLOR, OFFSET_CLEAR_DEPTH, OFFSET_CLEAR_MASK, OFFSET_COMPILED_STAT, OFFSET_CULL_ENABLED, OFFSET_CULL_FACE, OFFSET_DEPTH_ENABLED, OFFSET_DEPTH_FUNCTION, OFFSET_DEPTH_MASK, OFFSET_FRAME, OFFSET_FRONT_FACE, OFFSET_POINT_SIZE, OFFSET_RENDERING, OFFSET_SHADER_ACTIVE, OFFSET_SHADER_GLTYPE, OFFSET_SHADER_SOURCE, OFFSET_SOURCE_LENGTH, OFFSET_UPLOADED_STAT;
 
 import {
   CameraServer
@@ -52,6 +52,22 @@ OFFSET_CULL_FACE = 4 * 22;
 
 OFFSET_FRONT_FACE = 4 * 23;
 
+OFFSET_SHADER_ACTIVE = 4 * 3;
+
+OFFSET_SHADER_GLTYPE = 4 * 4;
+
+OFFSET_UPLOADED_STAT = 4 * 5;
+
+OFFSET_COMPILED_STAT = 4 * 6;
+
+OFFSET_ATTACHED_STAT = 4 * 7;
+
+OFFSET_SOURCE_LENGTH = 4 * 8;
+
+OFFSET_SHADER_SOURCE = 4 * 9;
+
+LENGTH_SHADER_SOURCE = 1e5 - OFFSET_SHADER_SOURCE;
+
 export var length = 1 * 30;
 
 export var byteLength = 4 * length;
@@ -84,6 +100,231 @@ export var GLClient = (function() {
   });
 
   return GLClient;
+
+}).call(this);
+
+export var GLProgram = (function() {
+  class GLProgram extends Pointer {};
+
+  GLProgram.byteLength = 48;
+
+  Object.defineProperties(GLProgram.prototype, {
+    gl: {
+      get: function() {
+        return this.parent.gl;
+      }
+    },
+    program: {
+      get: function() {
+        return this.glProgram != null ? this.glProgram : this.glProgram = this.gl.createProgram();
+      }
+    },
+    shaders: {
+      get: function() {
+        return this.children.filter(function(v) {
+          return v instanceof GLShader;
+        });
+      }
+    },
+    vertexShader: {
+      get: function() {
+        return this.shaders.find(function(s) {
+          return s.isVertex && s.isActive;
+        });
+      },
+      set: function(s) {
+        var has, i, len, ref, shader;
+        ref = this.children;
+        for (i = 0, len = ref.length; i < len; i++) {
+          shader = ref[i];
+          if (!(s - shader)) {
+            if (has = true) {
+              break;
+            }
+          }
+        }
+        if (!has) {
+          this.add(s);
+        }
+        return s.isActive = true;
+      }
+    },
+    fragmentShader: {
+      get: function() {
+        return this.shaders.find(function(s) {
+          return s.isFragment && s.isActive;
+        });
+      },
+      set: function(s) {
+        var has, i, len, ref, shader;
+        ref = this.children;
+        for (i = 0, len = ref.length; i < len; i++) {
+          shader = ref[i];
+          if (!(s - shader)) {
+            if (has = true) {
+              break;
+            }
+          }
+        }
+        if (!has) {
+          this.add(s);
+        }
+        return s.isActive = true;
+      }
+    }
+  });
+
+  return GLProgram;
+
+}).call(this);
+
+export var GLShader = (function() {
+  class GLShader extends Pointer {
+    upload() {
+      if (this.isUploaded) {
+        return this;
+      }
+      this.gl.shaderSource(this.shader, this.source);
+      this.isUploaded = 1;
+      return this;
+    }
+
+    compile() {
+      if (this.isCompiled) {
+        return this;
+      }
+      this.gl.compileShader(this.shader);
+      this.isCompiled = 1;
+      return this;
+    }
+
+    attach() {
+      if (this.isAttached) {
+        return this;
+      }
+      this.gl.attachShader(this.program, this.shader);
+      this.isAttached = 1;
+      return this;
+    }
+
+  };
+
+  GLShader.byteLength = 1e5;
+
+  GLShader.prototype.encoder = new TextEncoder;
+
+  GLShader.prototype.decoder = new TextDecoder;
+
+  GLShader.prototype.VERTEX_SHADER = WebGL2RenderingContext.VERTEX_SHADER;
+
+  GLShader.prototype.FRAGMENT_SHADER = WebGL2RenderingContext.FRAGMENT_SHADER;
+
+  Object.defineProperties(GLShader.prototype, {
+    gl: {
+      get: function() {
+        return this.parent.gl;
+      }
+    },
+    shader: {
+      get: function() {
+        return this.glShader != null ? this.glShader : this.glShader = this.gl.createShader(this.shaderType);
+      }
+    },
+    program: {
+      get: function() {
+        return this.parent.program;
+      }
+    },
+    isVertex: {
+      get: function() {
+        return /gl_Pos/.test(this.source) && this.VERTEX_SHADER || false;
+      }
+    },
+    isFragment: {
+      get: function() {
+        return /gl_Fra/.test(this.source) && this.FRAGMENT_SHADER || false;
+      }
+    },
+    source: {
+      get: function() {
+        var tarray;
+        if (!(length = this.charLength)) {
+          return "";
+        }
+        tarray = this.subUint8(OFFSET_SHADER_SOURCE, this.charLength);
+        return this.decoder.decode(tarray.slice(0));
+      },
+      set: function(source) {
+        var tarray;
+        if (!(source instanceof Uint8Array)) {
+          source = this.encoder.encode(arguments[0]);
+        }
+        tarray = this.subUint8(OFFSET_SHADER_SOURCE, LENGTH_SHADER_SOURCE);
+        tarray.fill(0);
+        tarray.set(source);
+        this.charLength = source.byteLength;
+        return this.shaderType = this.isVertex || this.isFragment;
+      }
+    },
+    charLength: {
+      get: function() {
+        return this.getUint32(OFFSET_SOURCE_LENGTH);
+      },
+      set: function() {
+        return this.setUint32(OFFSET_SOURCE_LENGTH, arguments[0]);
+      }
+    },
+    isUploaded: {
+      get: function() {
+        return this.getUint32(OFFSET_UPLOADED_STAT);
+      },
+      set: function() {
+        if (this.setUint32(OFFSET_UPLOADED_STAT, arguments[0])) {
+          return this.upload();
+        }
+      }
+    },
+    isCompiled: {
+      get: function() {
+        return this.getUint32(OFFSET_COMPILED_STAT);
+      },
+      set: function() {
+        if (this.setUint32(OFFSET_COMPILED_STAT, arguments[0])) {
+          return this.compile();
+        }
+      }
+    },
+    isAttached: {
+      get: function() {
+        return this.getUint32(OFFSET_ATTACHED_STAT);
+      },
+      set: function() {
+        if (this.setUint32(OFFSET_ATTACHED_STAT, arguments[0])) {
+          return this.attach();
+        }
+      }
+    },
+    shaderType: {
+      get: function() {
+        return keyOf(this.getUint32(OFFSET_SHADER_GLTYPE));
+      },
+      set: function() {
+        return this.setUint32(OFFSET_SHADER_GLTYPE, arguments[0]);
+      }
+    },
+    isActive: {
+      get: function() {
+        return this.getUint32(OFFSET_SHADER_ACTIVE);
+      },
+      set: function() {
+        if (this.setUint32(OFFSET_SHADER_ACTIVE, arguments[0])) {
+          return this.upload().compile().attach();
+        }
+      }
+    }
+  });
+
+  return GLShader;
 
 }).call(this);
 

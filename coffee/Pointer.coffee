@@ -36,6 +36,7 @@ POINTER_LENGTH               = 16
 POINTER_BYTELENGTH           =  4 * POINTER_LENGTH
 
 PTR_PROTOTYPE = [ null ]
+OBJECTS_ARRAY = {}
 
 TypedArraysIds =
     [ Float32Array ] : 1
@@ -60,7 +61,7 @@ for val, i in vals
     cls = eval("(class #{key} extends Number {})")
     vars[ val ] = new cls(val)
 
-keyOf = ( val ) ->
+self.keyOf = ( val ) ->
     vars[ val ] or val
 
 getCaller = ( val ) ->
@@ -129,11 +130,19 @@ export class Pointer extends Number
             configurable: yes
             get     : ->
                 if  ptr = DATAVIEW.getUint32 this + OFFSET_PTR_PARENT, LE
-                    classId = ptr + OFFSET_PTR_CLASSID
-                    ptrClassId = DATAVIEW.getUint32 classId, LE
-                    return new PTR_PROTOTYPE[ ptrClassId ]( ptr ) 
+                    return Ptr if Ptr = OBJECTS_ARRAY[ ptr * 1 ]
+                    
+                    classIdPtr = ptr + OFFSET_PTR_CLASSID
+                    ptrClassId = DATAVIEW.getUint32 classIdPtr , LE
+                    return Ptr = new PTR_PROTOTYPE[ ptrClassId ]( ptr ) 
 
             set     : ( ptr ) ->
+                [ p0, p1 ] =
+                    [ this * 1, ptr * 1 ]
+
+                OBJECTS_ARRAY[ p0 ] = this unless OBJECTS_ARRAY[ p0 ]
+                OBJECTS_ARRAY[ p1 ] = ptr unless OBJECTS_ARRAY[ p1 ]
+
                 if !ptr then return DATAVIEW.setUint32(
                     this + OFFSET_PTR_PARENT, 0, LE
                 )
@@ -228,7 +237,7 @@ export class Pointer extends Number
         DATAVIEW.getUint8 @byteOffset + byteOffset
 
     setUint8        : ( byteOffset, value ) ->
-        DATAVIEW.setUint8 @byteOffset + byteOffset, value
+        DATAVIEW.setUint8 @byteOffset + byteOffset, value ; value
 
     subUint8        : ( byteOffset, length ) ->
         new Uint8Array @buffer, @byteOffset + byteOffset, length
@@ -237,7 +246,7 @@ export class Pointer extends Number
         DATAVIEW.getInt32 @byteOffset + byteOffset, LE
 
     setInt32        : ( byteOffset, value ) ->
-        DATAVIEW.setInt32 @byteOffset + byteOffset, value, LE
+        DATAVIEW.setInt32 @byteOffset + byteOffset, value, LE ; value
 
     subInt32        : ( byteOffset, length ) ->
         new Int32Array @buffer, @byteOffset + byteOffset, length
@@ -249,7 +258,7 @@ export class Pointer extends Number
         keyOf DATAVIEW.getUint32 @byteOffset + byteOffset, LE
 
     setUint32       : ( byteOffset, value ) ->
-        DATAVIEW.setUint32 @byteOffset + byteOffset, value, LE
+        DATAVIEW.setUint32 @byteOffset + byteOffset, value, LE ; value
 
     subUint32       : ( byteOffset, length ) ->
         new Uint32Array @buffer, @byteOffset + byteOffset, length
@@ -258,7 +267,7 @@ export class Pointer extends Number
         DATAVIEW.getFloat32 @byteOffset + byteOffset, LE
 
     setFloat32      : ( byteOffset, value ) ->
-        DATAVIEW.setFloat32 @byteOffset + byteOffset, value, LE
+        DATAVIEW.setFloat32 @byteOffset + byteOffset, value, LE ; value
 
     subFloat32      : ( byteOffset, length ) ->
         new Float32Array @buffer, @byteOffset + byteOffset, length

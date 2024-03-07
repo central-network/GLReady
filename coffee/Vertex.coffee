@@ -107,6 +107,30 @@ export class DrawBuffer extends Pointer
 
     Object.defineProperties this::,
 
+        #? total allocated bytes in one big draw buffer
+        allocLength :
+            get     : -> DATAVIEW.getUint32 this + OFFSET_OBJECT_3, LE
+            set     : -> DATAVIEW.setUint32 this + OFFSET_OBJECT_3, arguments[ 0 ], LE
+
+    malloc : ( modeBufferPtr ) ->
+        ptr.attribBegin = @attribCount
+        ptr.allocOffset = @allocLength
+        allocByteLength = ptr.byteLength
+        ptr.attribCount = allocByteLength / @BYTES_PER_ATTRIBUTE
+
+        ptr.typedOffset = ptr.allocOffset / @BYTES_PER_ATTRIBUTE
+        ptr.typedLength = allocByteLength / @BYTES_PER_ELEMENT
+
+        @allocLength   += allocByteLength
+        @attribCount   += ptr.attribCount
+
+        ptr
+
+
+export class ModeBuffer extends Pointer
+
+    Object.defineProperties this::,
+
         #? one big buffer's start point 
         #* TRIANGLES | POINTS | LINES
         drawMode    :
@@ -130,10 +154,12 @@ export class DrawBuffer extends Pointer
             get     : -> DATAVIEW.getUint32 this + OFFSET_OBJECT_2, LE
             set     : -> DATAVIEW.setUint32 this + OFFSET_OBJECT_2, arguments[ 0 ], LE
 
-        #? total allocated bytes in one big draw buffer
+        #? total allocated bytes in mode buffer
         allocLength :
             get     : -> DATAVIEW.getUint32 this + OFFSET_OBJECT_3, LE
             set     : -> DATAVIEW.setUint32 this + OFFSET_OBJECT_3, arguments[ 0 ], LE
+
+
 
     malloc : ( ptr ) ->
         ptr.attribBegin = @attribCount
@@ -148,6 +174,8 @@ export class DrawBuffer extends Pointer
         @attribCount   += ptr.attribCount
 
         ptr
+
+
 
 export class Attributes extends Pointer
 
@@ -207,7 +235,7 @@ export class Vertices extends Pointer
             set     : -> DATAVIEW.setUint32 this + OFFSET_OBJECT_2, arguments[ 0 ], LE
 
         drawMode    :
-            get     : -> DATAVIEW.getUint32 this + OFFSET_OBJECT_3, LE
+            get     : -> keyOf DATAVIEW.getUint32 this + OFFSET_OBJECT_3, LE
             set     : -> DATAVIEW.setUint32 this + OFFSET_OBJECT_3, arguments[ 0 ], LE
 
         rotation    :

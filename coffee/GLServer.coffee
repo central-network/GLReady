@@ -28,6 +28,15 @@ OFFSET_CULL_ENABLED     = 4 * 21
 OFFSET_CULL_FACE        = 4 * 22
 OFFSET_FRONT_FACE       = 4 * 23
 
+OFFSET_SHADER_ACTIVE    = 4 * 3
+OFFSET_SHADER_GLTYPE    = 4 * 4
+OFFSET_UPLOADED_STAT    = 4 * 5
+OFFSET_COMPILED_STAT    = 4 * 6
+OFFSET_ATTACHED_STAT    = 4 * 7
+OFFSET_SOURCE_LENGTH    = 4 * 8
+OFFSET_SHADER_SOURCE    = 4 * 9
+LENGTH_SHADER_SOURCE    = 1e5 - OFFSET_SHADER_SOURCE
+
 export length       = 1 * 30
 export byteLength   = 4 * length
 
@@ -42,6 +51,123 @@ export class GLClient   extends Pointer
 
     Object.defineProperties this::,
         moving      : get     : -> @getInt32 OFFSET_MOVING 
+
+
+export class GLProgram  extends Pointer
+
+    @byteLength     : 48
+
+    Object.defineProperties this::,
+
+        gl              : get : -> @parent.gl
+
+        program         : get : -> @glProgram ?= @gl.createProgram()
+
+        shaders         : get : -> @children.filter (v) -> v instanceof GLShader
+
+        vertexShader    :
+            get : -> @shaders.find (s) -> s.isVertex and s.isActive
+            set : ( s ) ->
+                for shader in @children 
+                    break if has = yes unless s - shader
+                unless has then @add s
+                s.isActive = yes
+
+        fragmentShader  :
+            get : -> @shaders.find (s) -> s.isFragment and s.isActive
+            set : ( s ) ->
+                for shader in @children 
+                    break if has = yes unless s - shader
+                unless has then @add s
+                s.isActive = yes
+
+export class GLShader   extends Pointer
+
+    @byteLength     : 1e5
+
+    encoder         : new TextEncoder
+
+    decoder         : new TextDecoder
+
+    VERTEX_SHADER   : WebGL2RenderingContext.VERTEX_SHADER
+
+    FRAGMENT_SHADER : WebGL2RenderingContext.FRAGMENT_SHADER
+
+    Object.defineProperties this::,
+
+        gl              : get : -> @parent.gl
+
+        shader          : get : -> @glShader ?= @gl.createShader @shaderType
+
+        program         : get : -> @parent.program
+
+        isVertex        : get : -> /gl_Pos/.test( @source ) and @VERTEX_SHADER or no
+
+        isFragment      : get : -> /gl_Fra/.test( @source ) and @FRAGMENT_SHADER or no
+
+        source          :
+            get         : ->
+                unless length = @charLength
+                    return ""
+                
+                tarray = @subUint8 OFFSET_SHADER_SOURCE, @charLength
+
+                @decoder.decode tarray.slice 0
+                
+            set         : ( source ) ->
+                unless source instanceof Uint8Array
+                    source = @encoder.encode arguments[0] 
+
+                tarray = @subUint8 OFFSET_SHADER_SOURCE, LENGTH_SHADER_SOURCE
+                tarray.fill 0
+                tarray.set source
+
+                @charLength = source.byteLength
+                @shaderType = @isVertex || @isFragment
+
+        charLength      :
+            get         : -> @getUint32 OFFSET_SOURCE_LENGTH
+            set         : -> @setUint32 OFFSET_SOURCE_LENGTH, arguments[0]
+
+        isUploaded      :
+            get         : -> @getUint32 OFFSET_UPLOADED_STAT
+            set         : ->
+                @upload() if @setUint32 OFFSET_UPLOADED_STAT, arguments[0]
+
+        isCompiled      :
+            get         : -> @getUint32 OFFSET_COMPILED_STAT
+            set         : ->
+                @compile() if @setUint32 OFFSET_COMPILED_STAT, arguments[0]
+
+        isAttached      :
+            get         : -> @getUint32 OFFSET_ATTACHED_STAT
+            set         : ->
+                @attach() if @setUint32 OFFSET_ATTACHED_STAT, arguments[0]
+
+        shaderType      :
+            get         : -> keyOf @getUint32 OFFSET_SHADER_GLTYPE
+            set         : -> @setUint32 OFFSET_SHADER_GLTYPE, arguments[0]
+
+        isActive        :
+            get         : -> @getUint32 OFFSET_SHADER_ACTIVE
+            set         : ->
+                if  @setUint32 OFFSET_SHADER_ACTIVE, arguments[0]
+                    @upload().compile().attach()
+
+    upload : ->
+        return this if @isUploaded
+        @gl.shaderSource @shader, @source
+        @isUploaded = 1 ; this
+
+    compile : ->
+        return this if @isCompiled
+        @gl.compileShader @shader
+        @isCompiled = 1 ; this
+
+    attach : ->
+        return this if @isAttached
+        @gl.attachShader @program, @shader
+        @isAttached = 1 ; this
 
 export class GLServer   extends Pointer
 
