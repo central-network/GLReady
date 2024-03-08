@@ -37,6 +37,7 @@ POINTER_BYTELENGTH           =  4 * POINTER_LENGTH
 
 PTR_PROTOTYPE = [ null ]
 OBJECTS_ARRAY = {}
+OBJECTS = []
 
 TypedArraysIds =
     [ Float32Array ] : 1
@@ -87,7 +88,7 @@ export class Pointer extends Number
 
     constructor     : ( offset = -1 ) ->
         if  0 > super offset then return new @constructor(
-            mallocAtomic @constructor.byteLength
+            mallocAtomic @constructor.byteLength, @constructor
         )
 
         @init()
@@ -95,7 +96,7 @@ export class Pointer extends Number
     @maybePointer  : ( offset, pointer = this ) ->
         unless ptr = DATAVIEW.getUint32 pointer + offset
             DATAVIEW.setUint32 pointer + offset, ptr =
-                mallocAtomic this.byteLength
+                mallocAtomic this.byteLength, pointer
                 
         new this ptr
 
@@ -198,7 +199,7 @@ export class Pointer extends Number
         grow        :
             value   : ( byteLength ) ->
                 [ begin, end, @byteLength, @byteOffset ] =
-                    [ @begin, @end, byteLength, mallocAtomic byteLength ]
+                    [ @begin, @end, byteLength, mallocAtomic byteLength, @constructor ]
             
                 @reloadPointer()
                     .copyBytesFrom begin, end
@@ -229,6 +230,7 @@ export class Pointer extends Number
         @begin      = @byteOffset / @BYTES_PER_ELEMENT
 
         @end        = @begin + @length ; @
+
 
     copyBytesFrom   : ( begin, end ) ->
         U32ARRAY.copyWithin @begin, begin, end ; @
@@ -272,13 +274,52 @@ export class Pointer extends Number
     subFloat32      : ( byteOffset, length ) ->
         new Float32Array @buffer, @byteOffset + byteOffset, length
 
+    setObject       : ( byteOffset, object ) ->
+        DATAVIEW.setObject @byteOffset + byteOffset, object
+
+    getObject       : ( byteOffset ) ->
+        DATAVIEW.getObject @byteOffset + byteOffset
+
+    getHeader       : ( byteOffset, isObject ) ->
+        value = DATAVIEW.getUint32 this + byteOffset, LE
+        return value unless isObject ; OBJECTS[ value ]
+
+    keyHeader       : ( byteOffset ) ->
+        keyOf DATAVIEW.getUint32 this + byteOffset, LE
+
+    setHeader       : ( byteOffset, value, isObject ) ->
+        value = -1 + OBJECTS.push value if isObject
+        DATAVIEW.setUint32 this + byteOffset, value, LE ; value
+
     erase           : ( byteOffset, byteLength ) ->
         @subUint8( byteOffset, byteLength ).fill( 0 ) ; @
 
     subarray        : -> @array.subarray( ...arguments )
     fill            : -> @array    .fill( ...arguments ); @
+    map             : -> @array     .map( ...arguments )
     at              : -> @array      .at( ...arguments )
     set             : -> @array.set( [ ...arguments ].flat() ); @
+
+
+Object.defineProperties DataView::,
+    setObject : value : ( byteOffset, object, littleEndian = LE ) ->
+        @setUint32 byteOffset, i = OBJECTS.length+1, littleEndian
+        OBJECTS[ i ] = object
+
+    getObject : value : ( byteOffset, littleEndian = LE ) ->
+        return unless i = @getUint32 byteOffset, littleEndian
+        OBJECTS[ i ]
+
+export class ObjectPointer extends Number
+
+    @array : []
+    @count : 0
+
+    @of         : ( i ) -> @array[ i ]
+
+    constructor : ( object, index = ++ObjectPointer.count ) ->
+        ObjectPointer.array[ super index ] = object
+
 
 export class IndexPointer extends Pointer
 

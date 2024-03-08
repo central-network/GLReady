@@ -1,4 +1,4 @@
-var GL_VARIABLE_LENGTH, LENGTH_CLEAR_COLOR, LENGTH_SHADER_SOURCE, OFFSET_ATTACHED_STAT, OFFSET_BIND_TARGET, OFFSET_BLEND_ENABLED, OFFSET_BLEND_EQUATION, OFFSET_BLEND_FUNC_DST, OFFSET_BLEND_FUNC_SRC, OFFSET_CLEAR_COLOR, OFFSET_CLEAR_DEPTH, OFFSET_CLEAR_MASK, OFFSET_COMPILED_STAT, OFFSET_CULL_ENABLED, OFFSET_CULL_FACE, OFFSET_DEPTH_ENABLED, OFFSET_DEPTH_FUNCTION, OFFSET_DEPTH_MASK, OFFSET_FRAME, OFFSET_FRONT_FACE, OFFSET_POINT_SIZE, OFFSET_PROGRAM_ACTIVE, OFFSET_PROGRAM_INUSE, OFFSET_PROGRAM_LINKED, OFFSET_RENDERING, OFFSET_SHADER_ACTIVE, OFFSET_SHADER_GLTYPE, OFFSET_SHADER_SOURCE, OFFSET_SOURCE_LENGTH, OFFSET_UPLOADED_STAT;
+var LENGTH_CLEAR_COLOR, LENGTH_SHADER_SOURCE, OFFSET_ATTACHED_STAT, OFFSET_BIND_TARGET, OFFSET_BLEND_ENABLED, OFFSET_BLEND_EQUATION, OFFSET_BLEND_FUNC_DST, OFFSET_BLEND_FUNC_SRC, OFFSET_CLEAR_COLOR, OFFSET_CLEAR_DEPTH, OFFSET_CLEAR_MASK, OFFSET_COMPILED_STAT, OFFSET_CULL_ENABLED, OFFSET_CULL_FACE, OFFSET_DEPTH_ENABLED, OFFSET_DEPTH_FUNCTION, OFFSET_DEPTH_MASK, OFFSET_FRAME, OFFSET_FRONT_FACE, OFFSET_POINT_SIZE, OFFSET_PROGRAM_ACTIVE, OFFSET_PROGRAM_INUSE, OFFSET_PROGRAM_LINKED, OFFSET_RENDERING, OFFSET_SHADER_ACTIVE, OFFSET_SHADER_GLTYPE, OFFSET_SHADER_SOURCE, OFFSET_SOURCE_LENGTH, OFFSET_UPLOADED_STAT;
 
 import {
   CameraServer
@@ -15,6 +15,19 @@ import {
 import Pointer from "./Pointer.js";
 
 import Matrix4 from "./Matrix4.js";
+
+import {
+  LE,
+  DATAVIEW,
+  OFFSET_OBJECT_0,
+  OFFSET_OBJECT_1,
+  OFFSET_OBJECT_2,
+  OFFSET_OBJECT_3,
+  OFFSET_OBJECT_4,
+  OFFSET_OBJECT_5,
+  OFFSET_OBJECT_6,
+  ObjectPointer
+} from "./Pointer.js";
 
 OFFSET_RENDERING = 4 * 0;
 
@@ -87,25 +100,163 @@ export var Color = (function() {
 
 }).call(this);
 
-export var GLClient = (function() {
-  class GLClient extends Pointer {
-    constructor(ptr) {
-      super(ptr);
+export var GLVariable = (function() {
+  var ATTRIBUTE, FLOAT, UNIFORM, float, mat4, vec3, vec4;
+
+  class GLVariable extends Pointer {};
+
+  GLVariable.byteLength = 24;
+
+  GLVariable.TypedArray = Uint8Array;
+
+  GLVariable.prototype.ATTRIBUTE = new (ATTRIBUTE = class ATTRIBUTE extends Number {})(1);
+
+  GLVariable.prototype.UNIFORM = new (UNIFORM = class UNIFORM extends Number {})(2);
+
+  GLVariable.prototype.FLOAT = new (FLOAT = class FLOAT extends Number {})(5126);
+
+  Object.defineProperties(GLVariable, {
+    valueType: {
+      value: GLVariable.prototype.FLOAT
+    },
+    vec3: {
+      value: vec3 = (function() {
+        class vec3 extends GLVariable {};
+
+        vec3.itemLength = 3;
+
+        return vec3;
+
+      }).call(this)
+    },
+    vec4: {
+      value: vec4 = (function() {
+        class vec4 extends GLVariable {};
+
+        vec4.itemLength = 4;
+
+        return vec4;
+
+      }).call(this)
+    },
+    mat4: {
+      value: mat4 = (function() {
+        class mat4 extends GLVariable {};
+
+        mat4.itemLength = 16;
+
+        return mat4;
+
+      }).call(this)
+    },
+    float: {
+      value: float = (function() {
+        class float extends GLVariable {};
+
+        float.itemLength = 1;
+
+        return float;
+
+      }).call(this)
     }
+  });
 
-  };
-
-  GLClient.byteLength = byteLength;
-
-  Object.defineProperties(GLClient.prototype, {
-    moving: {
+  Object.defineProperties(GLVariable.prototype, {
+    name: {
       get: function() {
-        return this.getInt32(OFFSET_MOVING);
+        var code, j, key, len, ref;
+        key = "";
+        ref = this.array.slice(0, this.nameLength);
+        for (j = 0, len = ref.length; j < len; j++) {
+          code = ref[j];
+          key += String.fromCharCode(code);
+        }
+        return key;
+      },
+      set: function() {
+        var char, i, j, len, ref, results;
+        this.fill(0, this.nameLength = arguments[0].length);
+        ref = arguments[0];
+        results = [];
+        for (i = j = 0, len = ref.length; j < len; i = ++j) {
+          char = ref[i];
+          results.push(this.setUint8(i, char.charCodeAt(0)));
+        }
+        return results;
+      }
+    },
+    type: {
+      get: function() {
+        if (!(this.location instanceof Number)) {
+          return this.ATTRIBUTE;
+        }
+        return this.UNIFORM;
+      }
+    },
+    shader: {
+      get: function() {
+        return this.parent;
+      }
+    },
+    nameLength: {
+      get: function() {
+        return this.getHeader(OFFSET_OBJECT_0);
+      },
+      set: function() {
+        return this.setHeader(OFFSET_OBJECT_0, arguments[0]);
+      }
+    },
+    location: {
+      get: function() {
+        return this.getHeader(OFFSET_OBJECT_1, true);
+      },
+      set: function() {
+        return this.setHeader(OFFSET_OBJECT_1, arguments[0], true);
+      }
+    },
+    itemLength: {
+      get: function() {
+        return this.getHeader(OFFSET_OBJECT_2);
+      },
+      set: function() {
+        return this.setHeader(OFFSET_OBJECT_2, arguments[0]);
+      }
+    },
+    valueType: {
+      get: function() {
+        return this.keyHeader(OFFSET_OBJECT_3);
+      },
+      set: function() {
+        return this.setHeader(OFFSET_OBJECT_3, arguments[0]);
+      }
+    },
+    normalize: {
+      get: function() {
+        return this.getHeader(OFFSET_OBJECT_4);
+      },
+      set: function() {
+        return this.setHeader(OFFSET_OBJECT_4, arguments[0]);
+      }
+    },
+    stride: {
+      get: function() {
+        return this.getHeader(OFFSET_OBJECT_5);
+      },
+      set: function() {
+        return this.setHeader(OFFSET_OBJECT_5, arguments[0]);
+      }
+    },
+    offset: {
+      get: function() {
+        return this.getHeader(OFFSET_OBJECT_6);
+      },
+      set: function() {
+        return this.setHeader(OFFSET_OBJECT_6, arguments[0]);
       }
     }
   });
 
-  return GLClient;
+  return GLVariable;
 
 }).call(this);
 
@@ -229,6 +380,11 @@ export var GLProgram = (function() {
           return this.link().use();
         }
       }
+    },
+    variables: {
+      get: function() {
+        return this.shaders.map(GLShader.parse).flat();
+      }
     }
   });
 
@@ -238,80 +394,8 @@ export var GLProgram = (function() {
 
 export var GLBuffer = class GLBuffer extends Pointer {};
 
-GL_VARIABLE_LENGTH = {
-  vec2: 2,
-  vec3: 3,
-  vec4: 4,
-  mat2: 4,
-  mat3: 9,
-  mat4: 16,
-  float: 1,
-  int: 1
-};
-
 export var GLShader = (function() {
   class GLShader extends Pointer {
-    parseAttributes(source = this.source) {
-      var GL_FLOAT, _attributes, j, len, p, ref;
-      GL_FLOAT = WebGL2RenderingContext.FLOAT;
-      _attributes = {
-        keys: [],
-        types: [],
-        lengths: [],
-        length: 0,
-        byteLengths: [],
-        byteLength: 0,
-        pointers: [],
-        locations: [],
-        offsets: []
-      };
-      _attributes.locate = function() {};
-      _attributes.bind = function() {};
-      source.split(/\attribute/g).slice(1).map((l) => {
-        var key, location, offset, type;
-        [type, key] = l.split(/\;/g).at(0).split(/\s+/g).slice(1);
-        (length = GL_VARIABLE_LENGTH[type]);
-        (location = _attributes.locations.length);
-        (offset = _attributes.byteLength);
-        _attributes.types.push(type);
-        _attributes.keys.push(key);
-        _attributes.lengths.push(length);
-        _attributes.locations.push(location);
-        _attributes.byteLengths.push(length * 4);
-        _attributes.offsets.push(offset);
-        _attributes.pointers.push([location, length, GL_FLOAT, false, -1, offset]);
-        _attributes.length += length;
-        return _attributes.byteLength += length * 4;
-      });
-      ref = _attributes.pointers;
-      for (j = 0, len = ref.length; j < len; j++) {
-        p = ref[j];
-        p[4] = _attributes.byteLength;
-      }
-      _attributes.locate = function() {
-        var i, k, len1, location, ref1, results;
-        ref1 = _attributes.locations;
-        results = [];
-        for (i = k = 0, len1 = ref1.length; k < len1; i = ++k) {
-          location = ref1[i];
-          results.push(this.gl.bindAttribLocation(this.glProgram, location, _attributes.keys[i]));
-        }
-        return results;
-      };
-      _attributes.bind = function() {
-        var k, len1, location, normalized, offset, ref1, results, stride, type;
-        ref1 = _attributes.pointers;
-        results = [];
-        for (k = 0, len1 = ref1.length; k < len1; k++) {
-          [location, length, type, normalized, stride, offset] = ref1[k];
-          this.gl.vertexAttribPointer(location, length, type, normalized, stride, offset);
-          results.push(this.gl.enableVertexAttribArray(location));
-        }
-        return results;
-      };
-      return _attributes;
-    }
-
     upload() {
       if (this.isUploaded) {
         return this;
@@ -337,6 +421,41 @@ export var GLShader = (function() {
       this.gl.attachShader(this.glProgram, this.glShader);
       this.isAttached = 1;
       return this;
+    }
+
+    static parse() {
+      var gl, glProgram, j, key, keys, len, offset, shader, source;
+      [shader] = arguments;
+      [keys, offset] = [[], 0];
+      ({source, gl, glProgram} = shader);
+      source.split(/attribute/g).slice(1).map((line) => {
+        var key, kind, name, type;
+        [kind, type, name] = line.split(/\;/g)[0].split(/\s+/g);
+        keys.push(key = new GLVariable[type]);
+        key.name = name;
+        key.location = gl.getAttribLocation(glProgram, name);
+        key.itemLength = key.constructor.itemLength;
+        key.valueType = key.FLOAT;
+        key.normalize = false;
+        key.offset = offset;
+        key.parent = shader;
+        return offset += key.itemLength * 4;
+      });
+      for (j = 0, len = keys.length; j < len; j++) {
+        key = keys[j];
+        key.stride = offset;
+      }
+      source.split(/uniform/g).slice(1).map((line) => {
+        var kind, name, type;
+        [kind, type, name] = line.split(/\;/g)[0].split(/\s+/g);
+        keys.push(key = new GLVariable[type]);
+        key.name = name;
+        key.location = gl.getUniformLocation(glProgram, name);
+        key.itemLength = key.constructor.itemLength;
+        key.valueType = key.constructor.valueType;
+        return key.parent = shader;
+      });
+      return keys;
     }
 
   };
@@ -461,6 +580,11 @@ export var GLShader = (function() {
         if (this.setUint32(OFFSET_SHADER_ACTIVE, arguments[0])) {
           return this.upload().compile().attach();
         }
+      }
+    },
+    variables: {
+      get: function() {
+        return GLShader.parse(this);
       }
     }
   });

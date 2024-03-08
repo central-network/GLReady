@@ -1,4 +1,4 @@
-var INDEX_BEGIN, INDEX_BYTEFINISH, INDEX_BYTELENGTH, INDEX_BYTEOFFSET, INDEX_BYTES_PER_ELEMENT, INDEX_END, INDEX_LENGTH, INDEX_PTR_CLASS_ID, INDEX_PTR_PARENT, INDEX_TYPED_ARRAY_ID, OBJECTS_ARRAY, OFFSET_BEGIN, OFFSET_BYTEFINISH, OFFSET_BYTELENGTH, OFFSET_BYTEOFFSET, OFFSET_END, OFFSET_LENGTH, OFFSET_PTR_CLASSID, OFFSET_PTR_PARENT, POINTERS_BEGIN, POINTER_BYTELENGTH, POINTER_LENGTH, PTR_PROTOTYPE, TypedArraysIds, cls, getCaller, i, j, key, keys, len, val, vals, vars;
+var INDEX_BEGIN, INDEX_BYTEFINISH, INDEX_BYTELENGTH, INDEX_BYTEOFFSET, INDEX_BYTES_PER_ELEMENT, INDEX_END, INDEX_LENGTH, INDEX_PTR_CLASS_ID, INDEX_PTR_PARENT, INDEX_TYPED_ARRAY_ID, OBJECTS, OBJECTS_ARRAY, OFFSET_BEGIN, OFFSET_BYTEFINISH, OFFSET_BYTELENGTH, OFFSET_BYTEOFFSET, OFFSET_END, OFFSET_LENGTH, OFFSET_PTR_CLASSID, OFFSET_PTR_PARENT, POINTERS_BEGIN, POINTER_BYTELENGTH, POINTER_LENGTH, PTR_PROTOTYPE, TypedArraysIds, cls, getCaller, i, j, key, keys, len, val, vals, vars;
 
 export var BUFFER = null;
 
@@ -65,6 +65,8 @@ POINTER_BYTELENGTH = 4 * POINTER_LENGTH;
 PTR_PROTOTYPE = [null];
 
 OBJECTS_ARRAY = {};
+
+OBJECTS = [];
 
 TypedArraysIds = {
   [Float32Array]: 1,
@@ -136,7 +138,7 @@ export var Pointer = (function() {
 
     constructor(offset = -1) {
       if (0 > super(offset)) {
-        return new this.constructor(mallocAtomic(this.constructor.byteLength));
+        return new this.constructor(mallocAtomic(this.constructor.byteLength, this.constructor));
       }
       this.init();
     }
@@ -144,7 +146,7 @@ export var Pointer = (function() {
     static maybePointer(offset, pointer = this) {
       var ptr;
       if (!(ptr = DATAVIEW.getUint32(pointer + offset))) {
-        DATAVIEW.setUint32(pointer + offset, ptr = mallocAtomic(this.byteLength));
+        DATAVIEW.setUint32(pointer + offset, ptr = mallocAtomic(this.byteLength, pointer));
       }
       return new this(ptr);
     }
@@ -222,6 +224,35 @@ export var Pointer = (function() {
       return new Float32Array(this.buffer, this.byteOffset + byteOffset, length);
     }
 
+    setObject(byteOffset, object) {
+      return DATAVIEW.setObject(this.byteOffset + byteOffset, object);
+    }
+
+    getObject(byteOffset) {
+      return DATAVIEW.getObject(this.byteOffset + byteOffset);
+    }
+
+    getHeader(byteOffset, isObject) {
+      var value;
+      value = DATAVIEW.getUint32(this + byteOffset, LE);
+      if (!isObject) {
+        return value;
+      }
+      return OBJECTS[value];
+    }
+
+    keyHeader(byteOffset) {
+      return keyOf(DATAVIEW.getUint32(this + byteOffset, LE));
+    }
+
+    setHeader(byteOffset, value, isObject) {
+      if (isObject) {
+        value = -1 + OBJECTS.push(value);
+      }
+      DATAVIEW.setUint32(this + byteOffset, value, LE);
+      return value;
+    }
+
     erase(byteOffset, byteLength) {
       this.subUint8(byteOffset, byteLength).fill(0);
       return this;
@@ -234,6 +265,10 @@ export var Pointer = (function() {
     fill() {
       this.array.fill(...arguments);
       return this;
+    }
+
+    map() {
+      return this.array.map(...arguments);
     }
 
     at() {
@@ -397,7 +432,7 @@ export var Pointer = (function() {
     grow: {
       value: function(byteLength) {
         var begin, end;
-        [begin, end, this.byteLength, this.byteOffset] = [this.begin, this.end, byteLength, mallocAtomic(byteLength)];
+        [begin, end, this.byteLength, this.byteOffset] = [this.begin, this.end, byteLength, mallocAtomic(byteLength, this.constructor)];
         return this.reloadPointer().copyBytesFrom(begin, end);
       }
     },
@@ -442,6 +477,43 @@ export var Pointer = (function() {
   });
 
   return Pointer;
+
+}).call(this);
+
+Object.defineProperties(DataView.prototype, {
+  setObject: {
+    value: function(byteOffset, object, littleEndian = LE) {
+      this.setUint32(byteOffset, i = OBJECTS.length + 1, littleEndian);
+      return OBJECTS[i] = object;
+    }
+  },
+  getObject: {
+    value: function(byteOffset, littleEndian = LE) {
+      if (!(i = this.getUint32(byteOffset, littleEndian))) {
+        return;
+      }
+      return OBJECTS[i];
+    }
+  }
+});
+
+export var ObjectPointer = (function() {
+  class ObjectPointer extends Number {
+    static of(i) {
+      return this.array[i];
+    }
+
+    constructor(object, index = ++ObjectPointer.count) {
+      ObjectPointer.array[super(index)] = object;
+    }
+
+  };
+
+  ObjectPointer.array = [];
+
+  ObjectPointer.count = 0;
+
+  return ObjectPointer;
 
 }).call(this);
 

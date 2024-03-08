@@ -5,6 +5,20 @@ import { ScreenServer } from "./ScreenServer.js"
 import Pointer from "./Pointer.coffee"
 import Matrix4 from "./Matrix4.coffee"
 
+import {
+    LE,
+    DATAVIEW,
+    OFFSET_OBJECT_0,
+    OFFSET_OBJECT_1,
+    OFFSET_OBJECT_2,
+    OFFSET_OBJECT_3,
+    OFFSET_OBJECT_4,
+    OFFSET_OBJECT_5,
+    OFFSET_OBJECT_6,
+    ObjectPointer
+} from "./Pointer.coffee"
+
+
 OFFSET_RENDERING        = 4 * 0
 OFFSET_FRAME            = 4 * 1
 LENGTH_CLEAR_COLOR      = 4 * 4
@@ -48,23 +62,94 @@ export byteLength   = 4 * length
 export class Color      extends Pointer
     @byteLength : 16
 
-export class GLClient   extends Pointer
+export class GLVariable extends Pointer
 
-    @byteLength : byteLength
+    @byteLength = 24
 
-    constructor : ( ptr ) -> super ptr 
+    @TypedArray = Uint8Array
+
+    ATTRIBUTE   : new (class ATTRIBUTE extends Number) 1
+
+    UNIFORM     : new (class UNIFORM extends Number) 2
+    
+    FLOAT       : new (class FLOAT extends Number) 5126
+
+    Object.defineProperties this,
+
+        valueType       : value : @prototype.FLOAT
+
+        vec3            : value : class vec3  extends this
+            @itemLength : 3
+
+        vec4            : value : class vec4  extends this
+            @itemLength : 4
+
+        mat4            : value : class mat4  extends this
+            @itemLength : 16
+
+        float           : value : class float extends this
+            @itemLength : 1
 
     Object.defineProperties this::,
-        moving      : get     : -> @getInt32 OFFSET_MOVING 
 
+        name            :
+            get : ->
+                key = ""
+                for code in @array.slice 0, @nameLength
+                    key += String.fromCharCode code
+                key
+
+            set : ->
+                @fill 0, @nameLength = arguments[0].length
+
+                for char, i in arguments[0]
+                    @setUint8 i, char.charCodeAt 0
+
+        type            :
+            get     : -> 
+                unless @location instanceof Number
+                    return @ATTRIBUTE
+                return @UNIFORM
+
+        shader          :
+            get     : -> @parent
+
+        nameLength      :
+            get     : -> @getHeader OFFSET_OBJECT_0
+            set     : -> @setHeader OFFSET_OBJECT_0, arguments[ 0 ]
+
+        location        :
+            get     : -> @getHeader OFFSET_OBJECT_1, yes
+            set     : -> @setHeader OFFSET_OBJECT_1, arguments[ 0 ], yes
+
+        itemLength      :
+            get     : -> @getHeader OFFSET_OBJECT_2
+            set     : -> @setHeader OFFSET_OBJECT_2, arguments[ 0 ]
+
+        valueType       :
+            get     : -> @keyHeader OFFSET_OBJECT_3
+            set     : -> @setHeader OFFSET_OBJECT_3, arguments[ 0 ]
+
+        normalize       :
+            get     : -> @getHeader OFFSET_OBJECT_4
+            set     : -> @setHeader OFFSET_OBJECT_4, arguments[ 0 ]
+
+        stride          :
+            get     : -> @getHeader OFFSET_OBJECT_5
+            set     : -> @setHeader OFFSET_OBJECT_5, arguments[ 0 ]
+
+        offset          :
+            get     : -> @getHeader OFFSET_OBJECT_6
+            set     : -> @setHeader OFFSET_OBJECT_6, arguments[ 0 ]
 
 export class GLProgram  extends Pointer
 
-    @byteLength     : 48
+    @byteLength         : 48
 
     Object.defineProperties this::,
 
-        gl              : get : -> @parent.gl
+        gl              :
+            get : -> @parent.gl
 
         glProgram       :
             configurable: yes
@@ -72,7 +157,8 @@ export class GLProgram  extends Pointer
                 value : @gl.createProgram()
             ).glProgram
 
-        shaders         : get : -> @children.filter (v) -> v instanceof GLShader
+        shaders         :
+            get : -> @children.filter (v) -> v instanceof GLShader
 
         vertexShader    :
             get : -> @shaders.find (s) -> s.isVertex and s.isActive
@@ -106,6 +192,9 @@ export class GLProgram  extends Pointer
                 if  @setUint32 OFFSET_PROGRAM_ACTIVE, arguments[0]
                     @link().use()
 
+        variables       :
+            get         : -> @shaders.map( GLShader.parse ).flat()
+
     link            : ->
         return this if @isLinked
         @gl.linkProgram @glProgram
@@ -117,17 +206,6 @@ export class GLProgram  extends Pointer
         @isInUse = 1 ; this
 
 export class GLBuffer   extends Pointer
-    
-
-GL_VARIABLE_LENGTH  =
-    vec2            : 2 
-    vec3            : 3 
-    vec4            : 4 
-    mat2            : 4 
-    mat3            : 9 
-    mat4            : 16
-    float           : 1
-    int             : 1 
 
 export class GLShader   extends Pointer
 
@@ -137,65 +215,17 @@ export class GLShader   extends Pointer
 
     decoder         : new TextDecoder
 
-    parseAttributes : ( source = @source ) ->
-
-        GL_FLOAT    = WebGL2RenderingContext.FLOAT
-
-        _attributes =
-            keys        : [],
-            types       : [],
-            lengths     : [],
-            length      : 0,
-            byteLengths : [],
-            byteLength  : 0,
-            pointers    : [],
-            locations   : []
-            offsets     : []
-
-        _attributes.locate = ->
-        _attributes.bind = ->
-
-        source.split(/\attribute/g).slice(1).map (l) =>
-            [ type, key ] = l.split(/\;/g).at(0).split(/\s+/g).slice(1)
-            ( length = GL_VARIABLE_LENGTH[ type ] )
-            ( location = _attributes.locations.length )
-            ( offset = _attributes.byteLength )
-            
-            _attributes.types.push type
-            _attributes.keys.push key
-            _attributes.lengths.push length
-            _attributes.locations.push location
-            _attributes.byteLengths.push length * 4
-            _attributes.offsets.push offset
-            _attributes.pointers.push [
-                location, length, GL_FLOAT, no, -1, offset
-            ]
-            _attributes.length += length
-            _attributes.byteLength += length * 4
-
-        for p in _attributes.pointers
-            p[ 4 ] = _attributes.byteLength
-
-        _attributes.locate = ->
-            for location, i in _attributes.locations
-                @gl.bindAttribLocation @glProgram, location, _attributes.keys[ i ]
-
-        _attributes.bind = ->
-            for [ location, length, type, normalized, stride, offset ] in _attributes.pointers 
-                @gl.vertexAttribPointer location, length, type, normalized, stride, offset
-                @gl.enableVertexAttribArray location
-
-        _attributes
-
     VERTEX_SHADER   : WebGL2RenderingContext.VERTEX_SHADER
 
     FRAGMENT_SHADER : WebGL2RenderingContext.FRAGMENT_SHADER
 
     Object.defineProperties this::,
 
-        gl              : get : -> @parent.gl
+        gl              :
+            get : -> @parent.gl
 
-        glProgram       : get : -> @parent.glProgram
+        glProgram       :
+            get : -> @parent.glProgram
 
         glBuffer        :
             configurable: yes
@@ -209,9 +239,11 @@ export class GLShader   extends Pointer
                 value : @gl.createShader @shaderType
             ).glShader
 
-        isVertex        : get : -> /gl_Pos/.test( @source ) and @VERTEX_SHADER or no
+        isVertex        :
+            get : -> /gl_Pos/.test( @source ) and @VERTEX_SHADER or no
 
-        isFragment      : get : -> /gl_Fra/.test( @source ) and @FRAGMENT_SHADER or no
+        isFragment      :
+            get : -> /gl_Fra/.test( @source ) and @FRAGMENT_SHADER or no
 
         source          :
             get         : ->
@@ -263,20 +295,56 @@ export class GLShader   extends Pointer
                 if  @setUint32 OFFSET_SHADER_ACTIVE, arguments[0]
                     @upload().compile().attach()
 
-    upload : ->
+        variables       :
+            get : -> GLShader.parse this
+
+    upload              : ->
         return this if @isUploaded
         @gl.shaderSource @glShader, @source
         @isUploaded = 1 ; this
 
-    compile : ->
+    compile             : ->
         return this if @isCompiled
         @gl.compileShader @glShader
         @isCompiled = 1 ; this
 
-    attach : ->
+    attach              : ->
         return this if @isAttached
         @gl.attachShader @glProgram, @glShader
         @isAttached = 1 ; this
+
+    @parse              : ->
+        [ shader ] = arguments
+        [ keys, offset ] = [ [], 0 ]
+        { source, gl, glProgram } = shader
+
+        source.split(/attribute/g).slice( 1 ).map ( line ) =>
+            [ kind, type, name ] = line.split(/\;/g)[0].split /\s+/g
+
+            keys.push key   = new GLVariable[ type ]
+            key.name        = name
+            key.location    = gl.getAttribLocation glProgram, name
+            key.itemLength  = key.constructor.itemLength
+            key.valueType   = key.FLOAT
+            key.normalize   = no
+            key.offset      = offset
+            key.parent      = shader
+
+            offset += key.itemLength * 4
+        
+        key.stride = offset for key in keys
+
+        source.split(/uniform/g).slice( 1 ).map ( line ) =>
+            [ kind, type, name ] = line.split(/\;/g)[0].split /\s+/g
+
+            keys.push key   = new GLVariable[ type ]
+            key.name        = name
+            key.location    = gl.getUniformLocation glProgram, name
+            key.itemLength  = key.constructor.itemLength
+            key.valueType   = key.constructor.valueType
+            key.parent      = shader
+
+        keys        
 
 export class GLServer   extends Pointer
 
