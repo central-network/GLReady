@@ -1,7 +1,3 @@
-import { CameraServer } from "./Camera.coffee"
-import { BindServer } from "./BindServer.js"
-import { ScreenServer } from "./ScreenServer.js"
-
 import Pointer from "./Pointer.coffee"
 import Matrix4 from "./Matrix4.coffee"
 
@@ -348,13 +344,11 @@ export class GLShader   extends Pointer
 
 export class GLServer   extends Pointer
 
-    @byteLength     : byteLength
+    @byteLength         : byteLength
 
-    @TypedArray     : Uint32Array
+    @TypedArray         : Uint32Array
 
-    Camera          : Pointer
-
-    init            : ->
+    init                : ->
         @blendEnabled   = WebGL2RenderingContext.BLEND
         @blendFuncSrc   = WebGL2RenderingContext.SRC_COLOR
         @blendFuncDst   = WebGL2RenderingContext.DST_COLOR
@@ -376,8 +370,9 @@ export class GLServer   extends Pointer
 
         @pointSize      = 10
         
-    ticks : 0
-    nextTick            : ( pnow ) ->
+    ticks               : 0
+
+    nextTick            : ->
         @ticks++
         @gl.clear @clearMask
         @gl.drawArrays @gl.POINTS, 0, 3
@@ -388,10 +383,11 @@ export class GLServer   extends Pointer
         @updateBlend()
         @clear()
 
-    downloadParameter   : ( parameter ) ->
+    fetch               : ( GL_PARAMETER ) ->
         @gl.getParameter parameter
 
-    clear               : ( [ r, g, b, a ] = @clearColor.toRGBA @ ) ->
+    clear               : ->
+        [ r, g, b, a ] = @clearColor.toRGBA @
         @gl.clearColor                      r, g, b, a
         @gl.clear                           @clearMask
         ; @
@@ -423,8 +419,11 @@ export class GLServer   extends Pointer
 
     Object.defineProperties this::,
 
-        COLOR_CLEAR_VALUE : get : -> @gl.getParameter @gl.COLOR_CLEAR_VALUE
-        COLOR_WRITEMASK   : get : -> @gl.getParameter @gl.COLOR_WRITEMASK
+        COLOR_CLEAR_VALUE:
+            get         : -> @gl.getParameter @gl.COLOR_CLEAR_VALUE
+
+        COLOR_WRITEMASK :
+            get         : -> @gl.getParameter @gl.COLOR_WRITEMASK
 
         canvas          :
             get : -> @gl.canvas

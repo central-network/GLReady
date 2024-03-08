@@ -1,17 +1,5 @@
 var LENGTH_CLEAR_COLOR, LENGTH_SHADER_SOURCE, OFFSET_ATTACHED_STAT, OFFSET_BIND_TARGET, OFFSET_BLEND_ENABLED, OFFSET_BLEND_EQUATION, OFFSET_BLEND_FUNC_DST, OFFSET_BLEND_FUNC_SRC, OFFSET_CLEAR_COLOR, OFFSET_CLEAR_DEPTH, OFFSET_CLEAR_MASK, OFFSET_COMPILED_STAT, OFFSET_CULL_ENABLED, OFFSET_CULL_FACE, OFFSET_DEPTH_ENABLED, OFFSET_DEPTH_FUNCTION, OFFSET_DEPTH_MASK, OFFSET_FRAME, OFFSET_FRONT_FACE, OFFSET_POINT_SIZE, OFFSET_PROGRAM_ACTIVE, OFFSET_PROGRAM_INUSE, OFFSET_PROGRAM_LINKED, OFFSET_RENDERING, OFFSET_SHADER_ACTIVE, OFFSET_SHADER_GLTYPE, OFFSET_SHADER_SOURCE, OFFSET_SOURCE_LENGTH, OFFSET_UPLOADED_STAT;
 
-import {
-  CameraServer
-} from "./Camera.js";
-
-import {
-  BindServer
-} from "./BindServer.js";
-
-import {
-  ScreenServer
-} from "./ScreenServer.js";
-
 import Pointer from "./Pointer.js";
 
 import Matrix4 from "./Matrix4.js";
@@ -613,7 +601,7 @@ export var GLServer = (function() {
       return this.pointSize = 10;
     }
 
-    nextTick(pnow) {
+    nextTick() {
       this.ticks++;
       this.gl.clear(this.clearMask);
       return this.gl.drawArrays(this.gl.POINTS, 0, 3);
@@ -626,11 +614,13 @@ export var GLServer = (function() {
       return this.clear();
     }
 
-    downloadParameter(parameter) {
+    fetch(GL_PARAMETER) {
       return this.gl.getParameter(parameter);
     }
 
-    clear([r, g, b, a] = this.clearColor.toRGBA(this)) {
+    clear() {
+      var a, b, g, r;
+      [r, g, b, a] = this.clearColor.toRGBA(this);
       this.gl.clearColor(r, g, b, a);
       this.gl.clear(this.clearMask);
       return this;
@@ -674,8 +664,6 @@ export var GLServer = (function() {
   GLServer.byteLength = byteLength;
 
   GLServer.TypedArray = Uint32Array;
-
-  GLServer.prototype.Camera = Pointer;
 
   GLServer.prototype.ticks = 0;
 
