@@ -82,6 +82,7 @@
             console.log( "array:", self.vtx = Vertices.fromVertexCount( 3 ) )
             console.log( "at(2):", vtx.getVertex(2) )
             console.log("".padEnd(100, "-"))
+
             vtx.drawMode = WebGL2RenderingContext.TRIANGLES
 
             let program = new GLProgram()
@@ -89,14 +90,14 @@
             let fShader = new GLShader()
 
             vShader.source = `
-                attribute vec4     a_Vertex;
+                attribute vec3     a_Vertex;
                 attribute vec4     a_Color;
                 uniform   float    u_PointSize;
                 uniform   mat4     u_Camera;
                 varying   vec4     v_Color;
 
                 void main() {
-                    gl_Position  =  u_Camera * a_Vertex;
+                    gl_Position  =  u_Camera * vec4(a_Vertex, 1.0);
                     gl_PointSize =  u_PointSize;
                     v_Color      =  a_Color;
                 }
@@ -117,13 +118,15 @@
             program.vertexShader = vShader
             program.fragmentShader = fShader
 
+
             console.log( "vert:", vShader )
             console.log( "frag:", fShader )
             console.log( "prog:", program )
             console.log( "core:", glServer )
 
             program.isActive = true;
-
+            console.log(vShader.parseAttributes());
+            
             (ƒ => ƒ = function (µ) {
                 void glServer.nextTick(µ);
                 //void requestAnimationFrame(ƒ);

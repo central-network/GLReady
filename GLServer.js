@@ -1,4 +1,4 @@
-var LENGTH_CLEAR_COLOR, LENGTH_SHADER_SOURCE, OFFSET_ATTACHED_STAT, OFFSET_BIND_TARGET, OFFSET_BLEND_ENABLED, OFFSET_BLEND_EQUATION, OFFSET_BLEND_FUNC_DST, OFFSET_BLEND_FUNC_SRC, OFFSET_CLEAR_COLOR, OFFSET_CLEAR_DEPTH, OFFSET_CLEAR_MASK, OFFSET_COMPILED_STAT, OFFSET_CULL_ENABLED, OFFSET_CULL_FACE, OFFSET_DEPTH_ENABLED, OFFSET_DEPTH_FUNCTION, OFFSET_DEPTH_MASK, OFFSET_FRAME, OFFSET_FRONT_FACE, OFFSET_POINT_SIZE, OFFSET_PROGRAM_ACTIVE, OFFSET_PROGRAM_INUSE, OFFSET_PROGRAM_LINKED, OFFSET_RENDERING, OFFSET_SHADER_ACTIVE, OFFSET_SHADER_GLTYPE, OFFSET_SHADER_SOURCE, OFFSET_SOURCE_LENGTH, OFFSET_UPLOADED_STAT;
+var GL_VARIABLE_LENGTH, LENGTH_CLEAR_COLOR, LENGTH_SHADER_SOURCE, OFFSET_ATTACHED_STAT, OFFSET_BIND_TARGET, OFFSET_BLEND_ENABLED, OFFSET_BLEND_EQUATION, OFFSET_BLEND_FUNC_DST, OFFSET_BLEND_FUNC_SRC, OFFSET_CLEAR_COLOR, OFFSET_CLEAR_DEPTH, OFFSET_CLEAR_MASK, OFFSET_COMPILED_STAT, OFFSET_CULL_ENABLED, OFFSET_CULL_FACE, OFFSET_DEPTH_ENABLED, OFFSET_DEPTH_FUNCTION, OFFSET_DEPTH_MASK, OFFSET_FRAME, OFFSET_FRONT_FACE, OFFSET_POINT_SIZE, OFFSET_PROGRAM_ACTIVE, OFFSET_PROGRAM_INUSE, OFFSET_PROGRAM_LINKED, OFFSET_RENDERING, OFFSET_SHADER_ACTIVE, OFFSET_SHADER_GLTYPE, OFFSET_SHADER_SOURCE, OFFSET_SOURCE_LENGTH, OFFSET_UPLOADED_STAT;
 
 import {
   CameraServer
@@ -161,10 +161,10 @@ export var GLProgram = (function() {
         });
       },
       set: function(s) {
-        var has, i, len, ref, shader;
+        var has, j, len, ref, shader;
         ref = this.children;
-        for (i = 0, len = ref.length; i < len; i++) {
-          shader = ref[i];
+        for (j = 0, len = ref.length; j < len; j++) {
+          shader = ref[j];
           if (!(s - shader)) {
             if (has = true) {
               break;
@@ -184,10 +184,10 @@ export var GLProgram = (function() {
         });
       },
       set: function(s) {
-        var has, i, len, ref, shader;
+        var has, j, len, ref, shader;
         ref = this.children;
-        for (i = 0, len = ref.length; i < len; i++) {
-          shader = ref[i];
+        for (j = 0, len = ref.length; j < len; j++) {
+          shader = ref[j];
           if (!(s - shader)) {
             if (has = true) {
               break;
@@ -236,8 +236,82 @@ export var GLProgram = (function() {
 
 }).call(this);
 
+export var GLBuffer = class GLBuffer extends Pointer {};
+
+GL_VARIABLE_LENGTH = {
+  vec2: 2,
+  vec3: 3,
+  vec4: 4,
+  mat2: 4,
+  mat3: 9,
+  mat4: 16,
+  float: 1,
+  int: 1
+};
+
 export var GLShader = (function() {
   class GLShader extends Pointer {
+    parseAttributes(source = this.source) {
+      var GL_FLOAT, _attributes, j, len, p, ref;
+      GL_FLOAT = WebGL2RenderingContext.FLOAT;
+      _attributes = {
+        keys: [],
+        types: [],
+        lengths: [],
+        length: 0,
+        byteLengths: [],
+        byteLength: 0,
+        pointers: [],
+        locations: [],
+        offsets: []
+      };
+      _attributes.locate = function() {};
+      _attributes.bind = function() {};
+      source.split(/\attribute/g).slice(1).map((l) => {
+        var key, location, offset, type;
+        [type, key] = l.split(/\;/g).at(0).split(/\s+/g).slice(1);
+        (length = GL_VARIABLE_LENGTH[type]);
+        (location = _attributes.locations.length);
+        (offset = _attributes.byteLength);
+        _attributes.types.push(type);
+        _attributes.keys.push(key);
+        _attributes.lengths.push(length);
+        _attributes.locations.push(location);
+        _attributes.byteLengths.push(length * 4);
+        _attributes.offsets.push(offset);
+        _attributes.pointers.push([location, length, GL_FLOAT, false, -1, offset]);
+        _attributes.length += length;
+        return _attributes.byteLength += length * 4;
+      });
+      ref = _attributes.pointers;
+      for (j = 0, len = ref.length; j < len; j++) {
+        p = ref[j];
+        p[4] = _attributes.byteLength;
+      }
+      _attributes.locate = function() {
+        var i, k, len1, location, ref1, results;
+        ref1 = _attributes.locations;
+        results = [];
+        for (i = k = 0, len1 = ref1.length; k < len1; i = ++k) {
+          location = ref1[i];
+          results.push(this.gl.bindAttribLocation(this.glProgram, location, _attributes.keys[i]));
+        }
+        return results;
+      };
+      _attributes.bind = function() {
+        var k, len1, location, normalized, offset, ref1, results, stride, type;
+        ref1 = _attributes.pointers;
+        results = [];
+        for (k = 0, len1 = ref1.length; k < len1; k++) {
+          [location, length, type, normalized, stride, offset] = ref1[k];
+          this.gl.vertexAttribPointer(location, length, type, normalized, stride, offset);
+          results.push(this.gl.enableVertexAttribArray(location));
+        }
+        return results;
+      };
+      return _attributes;
+    }
+
     upload() {
       if (this.isUploaded) {
         return this;
@@ -438,31 +512,6 @@ export var GLServer = (function() {
       return this;
     }
 
-    bindBuffer() {
-      this.gl.bindBuffer(this.bindTarget, this.glBuffer);
-      return this;
-    }
-
-    runProgram() {
-      this.gl.linkProgram(this.glProgram);
-      this.gl.useProgram(this.glProgram);
-      return this;
-    }
-
-    setVertexShader(source) {
-      this.gl.shaderSource(this.glShaders[0], source);
-      this.gl.compileShader(this.glShaders[0]);
-      this.gl.attachShader(this.glProgram, this.glShaders[0]);
-      return this;
-    }
-
-    setFragmentShader(source) {
-      this.gl.shaderSource(this.glShaders[1], source);
-      this.gl.compileShader(this.glShaders[1]);
-      this.gl.attachShader(this.glProgram, this.glShaders[1]);
-      return this;
-    }
-
     updateCull() {
       if (this.cullEnabled) {
         this.gl.cullFace(this.cullFace);
@@ -503,10 +552,6 @@ export var GLServer = (function() {
   GLServer.TypedArray = Uint32Array;
 
   GLServer.prototype.Camera = Pointer;
-
-  GLServer.prototype.vShaderSource = 'attribute vec4     a_Vertex; attribute vec4     a_Color; uniform   float    u_PointSize; uniform   mat4     u_Camera; varying   vec4     v_Color; void main() { gl_Position  =  u_Camera * a_Vertex; gl_PointSize =  u_PointSize; v_Color      =  a_Color; }';
-
-  GLServer.prototype.fShaderSource = 'precision highp    float; varying   vec4     v_Color; void main() { gl_FragColor = v_Color; }';
 
   GLServer.prototype.ticks = 0;
 

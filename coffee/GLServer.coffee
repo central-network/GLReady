@@ -116,6 +116,18 @@ export class GLProgram  extends Pointer
         @gl.useProgram @glProgram
         @isInUse = 1 ; this
 
+export class GLBuffer   extends Pointer
+    
+
+GL_VARIABLE_LENGTH  =
+    vec2            : 2 
+    vec3            : 3 
+    vec4            : 4 
+    mat2            : 4 
+    mat3            : 9 
+    mat4            : 16
+    float           : 1
+    int             : 1 
 
 export class GLShader   extends Pointer
 
@@ -124,6 +136,56 @@ export class GLShader   extends Pointer
     encoder         : new TextEncoder
 
     decoder         : new TextDecoder
+
+    parseAttributes : ( source = @source ) ->
+
+        GL_FLOAT    = WebGL2RenderingContext.FLOAT
+
+        _attributes =
+            keys        : [],
+            types       : [],
+            lengths     : [],
+            length      : 0,
+            byteLengths : [],
+            byteLength  : 0,
+            pointers    : [],
+            locations   : []
+            offsets     : []
+
+        _attributes.locate = ->
+        _attributes.bind = ->
+
+        source.split(/\attribute/g).slice(1).map (l) =>
+            [ type, key ] = l.split(/\;/g).at(0).split(/\s+/g).slice(1)
+            ( length = GL_VARIABLE_LENGTH[ type ] )
+            ( location = _attributes.locations.length )
+            ( offset = _attributes.byteLength )
+            
+            _attributes.types.push type
+            _attributes.keys.push key
+            _attributes.lengths.push length
+            _attributes.locations.push location
+            _attributes.byteLengths.push length * 4
+            _attributes.offsets.push offset
+            _attributes.pointers.push [
+                location, length, GL_FLOAT, no, -1, offset
+            ]
+            _attributes.length += length
+            _attributes.byteLength += length * 4
+
+        for p in _attributes.pointers
+            p[ 4 ] = _attributes.byteLength
+
+        _attributes.locate = ->
+            for location, i in _attributes.locations
+                @gl.bindAttribLocation @glProgram, location, _attributes.keys[ i ]
+
+        _attributes.bind = ->
+            for [ location, length, type, normalized, stride, offset ] in _attributes.pointers 
+                @gl.vertexAttribPointer location, length, type, normalized, stride, offset
+                @gl.enableVertexAttribArray location
+
+        _attributes
 
     VERTEX_SHADER   : WebGL2RenderingContext.VERTEX_SHADER
 
@@ -224,29 +286,6 @@ export class GLServer   extends Pointer
 
     Camera          : Pointer
 
-    vShaderSource   : '
-        attribute vec4     a_Vertex;
-        attribute vec4     a_Color;
-        uniform   float    u_PointSize;
-        uniform   mat4     u_Camera;
-        varying   vec4     v_Color;
-
-        void main() {
-            gl_Position  =  u_Camera * a_Vertex;
-            gl_PointSize =  u_PointSize;
-            v_Color      =  a_Color;
-        }
-    ';
-
-    fShaderSource   : '
-        precision highp    float;
-        varying   vec4     v_Color;
-
-        void main() {
-            gl_FragColor = v_Color;
-        }
-    '
-
     init            : ->
         @blendEnabled   = WebGL2RenderingContext.BLEND
         @blendFuncSrc   = WebGL2RenderingContext.SRC_COLOR
@@ -289,27 +328,6 @@ export class GLServer   extends Pointer
         @gl.clear                           @clearMask
         ; @
 
-    bindBuffer          : ->
-        @gl.bindBuffer                      @bindTarget, @glBuffer
-        ; @
-
-    runProgram          : ->
-        @gl.linkProgram                     @glProgram
-        @gl.useProgram                      @glProgram
-        ; @
-
-    setVertexShader     : ( source ) ->
-        @gl.shaderSource                    @glShaders[0], source
-        @gl.compileShader                   @glShaders[0]
-        @gl.attachShader                    @glProgram, @glShaders[0]
-        ; @
-
-    setFragmentShader   : ( source ) ->
-        @gl.shaderSource                    @glShaders[1], source
-        @gl.compileShader                   @glShaders[1]
-        @gl.attachShader                    @glProgram, @glShaders[1]
-        ; @
-
     updateCull          : ->
         if  @cullEnabled
             @gl.cullFace                    @cullFace
@@ -345,7 +363,6 @@ export class GLServer   extends Pointer
             set : -> Object.defineProperty( this, "gl",
                 value : arguments[0].getContext "webgl2"
             ).prepareCanvas()
-
 
         bindTarget      :
             get         : -> @keyUint32 OFFSET_BIND_TARGET
