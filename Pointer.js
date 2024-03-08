@@ -1,4 +1,4 @@
-var Color4, INDEX_BEGIN, INDEX_BYTEFINISH, INDEX_BYTELENGTH, INDEX_BYTEOFFSET, INDEX_BYTES_PER_ELEMENT, INDEX_END, INDEX_LENGTH, INDEX_PTR_CLASS_ID, INDEX_PTR_PARENT, INDEX_TYPED_ARRAY_ID, OBJECTS, OBJECTS_ARRAY, OFFSET_BEGIN, OFFSET_BYTEFINISH, OFFSET_BYTELENGTH, OFFSET_BYTEOFFSET, OFFSET_END, OFFSET_LENGTH, OFFSET_PTR_CLASSID, OFFSET_PTR_PARENT, POINTERS_BEGIN, POINTER_BYTELENGTH, POINTER_LENGTH, PTR_PROTOTYPE, TypedArraysIds, cls, getCaller, i, j, key, keys, len, val, vals, vars;
+var Color4, INDEX_BEGIN, INDEX_BYTEFINISH, INDEX_BYTELENGTH, INDEX_BYTEOFFSET, INDEX_BYTES_PER_ELEMENT, INDEX_END, INDEX_LENGTH, INDEX_PTR_CLASS_ID, INDEX_PTR_PARENT, INDEX_TYPED_ARRAY_ID, OBJECTS, OBJECTS_ARRAY, OFFSET_BEGIN, OFFSET_BYTEFINISH, OFFSET_BYTELENGTH, OFFSET_BYTEOFFSET, OFFSET_END, OFFSET_LENGTH, OFFSET_PTR_OBJECT, OFFSET_PTR_PARENT, POINTERS_BEGIN, POINTER_BYTELENGTH, POINTER_LENGTH, PTR_PROTOTYPE, TypedArraysIds, cls, getCaller, i, j, key, keys, len, val, vals, vars;
 
 export var BUFFER = null;
 
@@ -40,7 +40,7 @@ OFFSET_END = 6 * 4;
 
 OFFSET_PTR_PARENT = 7 * 4;
 
-OFFSET_PTR_CLASSID = 8 * 4;
+OFFSET_PTR_OBJECT = 8 * 4;
 
 export var OFFSET_OBJECT_0 = 9 * 4;
 
@@ -66,7 +66,23 @@ PTR_PROTOTYPE = [null];
 
 OBJECTS_ARRAY = {};
 
-OBJECTS = [];
+OBJECTS = [null];
+
+OBJECTS.index = function(o) {
+  var i, j, len, p, ref;
+  ref = this;
+  for (i = j = 0, len = ref.length; j < len; i = ++j) {
+    p = ref[i];
+    if (!(p instanceof Number)) {
+      if (p === o) {
+        return i;
+      }
+    } else if (0 === p - o) {
+      return i;
+    }
+  }
+  return -1 + this.push(o);
+};
 
 TypedArraysIds = {
   [Float32Array]: 1,
@@ -140,7 +156,12 @@ export var Pointer = (function() {
       if (0 > super(offset)) {
         return new this.constructor(mallocAtomic(this.constructor.byteLength, this.constructor));
       }
+      this.object = OBJECTS.index(this);
       this.init();
+    }
+
+    static malloc(byteLength) {
+      return mallocAtomic(byteLength, this);
     }
 
     static maybePointer(offset, pointer = this) {
@@ -156,7 +177,6 @@ export var Pointer = (function() {
     }
 
     reloadPointer() {
-      this.byteFinish = this.byteOffset + this.byteLength;
       this.length = this.byteLength / this.BYTES_PER_ELEMENT;
       this.begin = this.byteOffset / this.BYTES_PER_ELEMENT;
       this.end = this.begin + this.length;
@@ -234,11 +254,12 @@ export var Pointer = (function() {
     }
 
     setObject(byteOffset, object) {
-      return DATAVIEW.setObject(this.byteOffset + byteOffset, object);
+      console.log(object, OBJECTS.index(object));
+      return DATAVIEW.setUint32(this.byteOffset + byteOffset, OBJECTS.index(object), LE);
     }
 
     getObject(byteOffset) {
-      return DATAVIEW.getObject(this.byteOffset + byteOffset);
+      return OBJECTS[DATAVIEW.getUint32(this.byteOffset + byteOffset, LE)];
     }
 
     getHeader(byteOffset, isObject) {
@@ -256,8 +277,9 @@ export var Pointer = (function() {
 
     setHeader(byteOffset, value, isObject) {
       if (isObject) {
-        value = -1 + OBJECTS.push(value);
+        value = OBJECTS.index(value);
       }
+      console.log(isObject, value);
       DATAVIEW.setUint32(this + byteOffset, value, LE);
       return value;
     }
@@ -298,6 +320,11 @@ export var Pointer = (function() {
   Pointer.BYTES_PER_ELEMENT = 4;
 
   Object.defineProperties(Pointer.prototype, {
+    objects: {
+      get: function() {
+        return console.warn(OBJECTS);
+      }
+    },
     byteOffset: {
       get: function() {
         return DATAVIEW.getUint32(this + OFFSET_BYTEOFFSET, LE);
@@ -347,95 +374,34 @@ export var Pointer = (function() {
       }
     },
     parent: {
-      configurable: true,
       get: function() {
-        var Ptr, classIdPtr, ptr, ptrClassId;
-        if (ptr = DATAVIEW.getUint32(this + OFFSET_PTR_PARENT, LE)) {
-          if (Ptr = OBJECTS_ARRAY[ptr * 1]) {
-            return Ptr;
-          }
-          classIdPtr = ptr + OFFSET_PTR_CLASSID;
-          ptrClassId = DATAVIEW.getUint32(classIdPtr, LE);
-          return Ptr = new PTR_PROTOTYPE[ptrClassId](ptr);
-        }
-      },
-      set: function(ptr) {
-        var id, p0, p1;
-        [p0, p1] = [this * 1, ptr * 1];
-        if (!OBJECTS_ARRAY[p0]) {
-          OBJECTS_ARRAY[p0] = this;
-        }
-        if (!OBJECTS_ARRAY[p1]) {
-          OBJECTS_ARRAY[p1] = ptr;
-        }
-        if (!ptr) {
-          return DATAVIEW.setUint32(this + OFFSET_PTR_PARENT, 0, LE);
-        }
-        if (-1 === (id = PTR_PROTOTYPE.indexOf(this.constructor))) {
-          id = -1 + PTR_PROTOTYPE.push(this.constructor);
-        }
-        DATAVIEW.setUint32(this + OFFSET_PTR_CLASSID, id, LE);
-        DATAVIEW.setUint32(this + OFFSET_PTR_PARENT, ptr, LE);
-        if (-1 === (id = PTR_PROTOTYPE.indexOf(ptr.constructor))) {
-          id = -1 + PTR_PROTOTYPE.push(ptr.constructor);
-        }
-        return DATAVIEW.setUint32(ptr + OFFSET_PTR_CLASSID, id, LE);
-      }
-    },
-    ptrClassId: {
-      configurable: true,
-      get: function() {
-        return DATAVIEW.getUint32(this + OFFSET_PTR_CLASSID, LE);
+        return OBJECTS[DATAVIEW.getUint32(this + OFFSET_PTR_PARENT, LE)];
       },
       set: function() {
-        return DATAVIEW.setUint32(this + OFFSET_PTR_CLASSID, arguments[0], LE);
+        return DATAVIEW.setUint32(this + OFFSET_PTR_PARENT, arguments[0], LE);
+      }
+    },
+    object: {
+      get: function() {
+        return OBJECTS[DATAVIEW.getUint32(this + OFFSET_PTR_OBJECT, LE)];
+      },
+      set: function() {
+        return DATAVIEW.setUint32(this + OFFSET_PTR_OBJECT, arguments[0], LE);
       }
     },
     children: {
-      configurable: true,
       get: function() {
-        var childs, classId, offset, ptr, ptrClassId;
-        offset = POINTERS_BEGIN + OFFSET_PTR_PARENT - POINTER_BYTELENGTH;
-        length = -8 + Atomics.load(U32ARRAY, 0);
-        childs = [];
-        while (length > (offset += POINTER_BYTELENGTH)) {
-          if (this - DATAVIEW.getUint32(offset, LE)) {
-            continue;
-          }
-          ptr = offset - OFFSET_PTR_PARENT;
-          classId = ptr + OFFSET_PTR_CLASSID;
-          ptrClassId = DATAVIEW.getUint32(classId, LE);
-          childs.push(new PTR_PROTOTYPE[ptrClassId](ptr));
-        }
-        return childs;
-      }
-    },
-    getPointer: {
-      value: function(offset, Ptr) {
-        var p;
-        if (p = this.getUint32(offset, LE)) {
-          return new Ptr(p);
-        }
-      }
-    },
-    setPointer: {
-      value: function(offset, ptr) {
-        return this.setUint32(offset, ptr * 1, LE);
+        return OBJECTS.filter((obj) => {
+          return 0 === this - (obj != null ? obj.parent : void 0);
+        });
       }
     },
     add: {
-      value: function(ptr) {
-        return ptr.parent = this;
-      }
-    },
-    del: {
-      value: function(ptr) {
-        return ptr.parent = 0;
-      }
-    },
-    remove: {
-      value: function() {
-        return this.children.forEach(this.del.bind(this));
+      value: function(child) {
+        if (!(child instanceof Number)) {
+          OBJECTS.index(child);
+        }
+        return child.parent = OBJECTS.index(this);
       }
     },
     grow: {
@@ -492,16 +458,13 @@ export var Pointer = (function() {
 Object.defineProperties(DataView.prototype, {
   setObject: {
     value: function(byteOffset, object, littleEndian = LE) {
-      this.setUint32(byteOffset, i = OBJECTS.length + 1, littleEndian);
-      return OBJECTS[i] = object;
+      this.setUint32(byteOffset, OBJECTS.index(object), littleEndian);
+      return object;
     }
   },
   getObject: {
     value: function(byteOffset, littleEndian = LE) {
-      if (!(i = this.getUint32(byteOffset, littleEndian))) {
-        return;
-      }
-      return OBJECTS[i];
+      return OBJECTS[this.getUint32(byteOffset, littleEndian)];
     }
   }
 });
@@ -586,14 +549,14 @@ export var IndexPointer = (function() {
         return this.parent.byteOffset + (this * this.byteLength);
       }
     },
-    ["byteFinish"]: {
-      get: function() {
-        return this.byteOffset + this.byteLength;
-      }
-    },
     ["byteLength"]: {
       get: function() {
         return this.constructor.byteLength;
+      }
+    },
+    ["byteFinish"]: {
+      get: function() {
+        return this.byteLength + this.byteOffset;
       }
     },
     ["length"]: {
@@ -608,9 +571,6 @@ export var IndexPointer = (function() {
     ["children"]: {
       configurable: true
     },
-    ["ptrClassId"]: {
-      configurable: true
-    },
     [$ptr]: {
       configurable: true
     }
@@ -619,8 +579,6 @@ export var IndexPointer = (function() {
   Reflect.deleteProperty(IndexPointer, $ptr);
 
   Reflect.deleteProperty(IndexPointer, 'children');
-
-  Reflect.deleteProperty(IndexPointer, 'ptrClassId');
 
   return IndexPointer;
 

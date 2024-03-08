@@ -52,7 +52,7 @@
 
             import { Matrix4 } from "./Matrix4.js"
             import { Pointer } from "./Pointer.js"
-            import { GLServer, GLProgram, GLShader } from "./GLServer.js"
+            import { GLServer, GLProgram, GLShader, GLPositions } from "./GLServer.js"
             import { BindServer } from "./BindServer.js"
             import { ScreenServer } from "./ScreenServer.js"
             import { Perspective } from "./Camera.js"
@@ -67,27 +67,31 @@
             bindServer.bind( canvas )
             screenServer.bind( canvas )
 
-            glServer.canvas = canvas
-
-            glServer.setViewPort( screenServer.width, screenServer.height )
 
             let camera = Perspective.create(
                 Math.rad( 80 ), screenServer.aspectRatio, .001, 1e3
             )
+            console.log( "core:", glServer );
+            glServer.canvas = canvas;
 
-            glServer.add( bindServer )
-            glServer.add( screenServer )
-            glServer.add( camera )
+            let program = new GLProgram();
+            glServer.add( program );
+            glServer.setViewPort( screenServer.width, screenServer.height );
+
+            glServer.add( bindServer );
+            glServer.add( screenServer );
+            glServer.add( camera );
             
-            console.log( "array:", self.vtx = Vertices.fromVertexCount( 3 ) )
-            console.log( "at(2):", vtx.getVertex(2) )
-            console.log("".padEnd(100, "-"))
+            console.log( "array:", self.vtx = GLPositions.for( 3 ) );
+            console.log( "at(2):", vtx.at(2) );
+            console.log("".padEnd(100, "-"));
 
-            vtx.drawMode = WebGL2RenderingContext.TRIANGLES
+            vtx.drawMode = WebGL2RenderingContext.TRIANGLES;
 
-            let program = new GLProgram()
-            let vShader = new GLShader()
-            let fShader = new GLShader()
+
+
+            let vShader = new GLShader();
+            let fShader = new GLShader();
 
             vShader.source = `
                 attribute vec3     a_Vertex;
@@ -113,22 +117,20 @@
             `;
 
 
-            glServer.add( program )
+            program.vertexShader = vShader;
+            program.fragmentShader = fShader;
 
-            program.vertexShader = vShader
-            program.fragmentShader = fShader
-
-
-            console.log( "vert:", vShader )
-            console.log( "frag:", fShader )
-            console.log( "prog:", program )
-            console.log( "core:", glServer )
+            console.log( "vert:", vShader );
+            console.log( "frag:", fShader );
+            console.log( "prog:", program );
 
             program.isActive = true;
+            //program.draw( vtx );
+
             
-            (ƒ => ƒ = function (µ) {
+            ;(ƒ => ƒ = function (µ) {
                 void glServer.nextTick(µ);
-                //void requestAnimationFrame(ƒ);
+                void requestAnimationFrame(ƒ);
             })()()
 
             

@@ -1,7 +1,5 @@
 var LENGTH_CLEAR_COLOR, LENGTH_SHADER_SOURCE, OFFSET_ATTACHED_STAT, OFFSET_BIND_TARGET, OFFSET_BLEND_ENABLED, OFFSET_BLEND_EQUATION, OFFSET_BLEND_FUNC_DST, OFFSET_BLEND_FUNC_SRC, OFFSET_CLEAR_COLOR, OFFSET_CLEAR_DEPTH, OFFSET_CLEAR_MASK, OFFSET_COMPILED_STAT, OFFSET_CULL_ENABLED, OFFSET_CULL_FACE, OFFSET_DEPTH_ENABLED, OFFSET_DEPTH_FUNCTION, OFFSET_DEPTH_MASK, OFFSET_FRAME, OFFSET_FRONT_FACE, OFFSET_POINT_SIZE, OFFSET_PROGRAM_ACTIVE, OFFSET_PROGRAM_INUSE, OFFSET_PROGRAM_LINKED, OFFSET_RENDERING, OFFSET_SHADER_ACTIVE, OFFSET_SHADER_GLTYPE, OFFSET_SHADER_SOURCE, OFFSET_SOURCE_LENGTH, OFFSET_UPLOADED_STAT;
 
-import Pointer from "./Pointer.js";
-
 import Matrix4 from "./Matrix4.js";
 
 import {
@@ -79,10 +77,37 @@ export var length = 1 * 30;
 
 export var byteLength = 4 * length;
 
+export var GLPointer = (function() {
+  class GLPointer extends Pointer {
+    oncontextrestored() {
+      return this;
+    }
+
+  };
+
+  Object.defineProperties(GLPointer.prototype, {
+    gl: {
+      get: function() {
+        var gl, ref;
+        if (!(gl = this.getHeader(OFFSET_OBJECT_6, true))) {
+          gl = (ref = this.parent) != null ? ref.gl : void 0;
+        }
+        return gl;
+      },
+      set: function() {
+        return this.setHeader(OFFSET_OBJECT_6, arguments[0], true);
+      }
+    }
+  });
+
+  return GLPointer;
+
+}).call(this);
+
 export var GLVariable = (function() {
   var ATTRIBUTE, FLOAT, UNIFORM, float, mat4, vec3, vec4;
 
-  class GLVariable extends Pointer {};
+  class GLVariable extends GLPointer {};
 
   GLVariable.byteLength = 24;
 
@@ -239,8 +264,57 @@ export var GLVariable = (function() {
 
 }).call(this);
 
+export var GLPositions = (function() {
+  class GLPositions extends GLPointer {};
+
+  GLPositions.TypedArray = Float32Array;
+
+  Object.defineProperties(GLPositions, {
+    for: {
+      value: function(count) {
+        return new this(this.malloc(byteLength = count * 3 * 4));
+      }
+    },
+    TRIANGLES: {
+      value: WebGL2RenderingContext.TRIANGLES
+    },
+    TRIANGLE_FAN: {
+      value: WebGL2RenderingContext.TRIANGLE_FAN
+    },
+    TRIANGLE_STRIP: {
+      value: WebGL2RenderingContext.TRIANGLE_STRIP
+    },
+    LINE: {
+      value: WebGL2RenderingContext.LINE
+    },
+    LINE_LOOP: {
+      value: WebGL2RenderingContext.LINE_LOOP
+    },
+    LINE_STRIP: {
+      value: WebGL2RenderingContext.LINE_STRIP
+    },
+    POINTS: {
+      value: WebGL2RenderingContext.POINTS
+    }
+  });
+
+  Object.defineProperties(GLPositions.prototype, {
+    drawMode: {
+      get: function() {
+        return this.keyHeader(OFFSET_OBJECT_0);
+      },
+      set: function() {
+        return this.setHeader(OFFSET_OBJECT_0, arguments[0]);
+      }
+    }
+  });
+
+  return GLPositions;
+
+}).call(this);
+
 export var GLProgram = (function() {
-  class GLProgram extends Pointer {
+  class GLProgram extends GLPointer {
     link() {
       if (this.isLinked) {
         return this;
@@ -259,22 +333,38 @@ export var GLProgram = (function() {
       return this;
     }
 
+    create() {
+      var j, len, ref, shader;
+      this.glProgram = this.gl.createProgram();
+      ref = this.shaders;
+      for (j = 0, len = ref.length; j < len; j++) {
+        shader = ref[j];
+        shader.create();
+      }
+      this.link().use().isActive = 1;
+      return this;
+    }
+
+    draw(ptr) {
+      this.add(ptr);
+      return console.log(ptr);
+    }
+
   };
 
   GLProgram.byteLength = 48;
 
   Object.defineProperties(GLProgram.prototype, {
-    gl: {
-      get: function() {
-        return this.parent.gl;
-      }
-    },
     glProgram: {
-      configurable: true,
+      set: function() {
+        return this.setHeader(OFFSET_OBJECT_0, arguments[0], true);
+      },
       get: function() {
-        return Object.defineProperty(this, "glProgram", {
-          value: this.gl.createProgram()
-        }).glProgram;
+        var p;
+        if (p = this.getHeader(OFFSET_OBJECT_0, true)) {
+          return p;
+        }
+        return this.glProgram = this.gl.createProgram();
       }
     },
     shaders: {
@@ -304,13 +394,15 @@ export var GLProgram = (function() {
         if (!has) {
           this.add(s);
         }
-        return s.isActive = true;
+        if (this.isActive) {
+          return s.isActive = true;
+        }
       }
     },
     fragmentShader: {
       get: function() {
         return this.shaders.find(function(s) {
-          return s.isFragment && s.isActive;
+          return !s.isVertex && s.isActive;
         });
       },
       set: function(s) {
@@ -327,7 +419,9 @@ export var GLProgram = (function() {
         if (!has) {
           this.add(s);
         }
-        return s.isActive = true;
+        if (this.isActive) {
+          return s.isActive = true;
+        }
       }
     },
     isInUse: {
@@ -355,9 +449,12 @@ export var GLProgram = (function() {
         return this.getUint32(OFFSET_PROGRAM_ACTIVE);
       },
       set: function() {
-        if (this.setUint32(OFFSET_PROGRAM_ACTIVE, arguments[0])) {
-          return this.link().use();
-        }
+        return this.setUint32(OFFSET_PROGRAM_ACTIVE, arguments[0]);
+      }
+    },
+    activate: {
+      get: function() {
+        return this.create().parent.create();
       }
     },
     variables: {
@@ -371,10 +468,15 @@ export var GLProgram = (function() {
 
 }).call(this);
 
-export var GLBuffer = class GLBuffer extends Pointer {};
+export var GLBuffer = class GLBuffer extends GLPointer {};
 
 export var GLShader = (function() {
-  class GLShader extends Pointer {
+  class GLShader extends GLPointer {
+    create() {
+      this.upload().compile().attach().isActive = 1;
+      return this;
+    }
+
     upload() {
       if (this.isUploaded) {
         return this;
@@ -394,6 +496,9 @@ export var GLShader = (function() {
     }
 
     attach() {
+      if (!this.glProgram) {
+        return;
+      }
       if (this.isAttached) {
         return this;
       }
@@ -441,49 +546,42 @@ export var GLShader = (function() {
 
   GLShader.byteLength = 1e5;
 
-  GLShader.prototype.encoder = new TextEncoder;
-
-  GLShader.prototype.decoder = new TextDecoder;
-
-  GLShader.prototype.VERTEX_SHADER = WebGL2RenderingContext.VERTEX_SHADER;
-
-  GLShader.prototype.FRAGMENT_SHADER = WebGL2RenderingContext.FRAGMENT_SHADER;
+  Object.defineProperties(GLShader, {
+    VERTEX_SHADER: {
+      value: WebGL2RenderingContext.VERTEX_SHADER
+    },
+    FRAGMENT_SHADER: {
+      value: WebGL2RenderingContext.FRAGMENT_SHADER
+    },
+    TextEncoder: {
+      value: new TextEncoder
+    },
+    TextDecoder: {
+      value: new TextDecoder
+    }
+  });
 
   Object.defineProperties(GLShader.prototype, {
-    gl: {
-      get: function() {
-        return this.parent.gl;
-      }
-    },
     glProgram: {
       get: function() {
         return this.parent.glProgram;
       }
     },
-    glBuffer: {
-      configurable: true,
-      get: function() {
-        return Object.defineProperty(this, "glBuffer", {
-          value: this.gl.createBuffer()
-        }).glBuffer;
-      }
-    },
     glShader: {
-      configurable: true,
+      set: function() {
+        return this.setHeader(OFFSET_OBJECT_0, arguments[0], true);
+      },
       get: function() {
-        return Object.defineProperty(this, "glShader", {
-          value: this.gl.createShader(this.shaderType)
-        }).glShader;
+        var p;
+        if (p = this.getHeader(OFFSET_OBJECT_0, true)) {
+          return p;
+        }
+        return this.glShader = this.gl.createShader(this.shaderType);
       }
     },
     isVertex: {
       get: function() {
-        return /gl_Pos/.test(this.source) && this.VERTEX_SHADER || false;
-      }
-    },
-    isFragment: {
-      get: function() {
-        return /gl_Fra/.test(this.source) && this.FRAGMENT_SHADER || false;
+        return /gl_Pos/.test(this.source);
       }
     },
     source: {
@@ -491,18 +589,25 @@ export var GLShader = (function() {
         if (!(length = this.charLength)) {
           return "";
         }
-        return this.decoder.decode(this.subUint8(OFFSET_SHADER_SOURCE, this.charLength).slice(0));
+        return GLShader.TextDecoder.decode(this.subUint8(OFFSET_SHADER_SOURCE, this.charLength).slice(0));
       },
       set: function(source) {
         var tarray;
         if (!(source instanceof Uint8Array)) {
-          source = this.encoder.encode(arguments[0]);
+          source = GLShader.TextEncoder.encode(arguments[0]);
         }
         tarray = this.subUint8(OFFSET_SHADER_SOURCE, LENGTH_SHADER_SOURCE);
         tarray.fill(0);
         tarray.set(source);
         this.charLength = source.byteLength;
-        return this.shaderType = this.isVertex || this.isFragment;
+        return this.shaderType = (function() {
+          switch (this.isVertex) {
+            case true:
+              return GLShader.VERTEX_SHADER;
+            case false:
+              return GLShader.FRAGMENT_SHADER;
+          }
+        }).call(this);
       }
     },
     charLength: {
@@ -556,9 +661,7 @@ export var GLShader = (function() {
         return this.getUint32(OFFSET_SHADER_ACTIVE);
       },
       set: function() {
-        if (this.setUint32(OFFSET_SHADER_ACTIVE, arguments[0])) {
-          return this.upload().compile().attach();
-        }
+        return this.setUint32(OFFSET_SHADER_ACTIVE, arguments[0]);
       }
     },
     variables: {
@@ -573,7 +676,7 @@ export var GLShader = (function() {
 }).call(this);
 
 export var GLServer = (function() {
-  class GLServer extends Pointer {
+  class GLServer extends GLPointer {
     init() {
       this.blendEnabled = WebGL2RenderingContext.BLEND;
       this.blendFuncSrc = WebGL2RenderingContext.SRC_COLOR;
@@ -593,16 +696,20 @@ export var GLServer = (function() {
     }
 
     nextTick() {
-      this.ticks++;
-      this.gl.clear(this.clearMask);
-      return this.gl.drawArrays(this.gl.POINTS, 0, 3);
+      if (this.isRendering) {
+        this.ticks++;
+        this.gl.clear(this.clearMask);
+        return this.gl.drawArrays(this.gl.POINTS, 0, 3);
+      }
     }
 
-    prepareCanvas() {
+    create() {
       this.updateCull();
       this.updateDepth();
       this.updateBlend();
-      return this.clear();
+      this.clear();
+      this.isRendering = 1;
+      return this;
     }
 
     fetch(GL_PARAMETER) {
@@ -646,15 +753,14 @@ export var GLServer = (function() {
     }
 
     setViewPort(width, height, left = 0, top = 0) {
-      this.gl.viewport(left, top, width, height);
-      return this;
+      if (this.gl) {
+        return this.gl.viewport(left, top, width, height);
+      }
     }
 
   };
 
-  GLServer.byteLength = byteLength;
-
-  GLServer.TypedArray = Uint32Array;
+  GLServer.byteLength = 4 * 30;
 
   GLServer.prototype.ticks = 0;
 
@@ -674,9 +780,36 @@ export var GLServer = (function() {
         return this.gl.canvas;
       },
       set: function() {
-        return Object.defineProperty(this, "gl", {
-          value: arguments[0].getContext("webgl2")
-        }).prepareCanvas();
+        return this.gl = arguments[0].getContext("webgl2");
+      }
+    },
+    isRendering: {
+      get: function() {
+        return this.getHeader(OFFSET_OBJECT_0);
+      },
+      set: function() {
+        return this.setHeader(OFFSET_OBJECT_0, arguments[0]);
+      }
+    },
+    programs: {
+      get: function() {
+        return this.children.filter(function(o) {
+          return o instanceof GLProgram;
+        });
+      }
+    },
+    shaders: {
+      get: function() {
+        return this.programs.filter(function(o) {
+          return o instanceof GLShader;
+        });
+      }
+    },
+    variables: {
+      get: function() {
+        return this.shaders.filter(function(o) {
+          return o instanceof GLVariable;
+        });
       }
     },
     bindTarget: {
