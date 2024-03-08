@@ -55,9 +55,6 @@ OFFSET_PROGRAM_ACTIVE   = 4 * 2
 export length       = 1 * 30
 export byteLength   = 4 * length
 
-export class Color      extends Pointer
-    @byteLength : 16
-
 export class GLVariable extends Pointer
 
     @byteLength = 24
@@ -436,8 +433,8 @@ export class GLServer   extends Pointer
             set         : -> @setUint32 OFFSET_BIND_TARGET, arguments[0]
 
         clearColor      :
-            get         : -> @getUint32 OFFSET_CLEAR_COLOR
-            set         : -> @setUint32 OFFSET_CLEAR_COLOR, arguments[0]
+            get         : -> @getColor4 OFFSET_CLEAR_COLOR
+            set         : -> @setColor4 OFFSET_CLEAR_COLOR, arguments[0]
 
         clearMask       :
             get         : -> @getUint32 OFFSET_CLEAR_MASK

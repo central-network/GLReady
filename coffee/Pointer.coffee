@@ -262,6 +262,12 @@ export class Pointer extends Number
     setUint32       : ( byteOffset, value ) ->
         DATAVIEW.setUint32 @byteOffset + byteOffset, value, LE ; value
 
+    getColor4       : ( byteOffset ) ->
+        new Color4 DATAVIEW.getUint32 @byteOffset + byteOffset, LE
+
+    setColor4       : ( byteOffset, value ) ->
+        DATAVIEW.setUint32 @byteOffset + byteOffset, value, LE ; value
+
     subUint32       : ( byteOffset, length ) ->
         new Uint32Array @buffer, @byteOffset + byteOffset, length
 
@@ -356,6 +362,35 @@ export class IndexPointer extends Pointer
     Reflect.deleteProperty this, 'children'
     Reflect.deleteProperty this, 'ptrClassId'
 
+class Color4 extends Number
+    Object.defineProperties this::,
+        f32 : get : ->
+            dv = new DataView new ArrayBuffer 4
+            dv.setUint32 0, this, LE
+
+            i8 = new Uint8Array dv.buffer
+            i8.reverse() if LE 
+            di = 255
+
+            Float32Array.of ...[ ...i8 ].map (n) -> n/di
+        
+        ui8 : get : ->
+            dv = new DataView new ArrayBuffer 4
+            dv.setUint32 0, this, LE
+
+            i8 = new Uint8Array dv.buffer
+            i8.reverse() if LE 
+            i8
+
+        hex : get : ->
+            "#" + [ ...@ui8 ].map (n) ->
+                n.toString(16).padStart(2,0)
+            .join ""
+
+        css : get : ->
+            [ r, g, b, a ] = @ui8
+            ( a = ( a / 2.55 ).toFixed(2) )
+            "rgba( #{r} #{g} #{b} / #{a}% )"
 
 Object.defineProperties Float32Array::,
     toUint32        : value : ->

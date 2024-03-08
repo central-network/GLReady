@@ -1,4 +1,4 @@
-var INDEX_BEGIN, INDEX_BYTEFINISH, INDEX_BYTELENGTH, INDEX_BYTEOFFSET, INDEX_BYTES_PER_ELEMENT, INDEX_END, INDEX_LENGTH, INDEX_PTR_CLASS_ID, INDEX_PTR_PARENT, INDEX_TYPED_ARRAY_ID, OBJECTS, OBJECTS_ARRAY, OFFSET_BEGIN, OFFSET_BYTEFINISH, OFFSET_BYTELENGTH, OFFSET_BYTEOFFSET, OFFSET_END, OFFSET_LENGTH, OFFSET_PTR_CLASSID, OFFSET_PTR_PARENT, POINTERS_BEGIN, POINTER_BYTELENGTH, POINTER_LENGTH, PTR_PROTOTYPE, TypedArraysIds, cls, getCaller, i, j, key, keys, len, val, vals, vars;
+var Color4, INDEX_BEGIN, INDEX_BYTEFINISH, INDEX_BYTELENGTH, INDEX_BYTEOFFSET, INDEX_BYTES_PER_ELEMENT, INDEX_END, INDEX_LENGTH, INDEX_PTR_CLASS_ID, INDEX_PTR_PARENT, INDEX_TYPED_ARRAY_ID, OBJECTS, OBJECTS_ARRAY, OFFSET_BEGIN, OFFSET_BYTEFINISH, OFFSET_BYTELENGTH, OFFSET_BYTEOFFSET, OFFSET_END, OFFSET_LENGTH, OFFSET_PTR_CLASSID, OFFSET_PTR_PARENT, POINTERS_BEGIN, POINTER_BYTELENGTH, POINTER_LENGTH, PTR_PROTOTYPE, TypedArraysIds, cls, getCaller, i, j, key, keys, len, val, vals, vars;
 
 export var BUFFER = null;
 
@@ -203,6 +203,15 @@ export var Pointer = (function() {
     }
 
     setUint32(byteOffset, value) {
+      DATAVIEW.setUint32(this.byteOffset + byteOffset, value, LE);
+      return value;
+    }
+
+    getColor4(byteOffset) {
+      return new Color4(DATAVIEW.getUint32(this.byteOffset + byteOffset, LE));
+    }
+
+    setColor4(byteOffset, value) {
       DATAVIEW.setUint32(this.byteOffset + byteOffset, value, LE);
       return value;
     }
@@ -614,6 +623,58 @@ export var IndexPointer = (function() {
   Reflect.deleteProperty(IndexPointer, 'ptrClassId');
 
   return IndexPointer;
+
+}).call(this);
+
+Color4 = (function() {
+  class Color4 extends Number {};
+
+  Object.defineProperties(Color4.prototype, {
+    f32: {
+      get: function() {
+        var di, dv, i8;
+        dv = new DataView(new ArrayBuffer(4));
+        dv.setUint32(0, this, LE);
+        i8 = new Uint8Array(dv.buffer);
+        if (LE) {
+          i8.reverse();
+        }
+        di = 255;
+        return Float32Array.of(...[...i8].map(function(n) {
+          return n / di;
+        }));
+      }
+    },
+    ui8: {
+      get: function() {
+        var dv, i8;
+        dv = new DataView(new ArrayBuffer(4));
+        dv.setUint32(0, this, LE);
+        i8 = new Uint8Array(dv.buffer);
+        if (LE) {
+          i8.reverse();
+        }
+        return i8;
+      }
+    },
+    hex: {
+      get: function() {
+        return "#" + [...this.ui8].map(function(n) {
+          return n.toString(16).padStart(2, 0);
+        }).join("");
+      }
+    },
+    css: {
+      get: function() {
+        var a, b, g, r;
+        [r, g, b, a] = this.ui8;
+        (a = (a / 2.55).toFixed(2));
+        return `rgba( ${r} ${g} ${b} / ${a}% )`;
+      }
+    }
+  });
+
+  return Color4;
 
 }).call(this);
 

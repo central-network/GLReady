@@ -79,15 +79,6 @@ export var length = 1 * 30;
 
 export var byteLength = 4 * length;
 
-export var Color = (function() {
-  class Color extends Pointer {};
-
-  Color.byteLength = 16;
-
-  return Color;
-
-}).call(this);
-
 export var GLVariable = (function() {
   var ATTRIBUTE, FLOAT, UNIFORM, float, mat4, vec3, vec4;
 
@@ -698,10 +689,10 @@ export var GLServer = (function() {
     },
     clearColor: {
       get: function() {
-        return this.getUint32(OFFSET_CLEAR_COLOR);
+        return this.getColor4(OFFSET_CLEAR_COLOR);
       },
       set: function() {
-        return this.setUint32(OFFSET_CLEAR_COLOR, arguments[0]);
+        return this.setColor4(OFFSET_CLEAR_COLOR, arguments[0]);
       }
     },
     clearMask: {
