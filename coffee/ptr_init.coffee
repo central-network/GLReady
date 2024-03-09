@@ -7,10 +7,7 @@ import GL from "./ptr_gl.js"
 export default init = ( buffer ) ->
     Pointer::buffer = buffer
     ptr_gl = new GL()
+    ptr_gl.fork 1
 
-    setTimeout =>
-        ptr_gl.syncWorkers()
-    , 200
-    
     console.error ptr_gl
     

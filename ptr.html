@@ -51,9 +51,7 @@
 
             let canvas = document.querySelector( 'canvas' );
             let buffer = new SharedArrayBuffer( 1e8 );
-            let worker = new Worker( "ptr_worker.js", { type: "module" });
-
-            worker.postMessage( buffer );
+            
             init( buffer );
 
         </script>

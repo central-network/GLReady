@@ -10,8 +10,6 @@ export default init = function(buffer) {
   var ptr_gl;
   Pointer.prototype.buffer = buffer;
   ptr_gl = new GL();
-  setTimeout(() => {
-    return ptr_gl.syncWorkers();
-  }, 200);
+  ptr_gl.fork(1);
   return console.error(ptr_gl);
 };

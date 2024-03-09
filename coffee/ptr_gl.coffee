@@ -1,10 +1,8 @@
 import Pointer from "./ptr.coffee"
+export default class GL extends Pointer
 
-export class GL extends Pointer
 
-export default GL.registerClass()
-
-Object.defineProperties GL,
+Object.defineProperties GL.registerClass(),
 
     byteLength  : value : 4 * 48
 
