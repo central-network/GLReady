@@ -100,10 +100,11 @@ export default Pointer = class Pointer extends Number {
   }
 
   fork(workerCount = 1) {
-    this.add(new WorkerPointer());
-    return setTimeout(() => {
-      return bc.postMessage(this);
-    }, 1000);
+    var worker;
+    this.add(worker = new WorkerPointer());
+    return worker.onmessage = () => {
+      return worker.send(this);
+    };
   }
 
   add(ptr) {
@@ -281,6 +282,12 @@ Object.defineProperties(WorkerPointer, {
 });
 
 Object.defineProperties(WorkerPointer.prototype, {
+  type: {
+    value: "module"
+  },
+  script: {
+    value: "./ptr_worker.js"
+  },
   init: {
     value: function() {
       return this.create();
@@ -288,14 +295,25 @@ Object.defineProperties(WorkerPointer.prototype, {
   },
   create: {
     value: function() {
-      var worker;
-      worker = new Worker("./ptr_worker.js", {
-        type: "module"
-      });
-      worker.postMessage(this.buffer);
-      this.setLinkedNode(worker);
-      this.setOnlineState(1);
-      return this;
+      var config, script, worker;
+      script = this.script;
+      config = {
+        type: this.type,
+        name: this
+      };
+      worker = new Worker(script, config);
+      worker.postMessage(buf);
+      return this.setLinkedNode(worker);
+    }
+  },
+  onmessage: {
+    set: function() {
+      return this.getLinkedNode().onmessage = arguments[0];
+    }
+  },
+  send: {
+    value: function() {
+      return this.getLinkedNode().postMessage(...arguments);
     }
   }
 });

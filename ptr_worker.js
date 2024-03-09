@@ -1,11 +1,16 @@
-var init;
+var init, node;
 
 import Pointer from "./ptr.js";
 
 import GL from "./ptr_gl.js";
 
+node = null;
+
 init = function(buffer) {
-  return Pointer.prototype.buffer = buffer;
+  Pointer.prototype.buffer = buffer;
+  node = new Pointer(self.name);
+  node.setOnlineState(1);
+  return postMessage(node);
 };
 
 bc.addEventListener("message", function(e) {
@@ -14,7 +19,9 @@ bc.addEventListener("message", function(e) {
 
 addEventListener("message", function({data}) {
   if (!(data instanceof SharedArrayBuffer)) {
-    return handleMessage(...arguments);
+    return console.log({
+      forked: new Pointer(data)
+    });
   }
   return init(data);
 });

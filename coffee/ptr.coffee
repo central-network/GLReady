@@ -79,11 +79,10 @@ export default class Pointer extends Number
     init        : -> this
 
     fork        : ( workerCount = 1 ) ->
-        @add new WorkerPointer()
-        
-        setTimeout =>
-            bc.postMessage this
-        , 1000
+        @add worker = new WorkerPointer()
+
+        worker.onmessage = =>
+            worker.send this
 
     add         : ( ptr ) -> ptr.setParentPtri this
 
@@ -173,19 +172,26 @@ Object.defineProperties WorkerPointer,
     byteLength      : value : 4 * 64
 
 Object.defineProperties WorkerPointer::,
+
+    type            : value : "module"
+
+    script          : value : "./ptr_worker.js"
     
     init            : value : ->
         @create()
 
     create          : value : ->
-        worker =new Worker "./ptr_worker.js", { type: "module" }
-        worker.postMessage @buffer
-        
-        @setLinkedNode worker
-        @setOnlineState 1
+        script = this . script
+        config = type : this.type , name : this
+        worker = new Worker script , config
+        worker . postMessage buf
 
-        ; @
-        
+        this
+            .setLinkedNode worker
+
+    onmessage       : set   : -> @getLinkedNode().onmessage = arguments[0]
+
+    send            : value : -> @getLinkedNode().postMessage ...arguments
 
 Object.defineProperties WorkerPointer::,
     
