@@ -4,7 +4,7 @@ export U32ARRAY = null
 
 INDEX_BYTEOFFSET             =  0
 INDEX_BYTELENGTH             =  1
-INDEX_BYTEFINISH             =  2
+INDEX_PTRCLASSID             =  2
 INDEX_LENGTH                 =  3
 INDEX_BEGIN                  =  5
 INDEX_END                    =  6
@@ -15,7 +15,7 @@ INDEX_PTR_CLASS_ID           = 10
 
 OFFSET_BYTEOFFSET            =  0 * 4
 OFFSET_BYTELENGTH            =  1 * 4
-OFFSET_BYTEFINISH            =  2 * 4
+OFFSET_PTRCLASSID            =  2 * 4
 OFFSET_LENGTH                =  3 * 4
 OFFSET_BEGIN                 =  5 * 4
 OFFSET_END                   =  6 * 4
@@ -38,6 +38,7 @@ POINTER_BYTELENGTH           =  4 * POINTER_LENGTH
 PTR_PROTOTYPE = [ null ]
 OBJECTS_ARRAY = {}
 OBJECTS = [ null ]
+CLASS_ID = [,]
 
 OBJECTS.index = ( o ) ->
     for p , i in this
@@ -94,12 +95,9 @@ export class Pointer extends Number
         yield @at( i ) while i++ < @length
 
     constructor     : ( offset = -1 ) ->
-        if  0 > super offset then return new @constructor(
-            mallocAtomic @constructor.byteLength, @constructor
-        )
-
-        @object = OBJECTS.index this
-        @init()
+        if  0 > super offset 
+            o = mallocAtomic @constructor.byteLength, @constructor
+            p = new @constructor o ; p.init() ; return p
 
     @malloc         : ( byteLength ) ->
         mallocAtomic byteLength, this
@@ -114,8 +112,6 @@ export class Pointer extends Number
     init            : -> this
 
     Object.defineProperties this::,
-        objects     : get : -> console.warn OBJECTS
-                
         byteOffset  :
             get     : -> DATAVIEW.getUint32 this + OFFSET_BYTEOFFSET, LE
             set     : -> DATAVIEW.setUint32 this + OFFSET_BYTEOFFSET, arguments[ 0 ], LE
@@ -124,9 +120,9 @@ export class Pointer extends Number
             get     : -> DATAVIEW.getUint32 this + OFFSET_BYTELENGTH, LE
             set     : -> DATAVIEW.setUint32 this + OFFSET_BYTELENGTH, arguments[ 0 ], LE
                 
-        byteFinish  :
-            get     : -> DATAVIEW.getUint32 this + OFFSET_BYTEFINISH, LE
-            set     : -> DATAVIEW.setUint32 this + OFFSET_BYTEFINISH, arguments[ 0 ], LE
+        classId     :
+            get     : -> DATAVIEW.getUint32 this + OFFSET_PTRCLASSID, LE
+            set     : -> DATAVIEW.setUint32 this + OFFSET_PTRCLASSID, arguments[ 0 ], LE
                         
         length      :
             get     : -> DATAVIEW.getUint32 this + OFFSET_LENGTH, LE
@@ -146,7 +142,7 @@ export class Pointer extends Number
 
         object      :
             get     : -> OBJECTS[ DATAVIEW.getUint32 this + OFFSET_PTR_OBJECT, LE ]
-            set     : -> DATAVIEW.setUint32 this + OFFSET_PTR_OBJECT, arguments[0], LE
+            set     : -> DATAVIEW.setUint32 this + OFFSET_PTR_OBJECT, OBJECTS.index(arguments[0]), LE
 
         children    :
             get     : -> OBJECTS.filter ( obj ) => 0 is this - obj?.parent
@@ -238,8 +234,6 @@ export class Pointer extends Number
         new Float32Array @buffer, @byteOffset + byteOffset, length
 
     setObject       : ( byteOffset, object ) ->
-        console.log object, OBJECTS.index( object )
-
         DATAVIEW.setUint32 @byteOffset + byteOffset, OBJECTS.index( object ), LE
 
     getObject       : ( byteOffset ) ->
@@ -254,7 +248,6 @@ export class Pointer extends Number
 
     setHeader       : ( byteOffset, value, isObject ) ->
         value = OBJECTS.index value if isObject
-        console.log isObject, value
         DATAVIEW.setUint32 this + byteOffset, value, LE ; value
 
     erase           : ( byteOffset, byteLength ) ->
@@ -292,7 +285,6 @@ export class IndexPointer extends Pointer
         [ "end" ]        : get : -> @length + @begin
         [ "byteOffset" ] : get : -> @parent . byteOffset + ( this * @byteLength )
         [ "byteLength" ] : get : -> @constructor . byteLength
-        [ "byteFinish" ] : get : -> @byteLength + @byteOffset
         [ "length" ]     : get : -> @byteLength / @BYTES_PER_ELEMENT        
         [ "parent" ]     : configurable: yes, writable: yes
         [ "children" ]   : configurable: yes
@@ -440,9 +432,11 @@ self.mallocAtomic = ( allocByteLength, Ptr = Pointer ) ->
     allocByteOffset = Atomics.add U32ARRAY, 1, allocByteLength
     allocByteFinish = allocByteOffset + allocByteLength
 
+    Ptr.ClassId or= -1 + CLASS_ID.push Ptr
+
     Atomics.store U32ARRAY, iptr + INDEX_BYTEOFFSET , allocByteOffset
     Atomics.store U32ARRAY, iptr + INDEX_BYTELENGTH , allocByteLength
-    Atomics.store U32ARRAY, iptr + INDEX_BYTEFINISH , allocByteFinish 
+    Atomics.store U32ARRAY, iptr + INDEX_PTRCLASSID , Ptr.ClassId 
     Atomics.store U32ARRAY, iptr + INDEX_LENGTH     , allocByteLength / BPel
     Atomics.store U32ARRAY, iptr + INDEX_BEGIN      , allocByteOffset / BPel
     Atomics.store U32ARRAY, iptr + INDEX_END        , allocByteFinish / BPel

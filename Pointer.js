@@ -1,4 +1,4 @@
-var Color4, INDEX_BEGIN, INDEX_BYTEFINISH, INDEX_BYTELENGTH, INDEX_BYTEOFFSET, INDEX_BYTES_PER_ELEMENT, INDEX_END, INDEX_LENGTH, INDEX_PTR_CLASS_ID, INDEX_PTR_PARENT, INDEX_TYPED_ARRAY_ID, OBJECTS, OBJECTS_ARRAY, OFFSET_BEGIN, OFFSET_BYTEFINISH, OFFSET_BYTELENGTH, OFFSET_BYTEOFFSET, OFFSET_END, OFFSET_LENGTH, OFFSET_PTR_OBJECT, OFFSET_PTR_PARENT, POINTERS_BEGIN, POINTER_BYTELENGTH, POINTER_LENGTH, PTR_PROTOTYPE, TypedArraysIds, cls, getCaller, i, j, key, keys, len, val, vals, vars;
+var CLASS_ID, Color4, INDEX_BEGIN, INDEX_BYTELENGTH, INDEX_BYTEOFFSET, INDEX_BYTES_PER_ELEMENT, INDEX_END, INDEX_LENGTH, INDEX_PTRCLASSID, INDEX_PTR_CLASS_ID, INDEX_PTR_PARENT, INDEX_TYPED_ARRAY_ID, OBJECTS, OBJECTS_ARRAY, OFFSET_BEGIN, OFFSET_BYTELENGTH, OFFSET_BYTEOFFSET, OFFSET_END, OFFSET_LENGTH, OFFSET_PTRCLASSID, OFFSET_PTR_OBJECT, OFFSET_PTR_PARENT, POINTERS_BEGIN, POINTER_BYTELENGTH, POINTER_LENGTH, PTR_PROTOTYPE, TypedArraysIds, cls, getCaller, i, j, key, keys, len, val, vals, vars;
 
 export var BUFFER = null;
 
@@ -10,7 +10,7 @@ INDEX_BYTEOFFSET = 0;
 
 INDEX_BYTELENGTH = 1;
 
-INDEX_BYTEFINISH = 2;
+INDEX_PTRCLASSID = 2;
 
 INDEX_LENGTH = 3;
 
@@ -30,7 +30,7 @@ OFFSET_BYTEOFFSET = 0 * 4;
 
 OFFSET_BYTELENGTH = 1 * 4;
 
-OFFSET_BYTEFINISH = 2 * 4;
+OFFSET_PTRCLASSID = 2 * 4;
 
 OFFSET_LENGTH = 3 * 4;
 
@@ -67,6 +67,8 @@ PTR_PROTOTYPE = [null];
 OBJECTS_ARRAY = {};
 
 OBJECTS = [null];
+
+CLASS_ID = [, ];
 
 OBJECTS.index = function(o) {
   var i, j, len, p, ref;
@@ -153,11 +155,13 @@ export var Pointer = (function() {
     }
 
     constructor(offset = -1) {
+      var o, p;
       if (0 > super(offset)) {
-        return new this.constructor(mallocAtomic(this.constructor.byteLength, this.constructor));
+        o = mallocAtomic(this.constructor.byteLength, this.constructor);
+        p = new this.constructor(o);
+        p.init();
+        return p;
       }
-      this.object = OBJECTS.index(this);
-      this.init();
     }
 
     static malloc(byteLength) {
@@ -254,7 +258,6 @@ export var Pointer = (function() {
     }
 
     setObject(byteOffset, object) {
-      console.log(object, OBJECTS.index(object));
       return DATAVIEW.setUint32(this.byteOffset + byteOffset, OBJECTS.index(object), LE);
     }
 
@@ -279,7 +282,6 @@ export var Pointer = (function() {
       if (isObject) {
         value = OBJECTS.index(value);
       }
-      console.log(isObject, value);
       DATAVIEW.setUint32(this + byteOffset, value, LE);
       return value;
     }
@@ -320,11 +322,6 @@ export var Pointer = (function() {
   Pointer.BYTES_PER_ELEMENT = 4;
 
   Object.defineProperties(Pointer.prototype, {
-    objects: {
-      get: function() {
-        return console.warn(OBJECTS);
-      }
-    },
     byteOffset: {
       get: function() {
         return DATAVIEW.getUint32(this + OFFSET_BYTEOFFSET, LE);
@@ -341,12 +338,12 @@ export var Pointer = (function() {
         return DATAVIEW.setUint32(this + OFFSET_BYTELENGTH, arguments[0], LE);
       }
     },
-    byteFinish: {
+    classId: {
       get: function() {
-        return DATAVIEW.getUint32(this + OFFSET_BYTEFINISH, LE);
+        return DATAVIEW.getUint32(this + OFFSET_PTRCLASSID, LE);
       },
       set: function() {
-        return DATAVIEW.setUint32(this + OFFSET_BYTEFINISH, arguments[0], LE);
+        return DATAVIEW.setUint32(this + OFFSET_PTRCLASSID, arguments[0], LE);
       }
     },
     length: {
@@ -386,7 +383,7 @@ export var Pointer = (function() {
         return OBJECTS[DATAVIEW.getUint32(this + OFFSET_PTR_OBJECT, LE)];
       },
       set: function() {
-        return DATAVIEW.setUint32(this + OFFSET_PTR_OBJECT, arguments[0], LE);
+        return DATAVIEW.setUint32(this + OFFSET_PTR_OBJECT, OBJECTS.index(arguments[0]), LE);
       }
     },
     children: {
@@ -552,11 +549,6 @@ export var IndexPointer = (function() {
     ["byteLength"]: {
       get: function() {
         return this.constructor.byteLength;
-      }
-    },
-    ["byteFinish"]: {
-      get: function() {
-        return this.byteLength + this.byteOffset;
       }
     },
     ["length"]: {
@@ -760,9 +752,10 @@ self.mallocAtomic = function(allocByteLength, Ptr = Pointer) {
   BPel = Ptr.TypedArray.BYTES_PER_ELEMENT;
   allocByteOffset = Atomics.add(U32ARRAY, 1, allocByteLength);
   allocByteFinish = allocByteOffset + allocByteLength;
+  Ptr.ClassId || (Ptr.ClassId = -1 + CLASS_ID.push(Ptr));
   Atomics.store(U32ARRAY, iptr + INDEX_BYTEOFFSET, allocByteOffset);
   Atomics.store(U32ARRAY, iptr + INDEX_BYTELENGTH, allocByteLength);
-  Atomics.store(U32ARRAY, iptr + INDEX_BYTEFINISH, allocByteFinish);
+  Atomics.store(U32ARRAY, iptr + INDEX_PTRCLASSID, Ptr.ClassId);
   Atomics.store(U32ARRAY, iptr + INDEX_LENGTH, allocByteLength / BPel);
   Atomics.store(U32ARRAY, iptr + INDEX_BEGIN, allocByteOffset / BPel);
   Atomics.store(U32ARRAY, iptr + INDEX_END, allocByteFinish / BPel);

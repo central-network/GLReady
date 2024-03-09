@@ -335,7 +335,6 @@ export var GLProgram = (function() {
 
     create() {
       var j, len, ref, shader;
-      this.glProgram = this.gl.createProgram();
       ref = this.shaders;
       for (j = 0, len = ref.length; j < len; j++) {
         shader = ref[j];
@@ -356,15 +355,8 @@ export var GLProgram = (function() {
 
   Object.defineProperties(GLProgram.prototype, {
     glProgram: {
-      set: function() {
-        return this.setHeader(OFFSET_OBJECT_0, arguments[0], true);
-      },
       get: function() {
-        var p;
-        if (p = this.getHeader(OFFSET_OBJECT_0, true)) {
-          return p;
-        }
-        return this.glProgram = this.gl.createProgram();
+        return this.object || (this.object = this.gl.createProgram());
       }
     },
     shaders: {
@@ -568,15 +560,8 @@ export var GLShader = (function() {
       }
     },
     glShader: {
-      set: function() {
-        return this.setHeader(OFFSET_OBJECT_0, arguments[0], true);
-      },
       get: function() {
-        var p;
-        if (p = this.getHeader(OFFSET_OBJECT_0, true)) {
-          return p;
-        }
-        return this.glShader = this.gl.createShader(this.shaderType);
+        return this.object || (this.object = this.gl.createShader(this.shaderType));
       }
     },
     isVertex: {

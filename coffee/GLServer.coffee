@@ -179,10 +179,7 @@ export class GLProgram      extends GLPointer
     Object.defineProperties this::,
 
         glProgram       :
-            set : -> @setHeader OFFSET_OBJECT_0, arguments[0], yes
-            get : ->
-                return p if p = @getHeader OFFSET_OBJECT_0, yes
-                return @glProgram = @gl.createProgram() 
+            get : -> @object or= @gl.createProgram() 
 
         shaders         :
             get : -> @children.filter (v) -> v instanceof GLShader
@@ -233,8 +230,6 @@ export class GLProgram      extends GLPointer
         @isInUse = 1 ; this
 
     create              : ->
-        @glProgram = @gl.createProgram()
-
         for shader in @shaders
             shader.create()
 
@@ -266,10 +261,7 @@ export class GLShader   extends GLPointer
             get : -> @parent.glProgram
 
         glShader        :
-            set : -> @setHeader OFFSET_OBJECT_0, arguments[0], yes
-            get : ->
-                return p if p = @getHeader OFFSET_OBJECT_0, yes
-                return @glShader = @gl.createShader @shaderType 
+            get : -> @object or= @gl.createShader @shaderType 
 
         isVertex        :
             get : -> /gl_Pos/.test @source 
