@@ -14,10 +14,24 @@ POINTERS_BYTEOFFSET = 8
 
 proxy = -> new Proxy i: arguments[0],
     get : ( {i}, key ) ->
+
+        #* request sent to window --->
+        #TODO integrate arguments for fns
         postMessage proxy: i, key:key
 
+        #* proxy locked now --->
         Atomics.wait i32, 1000, 0
-        Atomics.load i32, 1000
+        #TODO window processing request
+        #TODO notify 1000 index for one time 
+        #TODO when result is ready
+        
+        #* proxy unlocked now --->
+        result = Atomics.load i32, 1000
+        #TODO window written result to that index
+        #TODO we need to implement more complex ones
+
+        #TODO hey beyb: that's sync on window and worker
+        return result #? awesome :))) <3
 
 Object.defineProperties DataView::,
 
@@ -99,15 +113,25 @@ export default class Pointer extends Number
         @add worker = new WorkerPointer()
 
         worker.onmessage = ({ data }) =>
-            if  i = data.proxy
-                key = data.key
-                result = OBJECTS[i][key]
+            if  i = data.proxy  #TODO is it proxy request? only one just for now
+                key = data.key  #TODO what is fn's or variable's name
+                result = OBJECTS[i][key] #TODO get request
 
-                console.warn "request :", OBJECTS[i].constructor.name + "." + key
-                console.warn "result  :", result
+                #TODO call if it is a function -- not ready yet
+                if  typeof result is "function"
+                    #TODO needs arguments parameter?? 
+                    result = result ...data.arguments
 
+                log request: OBJECTS[i].constructor.name + "." + key
+                log result: result
+
+                #TODO store result to Int32 array
                 Atomics.store i32, 1000, result
+
+                #TODO notify cell to unlock
                 Atomics.notify i32, 1000, 1
+
+                #* proxy unlocked now --->
 
     add         : ( ptr ) -> ptr.setParentPtri this
 

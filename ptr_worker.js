@@ -13,11 +13,11 @@ init = function(buffer) {
   worker = new Pointer(self.name);
   forker = worker.getParentPtrP();
   worker.setOnlineState(1);
-  console.log({
+  log({
     worker: worker,
     forker: forker
   });
-  return console.log("locked request gl.FLOAT:", forker.gl.FLOAT);
+  return log(["locked request'n response", "gl.FLOAT", forker.gl.FLOAT]);
 };
 
 addEventListener("message", function({data}) {

@@ -12,9 +12,8 @@ init = ( buffer ) ->
     forker = worker.getParentPtrP()
     worker . setOnlineState 1
 
-    console.log worker: worker, forker: forker
-
-    console.log "locked request gl.FLOAT:", forker.gl.FLOAT
+    log worker: worker, forker: forker
+    log [ "locked request'n response", "gl.FLOAT", forker.gl.FLOAT ]
 
 addEventListener "message", ({ data }) ->
 

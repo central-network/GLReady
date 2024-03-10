@@ -21,12 +21,26 @@ proxy = function() {
     i: arguments[0]
   }, {
     get: function({i}, key) {
+      var result;
+      //* request sent to window --->
+      //TODO integrate arguments for fns
       postMessage({
         proxy: i,
         key: key
       });
+      //* proxy locked now --->
       Atomics.wait(i32, 1000, 0);
-      return Atomics.load(i32, 1000);
+      //TODO window processing request
+      //TODO notify 1000 index for one time 
+      //TODO when result is ready
+
+      //* proxy unlocked now --->
+      result = Atomics.load(i32, 1000);
+      //TODO window written result to that index
+      //TODO we need to implement more complex ones
+
+      //TODO hey beyb: that's sync on window and worker
+      return result; //? awesome :))) <3
     }
   });
 };
@@ -136,17 +150,30 @@ export default Pointer = class Pointer extends Number {
     this.add(worker = new WorkerPointer());
     return worker.onmessage = ({data}) => {
       var i, key, result;
-      if (i = data.proxy) {
-        key = data.key;
+      if (i = data.proxy) { //TODO is it proxy request? only one just for now
+        key = data.key; //TODO what is fn's or variable's name
         result = OBJECTS[i][key];
-        console.warn("request :", OBJECTS[i].constructor.name + "." + key);
-        console.warn("result  :", result);
+        
+        //TODO call if it is a function -- not ready yet
+        if (typeof result === "function") {
+          //TODO needs arguments parameter?? 
+          result = result(...data.arguments);
+        }
+        log({
+          request: OBJECTS[i].constructor.name + "." + key
+        });
+        log({
+          result: result
+        });
+        //TODO store result to Int32 array
         Atomics.store(i32, 1000, result);
+        //TODO notify cell to unlock
         return Atomics.notify(i32, 1000, 1);
       }
     };
   }
 
+  //* proxy unlocked now --->
   add(ptr) {
     return ptr.setParentPtri(this);
   }
