@@ -628,6 +628,12 @@ Color4 = (function() {
 
 }).call(this);
 
+Object.defineProperties(WebGL2RenderingContext, {
+  DEPTH_N_COLOR_BIT: {
+    value: WebGL2RenderingContext.DEPTH_BUFFER_BIT | WebGL2RenderingContext.COLOR_BUFFER_BIT
+  }
+});
+
 Object.defineProperties(Float32Array.prototype, {
   toUint32: {
     value: function() {

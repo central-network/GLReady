@@ -1,26 +1,38 @@
-var GL, OFFSET_BLEND_ACTIVE, OFFSET_CLEAR_COLOR, OFFSET_CLEAR_DEPTH, OFFSET_CULLFACE, OFFSET_CULL_ACTIVE, OFFSET_DEPTH_ACTIVE, OFFSET_DEPTH_FUNC, OFFSET_DEPTH_MASK, OFFSET_DRAW_ACTIVE, OFFSET_FRONTFACE;
+var GL, OFFSET_BIND_TARGET, OFFSET_BLEND_ACTIVE, OFFSET_BLEND_EQUATE, OFFSET_BLEND_FUNC, OFFSET_BLEND_INARG, OFFSET_BLEND_OUTARG, OFFSET_CLEAR_COLOR, OFFSET_CLEAR_DEPTH, OFFSET_CLEAR_MASK, OFFSET_CULL_ENABLED, OFFSET_CULL_FACE, OFFSET_DEPTH_ACTIVE, OFFSET_DEPTH_FUNC, OFFSET_DEPTH_TEST, OFFSET_DRAW_ACTIVE, OFFSET_FRONTFACE;
 
 import Pointer from "./ptr.js";
 
 OFFSET_DRAW_ACTIVE = 4 * 2;
 
-OFFSET_CULL_ACTIVE = 4 * 2 + 1;
+OFFSET_CULL_ENABLED = 4 * 2 + 1;
 
 OFFSET_BLEND_ACTIVE = 4 * 2 + 2;
 
 OFFSET_DEPTH_ACTIVE = 4 * 2 + 3;
 
-OFFSET_CULLFACE = 4 * 3;
+OFFSET_CULL_FACE = 4 * 3;
 
 OFFSET_FRONTFACE = 4 * 3 + 2;
 
 OFFSET_DEPTH_FUNC = 4 * 4;
 
-OFFSET_DEPTH_MASK = 4 * 4 + 2;
+OFFSET_CLEAR_MASK = 4 * 4 + 2;
 
 OFFSET_CLEAR_DEPTH = 4 * 5;
 
 OFFSET_CLEAR_COLOR = 4 * 6;
+
+OFFSET_BIND_TARGET = 4 * 7;
+
+OFFSET_BLEND_EQUATE = 4 * 7 + 2;
+
+OFFSET_BLEND_INARG = 4 * 8;
+
+OFFSET_BLEND_OUTARG = 4 * 8 + 2;
+
+OFFSET_BLEND_FUNC = 4 * 9;
+
+OFFSET_DEPTH_TEST = 4 * 9 + 2;
 
 export default GL = (function() {
   class GL extends Pointer {
@@ -48,12 +60,12 @@ export default GL = (function() {
       return this.setUint8(OFFSET_DRAW_ACTIVE, arguments[0]);
     }
 
-    getCullActive() {
-      return this.getUint8(OFFSET_CULL_ACTIVE);
+    getCullEnabled() {
+      return this.getUint8(OFFSET_CULL_ENABLED);
     }
 
-    setCullActive() {
-      return this.setUint8(OFFSET_CULL_ACTIVE, arguments[0]);
+    setCullEnabled() {
+      return this.setUint8(OFFSET_CULL_ENABLED, arguments[0]);
     }
 
     getBlendActive() {
@@ -72,20 +84,32 @@ export default GL = (function() {
       return this.setUint8(OFFSET_DEPTH_ACTIVE, arguments[0]);
     }
 
+    keyDepthTest() {
+      return this.keyUint16(OFFSET_DEPTH_TEST);
+    }
+
+    getDepthTest() {
+      return this.getUint16(OFFSET_DEPTH_TEST);
+    }
+
+    setDepthTest() {
+      return this.setUint16(OFFSET_DEPTH_TEST, arguments[0]);
+    }
+
     keyCullFace() {
-      return this.keyUint16(OFFSET_CULLFACE, WebGLRenderingContext);
+      return this.keyUint16(OFFSET_CULL_FACE);
     }
 
     getCullFace() {
-      return this.getUint16(OFFSET_CULLFACE);
+      return this.getUint16(OFFSET_CULL_FACE);
     }
 
     setCullFace() {
-      return this.setUint16(OFFSET_CULLFACE, arguments[0]);
+      return this.setUint16(OFFSET_CULL_FACE, arguments[0]);
     }
 
     keyFrontFace() {
-      return this.keyUint16(OFFSET_FRONTFACE, WebGLRenderingContext);
+      return this.keyUint16(OFFSET_FRONTFACE);
     }
 
     getFrontFace() {
@@ -97,7 +121,7 @@ export default GL = (function() {
     }
 
     keyDepthFunc() {
-      return this.keyUint16(OFFSET_DEPTH_FUNC, WebGLRenderingContext);
+      return this.keyUint16(OFFSET_DEPTH_FUNC);
     }
 
     getDepthFunc() {
@@ -108,16 +132,16 @@ export default GL = (function() {
       return this.setUint16(OFFSET_DEPTH_FUNC, arguments[0]);
     }
 
-    keyDepthMask() {
-      return this.keyUint16(OFFSET_DEPTH_MASK, WebGLRenderingContext);
+    keyClearMask() {
+      return this.keyUint16(OFFSET_CLEAR_MASK);
     }
 
-    getDepthMask() {
-      return this.getUint16(OFFSET_DEPTH_MASK);
+    getClearMask() {
+      return this.getUint16(OFFSET_CLEAR_MASK);
     }
 
-    setDepthMask() {
-      return this.setUint16(OFFSET_DEPTH_MASK, arguments[0]);
+    setClearMask() {
+      return this.setUint16(OFFSET_CLEAR_MASK, arguments[0]);
     }
 
     getClearDepth() {
@@ -138,6 +162,66 @@ export default GL = (function() {
 
     setClearColor() {
       return this.setColor4(OFFSET_CLEAR_COLOR, arguments[0]);
+    }
+
+    keyBindTarget() {
+      return this.keyUint16(OFFSET_BIND_TARGET);
+    }
+
+    getBindTarget() {
+      return this.getUint16(OFFSET_BIND_TARGET);
+    }
+
+    setBindTarget() {
+      return this.setUint16(OFFSET_BIND_TARGET, arguments[0]);
+    }
+
+    keyBlendEquate() {
+      return this.keyUint16(OFFSET_BLEND_EQUATE);
+    }
+
+    getBlendEquate() {
+      return this.getUint16(OFFSET_BLEND_EQUATE);
+    }
+
+    setBlendEquate() {
+      return this.setUint16(OFFSET_BLEND_EQUATE, arguments[0]);
+    }
+
+    keyBlendInArg() {
+      return this.keyUint16(OFFSET_BLEND_INARG);
+    }
+
+    getBlendInArg() {
+      return this.getUint16(OFFSET_BLEND_INARG);
+    }
+
+    setBlendInArg() {
+      return this.setUint16(OFFSET_BLEND_INARG, arguments[0]);
+    }
+
+    keyBlendOutArg() {
+      return this.keyUint16(OFFSET_BLEND_OUTARG);
+    }
+
+    getBlendOutArg() {
+      return this.getUint16(OFFSET_BLEND_OUTARG);
+    }
+
+    setBlendOutArg() {
+      return this.setUint16(OFFSET_BLEND_OUTARG, arguments[0]);
+    }
+
+    keyBlendFunc() {
+      return this.keyUint16(OFFSET_BLEND_FUNC);
+    }
+
+    getBlendFunc() {
+      return this.getUint16(OFFSET_BLEND_FUNC);
+    }
+
+    setBlendFunc() {
+      return this.setUint16(OFFSET_BLEND_FUNC, arguments[0]);
     }
 
   };
@@ -161,9 +245,9 @@ export default GL = (function() {
       get: GL.prototype.getDrawActive,
       set: GL.prototype.setDrawActive
     },
-    cullActive: {
-      get: GL.prototype.getCullActive,
-      set: GL.prototype.setCullActive
+    cullEnabled: {
+      get: GL.prototype.getCullEnabled,
+      set: GL.prototype.setCullEnabled
     },
     cullFace: {
       get: GL.prototype.keyCullFace,
@@ -177,17 +261,41 @@ export default GL = (function() {
       get: GL.prototype.getBlendActive,
       set: GL.prototype.setBlendActive
     },
+    blendEquate: {
+      get: GL.prototype.keyBlendEquate,
+      set: GL.prototype.setBlendEquate
+    },
+    blendFunc: {
+      get: GL.prototype.keyBlendFunc,
+      set: GL.prototype.setBlendFunc
+    },
+    blendInArg: {
+      get: GL.prototype.keyBlendInArg,
+      set: GL.prototype.setBlendInArg
+    },
+    blendOutArg: {
+      get: GL.prototype.keyBlendOutArg,
+      set: GL.prototype.setBlendOutArg
+    },
     depthActive: {
       get: GL.prototype.getDepthActive,
       set: GL.prototype.setDepthActive
+    },
+    depthTest: {
+      get: GL.prototype.keyDepthTest,
+      set: GL.prototype.setDepthTest
     },
     depthFunc: {
       get: GL.prototype.keyDepthFunc,
       set: GL.prototype.setDepthFunc
     },
-    depthMask: {
-      get: GL.prototype.keyDepthMask,
-      set: GL.prototype.setDepthMask
+    clearMask: {
+      get: GL.prototype.keyClearMask,
+      set: GL.prototype.setClearMask
+    },
+    bindTarget: {
+      get: GL.prototype.keyBindTarget,
+      set: GL.prototype.setBindTarget
     },
     clearDepth: {
       get: GL.prototype.getClearDepth,

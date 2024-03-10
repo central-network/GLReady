@@ -1,4 +1,4 @@
-var BYTES_PER_POINTER, Color4, INDEX_BUF, INDEX_PTR, LE, LENGTH_OF_POINTER, OBJECTS, OFFSET_BYTELENGTH, OFFSET_BYTEOFFSET, OFFSET_LINKEDNODE, OFFSET_PARENT_PTR, OFFSET_PROTOCLASS, OFFSET_PTRCLASS_0, OFFSET_PTRCLASS_1, OFFSET_PTRCLASS_2, OFFSET_PTRCLASS_3, OFFSET_PTRCLASS_4, POINTERS_BYTELENGTH, POINTERS_BYTEOFFSET, POINTER_PROTOTYPE, Pointer, buf, dvw, i32, malloc, palloc, proxy, u32;
+var BYTES_PER_POINTER, Color4, DEPTH_N_COLOR_BIT, INDEX_BUF, INDEX_PTR, KEYED, LE, LENGTH_OF_POINTER, NONE, OBJECTS, OFFSET_BYTELENGTH, OFFSET_BYTEOFFSET, OFFSET_LINKEDNODE, OFFSET_PARENT_PTR, OFFSET_PROTOCLASS, OFFSET_PTRCLASS_0, OFFSET_PTRCLASS_1, OFFSET_PTRCLASS_2, OFFSET_PTRCLASS_3, OFFSET_PTRCLASS_4, POINTERS_BYTELENGTH, POINTERS_BYTEOFFSET, POINTER_PROTOTYPE, Pointer, buf, dvw, i32, k, malloc, palloc, proxy, u32, v;
 
 import "./ptr_self.js";
 
@@ -45,6 +45,16 @@ proxy = function() {
   });
 };
 
+KEYED = {
+  0: new (NONE = class NONE extends Number {})(0),
+  16640: new (DEPTH_N_COLOR_BIT = class DEPTH_N_COLOR_BIT extends Number {})(16640)
+};
+
+for (k in WebGL2RenderingContext) {
+  v = WebGL2RenderingContext[k];
+  KEYED[v] = eval(`new (class ${k} extends Number {})(${v})`);
+}
+
 Object.defineProperties(DataView.prototype, {
   setObject: {
     value: function(offset, object) {
@@ -71,20 +81,8 @@ Object.defineProperties(DataView.prototype, {
     }
   },
   keyUint16: {
-    value: function(offset, keyof) {
-      var k, v, value;
-      if (!(v = this.getUint16(offset, LE))) {
-        return 0;
-      }
-      if (!keyof[v]) {
-        for (k in keyof) {
-          value = keyof[k];
-          if (!(v - value)) {
-            keyof[v] = eval(`new (class ${k} extends Number {})(${v})`);
-          }
-        }
-      }
-      return keyof[v];
+    value: function(offset) {
+      return KEYED[this.getUint16(offset, LE)];
     }
   }
 });
@@ -161,49 +159,49 @@ Color4 = (function() {
     }
   });
 
+  Object.defineProperties(Number.prototype, {
+    toUint32Number: {
+      value: function() {
+        if (!this) {
+          return 0;
+        }
+        new DataView(buf = new ArrayBuffer(4)).setUint32(0, this, LE);
+        return parseInt("0x" + [...new Uint8Array(buf)].map(function(m) {
+          return m.toString(16).padStart(2, 0);
+        }).join(""));
+      }
+    },
+    toFloat32Array: {
+      value: function(normalized = true) {
+        var di, dv, i8;
+        if (!this) {
+          return new Float32Array(4);
+        }
+        dv = new DataView(new ArrayBuffer(4));
+        dv.setUint32(0, this, LE);
+        i8 = new Uint8Array(dv.buffer);
+        if (LE) {
+          i8.reverse();
+        }
+        di = 1;
+        if (normalized) {
+          di = 255;
+        }
+        return Float32Array.of(...[...i8].map(function(n) {
+          return n / di;
+        }));
+      }
+    },
+    toRGBA: {
+      value: function() {
+        return this.toFloat32Array(...arguments);
+      }
+    }
+  });
+
   return Color4;
 
 }).call(this);
-
-Object.defineProperties(Number.prototype, {
-  toUint32Number: {
-    value: function() {
-      if (!this) {
-        return 0;
-      }
-      new DataView(buf = new ArrayBuffer(4)).setUint32(0, this, LE);
-      return parseInt("0x" + [...new Uint8Array(buf)].map(function(m) {
-        return m.toString(16).padStart(2, 0);
-      }).join(""));
-    }
-  },
-  toFloat32Array: {
-    value: function(normalized = true) {
-      var di, dv, i8;
-      if (!this) {
-        return new Float32Array(4);
-      }
-      dv = new DataView(new ArrayBuffer(4));
-      dv.setUint32(0, this, LE);
-      i8 = new Uint8Array(dv.buffer);
-      if (LE) {
-        i8.reverse();
-      }
-      di = 1;
-      if (normalized) {
-        di = 255;
-      }
-      return Float32Array.of(...[...i8].map(function(n) {
-        return n / di;
-      }));
-    }
-  },
-  toRGBA: {
-    value: function() {
-      return this.toFloat32Array(...arguments);
-    }
-  }
-});
 
 //? POINTER STARTS
 LENGTH_OF_POINTER = 16;

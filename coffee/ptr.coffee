@@ -33,6 +33,12 @@ proxy = -> new Proxy i: arguments[0],
         #TODO hey beyb: that's sync on window and worker
         return result #? awesome :))) <3
 
+KEYED =
+    0       : new (class NONE extends Number) 0
+    16640   : new (class DEPTH_N_COLOR_BIT extends Number) 16640
+
+for k, v of WebGL2RenderingContext then KEYED[ v ] =
+    eval "new (class #{k} extends Number {})(#{v})"
 
 Object.defineProperties DataView::,
     
@@ -49,12 +55,8 @@ Object.defineProperties DataView::,
     toPointer : value : ( offset ) ->
         new Pointer @getUint32 offset
 
-    keyUint16 : value : ( offset, keyof ) ->
-        return 0 unless v = @getUint16 offset, LE
-
-        unless keyof[ v ] then for k, value of keyof then unless v - value
-            keyof[ v ] = eval "new (class #{k} extends Number {})(#{v})"
-        keyof[ v ]
+    keyUint16 : value : ( offset ) ->
+        KEYED[ @getUint16 offset, LE ]
 
 class Color4 extends Number
 
@@ -110,34 +112,34 @@ class Color4 extends Number
             ( a = ( a / 2.55 ).toFixed(2) )
             "rgba( #{r} #{g} #{b} / #{a}% )"
 
-Object.defineProperties Number::,
+    Object.defineProperties Number::,
 
-    toUint32Number  : value : ->
-        return 0 unless this
+        toUint32Number  : value : ->
+            return 0 unless this
 
-        new DataView buf = new ArrayBuffer 4
-            .setUint32 0, this, LE
+            new DataView buf = new ArrayBuffer 4
+                .setUint32 0, this, LE
 
-        parseInt "0x" + [ 
-            ...new Uint8Array( buf )
-        ].map( (m) -> m.toString(16).padStart(2, 0) ).join("")
+            parseInt "0x" + [ 
+                ...new Uint8Array( buf )
+            ].map( (m) -> m.toString(16).padStart(2, 0) ).join("")
 
-    toFloat32Array  : value : ( normalized = yes )  ->
-        return new Float32Array(4) unless this
+        toFloat32Array  : value : ( normalized = yes )  ->
+            return new Float32Array(4) unless this
 
-        dv = new DataView new ArrayBuffer 4
-        dv.setUint32 0, this, LE
+            dv = new DataView new ArrayBuffer 4
+            dv.setUint32 0, this, LE
 
-        i8 = new Uint8Array dv.buffer
-        i8.reverse() if LE 
+            i8 = new Uint8Array dv.buffer
+            i8.reverse() if LE 
 
-        di = 1
-        di = 255 if normalized
+            di = 1
+            di = 255 if normalized
 
-        Float32Array.of ...[ ...i8 ].map (n) -> n/di
+            Float32Array.of ...[ ...i8 ].map (n) -> n/di
 
-    toRGBA          : value : ->
-        @toFloat32Array ...arguments
+        toRGBA          : value : ->
+            @toFloat32Array ...arguments
 
 #? POINTER STARTS
 LENGTH_OF_POINTER   = 16

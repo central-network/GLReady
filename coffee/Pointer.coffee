@@ -340,6 +340,13 @@ class Color4 extends Number
             ( a = ( a / 2.55 ).toFixed(2) )
             "rgba( #{r} #{g} #{b} / #{a}% )"
 
+
+Object.defineProperties WebGL2RenderingContext,
+    DEPTH_N_COLOR_BIT : value : (
+        WebGL2RenderingContext.DEPTH_BUFFER_BIT |
+        WebGL2RenderingContext.COLOR_BUFFER_BIT
+    )
+
 Object.defineProperties Float32Array::,
     toUint32        : value : ->
         new Uint32Array( Uint8Array.of(
