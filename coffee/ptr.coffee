@@ -33,8 +33,9 @@ proxy = -> new Proxy i: arguments[0],
         #TODO hey beyb: that's sync on window and worker
         return result #? awesome :))) <3
 
-Object.defineProperties DataView::,
 
+Object.defineProperties DataView::,
+    
     setObject : value : ( offset, object ) ->
         if -1 is i = OBJECTS.indexOf object
             i += OBJECTS.push object
@@ -47,6 +48,96 @@ Object.defineProperties DataView::,
 
     toPointer : value : ( offset ) ->
         new Pointer @getUint32 offset
+
+    keyUint16 : value : ( offset, keyof ) ->
+        return 0 unless v = @getUint16 offset, LE
+
+        unless keyof[ v ] then for k, value of keyof then unless v - value
+            keyof[ v ] = eval "new (class #{k} extends Number {})(#{v})"
+        keyof[ v ]
+
+class Color4 extends Number
+
+    Object.defineProperties this,
+        u32 : value : ( any ) ->
+            if isNaN any
+                if  any.map
+                    [ r = 0, g = 0, b = 0, a = 1 ] = any
+
+                    if (r and r <= 1) or (g and g <= 1 ) or (b and b <= 1 )
+                        r *= 0xff
+                        g *= 0xff
+                        b *= 0xff
+
+                    if (a and a <= 1)
+                        a *= 0xff
+
+                    return parseInt(
+                        r.toString(16).padStart(2,0) +
+                        g.toString(16).padStart(2,0) +
+                        b.toString(16).padStart(2,0) +
+                        a.toString(16).padStart(2,0) , 16
+                    )
+                return parseInt any
+            return any                
+
+    Object.defineProperties this::,
+        f32 : get : ->
+            dv = new DataView new ArrayBuffer 4
+            dv.setUint32 0, this, LE
+
+            i8 = new Uint8Array dv.buffer
+            i8.reverse() if LE 
+            di = 255
+
+            Float32Array.of ...[ ...i8 ].map (n) -> n/di
+        
+        ui8 : get : ->
+            dv = new DataView new ArrayBuffer 4
+            dv.setUint32 0, this, LE
+
+            i8 = new Uint8Array dv.buffer
+            i8.reverse() if LE 
+            i8
+
+        hex : get : ->
+            "#" + [ ...@ui8 ].map (n) ->
+                n.toString(16).padStart(2,0)
+            .join ""
+
+        css : get : ->
+            [ r, g, b, a ] = @ui8
+            ( a = ( a / 2.55 ).toFixed(2) )
+            "rgba( #{r} #{g} #{b} / #{a}% )"
+
+Object.defineProperties Number::,
+
+    toUint32Number  : value : ->
+        return 0 unless this
+
+        new DataView buf = new ArrayBuffer 4
+            .setUint32 0, this, LE
+
+        parseInt "0x" + [ 
+            ...new Uint8Array( buf )
+        ].map( (m) -> m.toString(16).padStart(2, 0) ).join("")
+
+    toFloat32Array  : value : ( normalized = yes )  ->
+        return new Float32Array(4) unless this
+
+        dv = new DataView new ArrayBuffer 4
+        dv.setUint32 0, this, LE
+
+        i8 = new Uint8Array dv.buffer
+        i8.reverse() if LE 
+
+        di = 1
+        di = 255 if normalized
+
+        Float32Array.of ...[ ...i8 ].map (n) -> n/di
+
+    toRGBA          : value : ->
+        @toFloat32Array ...arguments
 
 #? POINTER STARTS
 LENGTH_OF_POINTER   = 16
@@ -67,7 +158,7 @@ POINTER_PROTOTYPE   = [,]
 
 export default class Pointer extends Number
 
-    @setBuffer : ( sab, max = 1e20 ) ->
+    @setBuffer  : ( sab, max = 1e20 ) ->
 
         unless sab then loop
             try sab = new SharedArrayBuffer max
@@ -107,7 +198,8 @@ export default class Pointer extends Number
                 
             @init()
 
-    init        : -> this
+    init        : ->
+        this
 
     fork        : ->
         @add worker = new WorkerPointer()
@@ -133,7 +225,8 @@ export default class Pointer extends Number
 
                 #* proxy unlocked now --->
 
-    add         : ( ptr ) -> ptr.setParentPtri this
+    add         : ->
+        arguments[0].setParentPtri this
 
         
 export class BufferPointer extends Pointer
@@ -152,6 +245,10 @@ Object.defineProperties Pointer,
 Object.defineProperties Pointer::,
 
     getHeader       : value : -> dvw.getUint32 this + arguments[0] * 4
+
+    getTypedArray   : value : -> new this.constructor.typedArray @buffer, @byteOffset, @length
+
+    getTypedLength  : value : -> @byteLength / this.constructor.typedArray.BYTES_PER_ELEMENT
 
     findAllChilds   : value : ->
         offset = POINTERS_BYTEOFFSET + OFFSET_PARENT_PTR
@@ -197,8 +294,33 @@ Object.defineProperties Pointer::,
     getParentPtrP   : value : -> dvw.toPointer this + OFFSET_PARENT_PTR, LE
 
 
+Object.defineProperties Pointer::,
+
+    getUint8        : value : -> dvw.getUint8 @byteOffset + arguments[0]
+    
+    setUint8        : value : -> dvw.setUint8 @byteOffset + arguments[0], arguments[1]
+
+    keyUint16       : value : -> dvw.keyUint16 @byteOffset + arguments[0], arguments[1]
+
+    getUint16       : value : -> dvw.getUint16 @byteOffset + arguments[0]
+    
+    setUint16       : value : -> dvw.setUint16 @byteOffset + arguments[0], arguments[1], LE
+
+    getFloat32      : value : -> dvw.getFloat32 @byteOffset + arguments[0]
+    
+    setFloat32      : value : -> dvw.setFloat32 @byteOffset + arguments[0], arguments[1], LE
+
+    rgbColor4       : value : -> @getColor4( ...arguments ).f32
+    
+    getColor4       : value : -> new Color4 dvw.getUint32 @byteOffset + arguments[0], LE
+    
+    setColor4       : value : -> dvw.setUint32 @byteOffset + arguments[0], Color4.u32(arguments[1]), LE
 
 Object.defineProperties Pointer::,
+
+    length          : get : Pointer::getTypedLength
+
+    array           : get : Pointer::getTypedArray
 
     children        : get : Pointer::findAllChilds
 
@@ -214,6 +336,7 @@ Object.defineProperties Pointer::,
     
     parent          : get : Pointer::getParentPtrP , set : Pointer::setParentPtri
 
+    
 
 
 Object.defineProperties WorkerPointer,

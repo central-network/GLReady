@@ -9,5 +9,7 @@ export default init = ( buffer ) ->
     ptr_gl = new GL()
     ptr_gl.fork 1
 
+    ptr_gl.cullFace = WebGL2RenderingContext.CULL_FACE
+
     console.error ptr_gl
     

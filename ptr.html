@@ -56,8 +56,14 @@
 
             gl = new GL();
             gl.setCanvasNode( canvas );
-            gl.fork()
+            //gl.fork()
             
+            gl.cullActive = true;
+            gl.cullFace = WebGL2RenderingContext.CULL_FACE;
+            gl.frontFace = WebGL2RenderingContext.CCW;
+            gl.clearDepth = 1.1;
+            gl.depthFunc = WebGL2RenderingContext.LEQUAL;
+            gl.clearColor = [ 15, 18, 26 ]
 
             log( gl );
 

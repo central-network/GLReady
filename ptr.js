@@ -1,4 +1,4 @@
-var BYTES_PER_POINTER, INDEX_BUF, INDEX_PTR, LE, LENGTH_OF_POINTER, OBJECTS, OFFSET_BYTELENGTH, OFFSET_BYTEOFFSET, OFFSET_LINKEDNODE, OFFSET_PARENT_PTR, OFFSET_PROTOCLASS, OFFSET_PTRCLASS_0, OFFSET_PTRCLASS_1, OFFSET_PTRCLASS_2, OFFSET_PTRCLASS_3, OFFSET_PTRCLASS_4, POINTERS_BYTELENGTH, POINTERS_BYTEOFFSET, POINTER_PROTOTYPE, Pointer, buf, dvw, i32, malloc, palloc, proxy, u32;
+var BYTES_PER_POINTER, Color4, INDEX_BUF, INDEX_PTR, LE, LENGTH_OF_POINTER, OBJECTS, OFFSET_BYTELENGTH, OFFSET_BYTEOFFSET, OFFSET_LINKEDNODE, OFFSET_PARENT_PTR, OFFSET_PROTOCLASS, OFFSET_PTRCLASS_0, OFFSET_PTRCLASS_1, OFFSET_PTRCLASS_2, OFFSET_PTRCLASS_3, OFFSET_PTRCLASS_4, POINTERS_BYTELENGTH, POINTERS_BYTEOFFSET, POINTER_PROTOTYPE, Pointer, buf, dvw, i32, malloc, palloc, proxy, u32;
 
 import "./ptr_self.js";
 
@@ -68,6 +68,139 @@ Object.defineProperties(DataView.prototype, {
   toPointer: {
     value: function(offset) {
       return new Pointer(this.getUint32(offset));
+    }
+  },
+  keyUint16: {
+    value: function(offset, keyof) {
+      var k, v, value;
+      if (!(v = this.getUint16(offset, LE))) {
+        return 0;
+      }
+      if (!keyof[v]) {
+        for (k in keyof) {
+          value = keyof[k];
+          if (!(v - value)) {
+            keyof[v] = eval(`new (class ${k} extends Number {})(${v})`);
+          }
+        }
+      }
+      return keyof[v];
+    }
+  }
+});
+
+Color4 = (function() {
+  class Color4 extends Number {};
+
+  Object.defineProperties(Color4, {
+    u32: {
+      value: function(any) {
+        var a, b, g, r;
+        if (isNaN(any)) {
+          if (any.map) {
+            [r = 0, g = 0, b = 0, a = 1] = any;
+            if ((r && r <= 1) || (g && g <= 1) || (b && b <= 1)) {
+              r *= 0xff;
+              g *= 0xff;
+              b *= 0xff;
+            }
+            if (a && a <= 1) {
+              a *= 0xff;
+            }
+            return parseInt(r.toString(16).padStart(2, 0) + g.toString(16).padStart(2, 0) + b.toString(16).padStart(2, 0) + a.toString(16).padStart(2, 0), 16);
+          }
+          return parseInt(any);
+        }
+        return any;
+      }
+    }
+  });
+
+  Object.defineProperties(Color4.prototype, {
+    f32: {
+      get: function() {
+        var di, dv, i8;
+        dv = new DataView(new ArrayBuffer(4));
+        dv.setUint32(0, this, LE);
+        i8 = new Uint8Array(dv.buffer);
+        if (LE) {
+          i8.reverse();
+        }
+        di = 255;
+        return Float32Array.of(...[...i8].map(function(n) {
+          return n / di;
+        }));
+      }
+    },
+    ui8: {
+      get: function() {
+        var dv, i8;
+        dv = new DataView(new ArrayBuffer(4));
+        dv.setUint32(0, this, LE);
+        i8 = new Uint8Array(dv.buffer);
+        if (LE) {
+          i8.reverse();
+        }
+        return i8;
+      }
+    },
+    hex: {
+      get: function() {
+        return "#" + [...this.ui8].map(function(n) {
+          return n.toString(16).padStart(2, 0);
+        }).join("");
+      }
+    },
+    css: {
+      get: function() {
+        var a, b, g, r;
+        [r, g, b, a] = this.ui8;
+        (a = (a / 2.55).toFixed(2));
+        return `rgba( ${r} ${g} ${b} / ${a}% )`;
+      }
+    }
+  });
+
+  return Color4;
+
+}).call(this);
+
+Object.defineProperties(Number.prototype, {
+  toUint32Number: {
+    value: function() {
+      if (!this) {
+        return 0;
+      }
+      new DataView(buf = new ArrayBuffer(4)).setUint32(0, this, LE);
+      return parseInt("0x" + [...new Uint8Array(buf)].map(function(m) {
+        return m.toString(16).padStart(2, 0);
+      }).join(""));
+    }
+  },
+  toFloat32Array: {
+    value: function(normalized = true) {
+      var di, dv, i8;
+      if (!this) {
+        return new Float32Array(4);
+      }
+      dv = new DataView(new ArrayBuffer(4));
+      dv.setUint32(0, this, LE);
+      i8 = new Uint8Array(dv.buffer);
+      if (LE) {
+        i8.reverse();
+      }
+      di = 1;
+      if (normalized) {
+        di = 255;
+      }
+      return Float32Array.of(...[...i8].map(function(n) {
+        return n / di;
+      }));
+    }
+  },
+  toRGBA: {
+    value: function() {
+      return this.toFloat32Array(...arguments);
     }
   }
 });
@@ -174,8 +307,8 @@ export default Pointer = class Pointer extends Number {
   }
 
   //* proxy unlocked now --->
-  add(ptr) {
-    return ptr.setParentPtri(this);
+  add() {
+    return arguments[0].setParentPtri(this);
   }
 
 };
@@ -209,6 +342,16 @@ Object.defineProperties(Pointer.prototype, {
   getHeader: {
     value: function() {
       return dvw.getUint32(this + arguments[0] * 4);
+    }
+  },
+  getTypedArray: {
+    value: function() {
+      return new this.constructor.typedArray(this.buffer, this.byteOffset, this.length);
+    }
+  },
+  getTypedLength: {
+    value: function() {
+      return this.byteLength / this.constructor.typedArray.BYTES_PER_ELEMENT;
     }
   },
   findAllChilds: {
@@ -315,6 +458,65 @@ Object.defineProperties(Pointer.prototype, {
 });
 
 Object.defineProperties(Pointer.prototype, {
+  getUint8: {
+    value: function() {
+      return dvw.getUint8(this.byteOffset + arguments[0]);
+    }
+  },
+  setUint8: {
+    value: function() {
+      return dvw.setUint8(this.byteOffset + arguments[0], arguments[1]);
+    }
+  },
+  keyUint16: {
+    value: function() {
+      return dvw.keyUint16(this.byteOffset + arguments[0], arguments[1]);
+    }
+  },
+  getUint16: {
+    value: function() {
+      return dvw.getUint16(this.byteOffset + arguments[0]);
+    }
+  },
+  setUint16: {
+    value: function() {
+      return dvw.setUint16(this.byteOffset + arguments[0], arguments[1], LE);
+    }
+  },
+  getFloat32: {
+    value: function() {
+      return dvw.getFloat32(this.byteOffset + arguments[0]);
+    }
+  },
+  setFloat32: {
+    value: function() {
+      return dvw.setFloat32(this.byteOffset + arguments[0], arguments[1], LE);
+    }
+  },
+  rgbColor4: {
+    value: function() {
+      return this.getColor4(...arguments).f32;
+    }
+  },
+  getColor4: {
+    value: function() {
+      return new Color4(dvw.getUint32(this.byteOffset + arguments[0], LE));
+    }
+  },
+  setColor4: {
+    value: function() {
+      return dvw.setUint32(this.byteOffset + arguments[0], Color4.u32(arguments[1]), LE);
+    }
+  }
+});
+
+Object.defineProperties(Pointer.prototype, {
+  length: {
+    get: Pointer.prototype.getTypedLength
+  },
+  array: {
+    get: Pointer.prototype.getTypedArray
+  },
   children: {
     get: Pointer.prototype.findAllChilds
   },

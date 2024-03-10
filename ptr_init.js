@@ -11,5 +11,6 @@ export default init = function(buffer) {
   Pointer.prototype.buffer = buffer;
   ptr_gl = new GL();
   ptr_gl.fork(1);
+  ptr_gl.cullFace = WebGL2RenderingContext.CULL_FACE;
   return console.error(ptr_gl);
 };
