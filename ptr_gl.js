@@ -84,6 +84,14 @@ export default GL = (function() {
       return this.setUint8(OFFSET_DEPTH_ACTIVE, arguments[0]);
     }
 
+    getClearDepth() {
+      return this.getFloat32(OFFSET_CLEAR_DEPTH);
+    }
+
+    setClearDepth() {
+      return this.setFloat32(OFFSET_CLEAR_DEPTH, arguments[0]);
+    }
+
     keyDepthTest() {
       return this.keyUint16(OFFSET_DEPTH_TEST);
     }
@@ -142,14 +150,6 @@ export default GL = (function() {
 
     setClearMask() {
       return this.setUint16(OFFSET_CLEAR_MASK, arguments[0]);
-    }
-
-    getClearDepth() {
-      return this.getFloat32(OFFSET_CLEAR_DEPTH);
-    }
-
-    setClearDepth() {
-      return this.setFloat32(OFFSET_CLEAR_DEPTH, arguments[0]);
     }
 
     rgbClearColor() {

@@ -48,6 +48,10 @@ export default class GL extends Pointer
     
     setDepthActive  : -> @setUint8 OFFSET_DEPTH_ACTIVE, arguments[0] 
 
+    getClearDepth   : -> @getFloat32 OFFSET_CLEAR_DEPTH
+    
+    setClearDepth   : -> @setFloat32 OFFSET_CLEAR_DEPTH, arguments[0] 
+
     keyDepthTest    : -> @keyUint16 OFFSET_DEPTH_TEST
     
     getDepthTest    : -> @getUint16 OFFSET_DEPTH_TEST
@@ -77,10 +81,6 @@ export default class GL extends Pointer
     getClearMask    : -> @getUint16 OFFSET_CLEAR_MASK
     
     setClearMask    : -> @setUint16 OFFSET_CLEAR_MASK, arguments[0] 
-    
-    getClearDepth   : -> @getFloat32 OFFSET_CLEAR_DEPTH
-    
-    setClearDepth   : -> @setFloat32 OFFSET_CLEAR_DEPTH, arguments[0] 
     
     rgbClearColor   : -> @rgbColor4 OFFSET_CLEAR_COLOR
     
