@@ -1,12 +1,12 @@
-var BYTES_PER_POINTER, INDEX_BUF, INDEX_PTR, LE, LENGTH_OF_POINTER, OBJECTS, OFFSET_BYTELENGTH, OFFSET_BYTEOFFSET, OFFSET_LINKEDNODE, OFFSET_PARENT_PTR, OFFSET_PROTOCLASS, OFFSET_PTRCLASS_0, OFFSET_PTRCLASS_1, OFFSET_PTRCLASS_2, OFFSET_PTRCLASS_3, OFFSET_PTRCLASS_4, POINTERS_BYTELENGTH, POINTERS_BYTEOFFSET, POINTER_PROTOTYPE, Pointer, buf, dvw, f32, initbuf, malloc, palloc, u32;
+var BYTES_PER_POINTER, INDEX_BUF, INDEX_PTR, LE, LENGTH_OF_POINTER, OBJECTS, OFFSET_BYTELENGTH, OFFSET_BYTEOFFSET, OFFSET_LINKEDNODE, OFFSET_PARENT_PTR, OFFSET_PROTOCLASS, OFFSET_PTRCLASS_0, OFFSET_PTRCLASS_1, OFFSET_PTRCLASS_2, OFFSET_PTRCLASS_3, OFFSET_PTRCLASS_4, POINTERS_BYTELENGTH, POINTERS_BYTEOFFSET, POINTER_PROTOTYPE, Pointer, buf, dvw, i32, malloc, palloc, proxy, u32;
 
 import "./ptr_self.js";
 
 LE = false;
 
-OBJECTS = [];
+OBJECTS = [, ];
 
-buf = u32 = f32 = dvw = palloc = malloc = false;
+buf = u32 = i32 = dvw = palloc = malloc = false;
 
 INDEX_BUF = 0;
 
@@ -16,17 +16,19 @@ POINTERS_BYTELENGTH = 4 * 1e5;
 
 POINTERS_BYTEOFFSET = 8;
 
-initbuf = function(sab) {
-  buf = sab;
-  u32 = new Uint32Array(buf);
-  f32 = new Float32Array(buf);
-  dvw = new DataView(buf);
-  Atomics.or(u32, INDEX_BUF, POINTERS_BYTELENGTH); //byteOffset
-  Atomics.or(u32, INDEX_PTR, POINTERS_BYTEOFFSET); //pointerOffset
-  palloc = Atomics.add.bind(Atomics, u32, INDEX_PTR);
-  malloc = Atomics.add.bind(Atomics, u32, INDEX_BUF);
-  log("base buffer settled", buf);
-  return log("atomics uint32 base", u32);
+proxy = function() {
+  return new Proxy({
+    i: arguments[0]
+  }, {
+    get: function({i}, key) {
+      postMessage({
+        proxy: i,
+        key: key
+      });
+      Atomics.wait(i32, 1000, 0);
+      return Atomics.load(i32, 1000);
+    }
+  });
 };
 
 Object.defineProperties(DataView.prototype, {
@@ -35,14 +37,18 @@ Object.defineProperties(DataView.prototype, {
       var i;
       if (-1 === (i = OBJECTS.indexOf(object))) {
         i += OBJECTS.push(object);
-        this.setUint32(offset, object, LE);
+        this.setUint32(offset, i, LE);
       }
       return i;
     }
   },
   getObject: {
     value: function(offset) {
-      return OBJECTS[this.getUint32(offset, LE)];
+      var i;
+      if (!(i = this.getUint32(offset, LE))) {
+        return;
+      }
+      return OBJECTS[i] != null ? OBJECTS[i] : OBJECTS[i] = proxy(i);
     }
   },
   toPointer: {
@@ -80,10 +86,40 @@ OFFSET_PTRCLASS_4 = 4 * 10;
 POINTER_PROTOTYPE = [, ];
 
 export default Pointer = class Pointer extends Number {
+  static setBuffer(sab, max = 1e20) {
+    var f32;
+    if (!sab) {
+      while (true) {
+        try {
+          sab = new SharedArrayBuffer(max);
+        } catch (error) {
+          if (max = max / 10) {
+            continue;
+          }
+        }
+        break;
+      }
+    }
+    buf = sab;
+    u32 = new Uint32Array(buf);
+    i32 = new Int32Array(buf);
+    f32 = new Float32Array(buf);
+    dvw = new DataView(buf);
+    Atomics.or(u32, INDEX_BUF, POINTERS_BYTELENGTH); //byteOffset
+    Atomics.or(u32, INDEX_PTR, POINTERS_BYTEOFFSET); //pointerOffset
+    palloc = Atomics.add.bind(Atomics, u32, INDEX_PTR);
+    malloc = Atomics.add.bind(Atomics, u32, INDEX_BUF);
+    log("base buffer settled", buf);
+    log("atomics uint32 base", u32);
+    Reflect.defineProperty(Pointer.prototype, "buffer", {
+      value: sab
+    });
+    return Reflect.deleteProperty(Pointer, "setBuffer");
+  }
+
   constructor(ptr = palloc(BYTES_PER_POINTER)) {
-    var shadow;
     super(ptr);
-    if (shadow = arguments.length) {
+    if (arguments.length) {
       Object.setPrototypeOf(this, POINTER_PROTOTYPE[this.getProtoClass()].prototype);
     } else {
       this.setByteLength(this.constructor.byteLength).setProtoClass(this.constructor.protoClass).setByteOffset(malloc(this.getByteLength()));
@@ -91,19 +127,23 @@ export default Pointer = class Pointer extends Number {
     }
   }
 
-  sync() {
-    return bc.postMessage(this);
-  }
-
   init() {
     return this;
   }
 
-  fork(workerCount = 1) {
+  fork() {
     var worker;
     this.add(worker = new WorkerPointer());
-    return worker.onmessage = () => {
-      return worker.send(this);
+    return worker.onmessage = ({data}) => {
+      var i, key, result;
+      if (i = data.proxy) {
+        key = data.key;
+        result = OBJECTS[i][key];
+        console.warn("request :", OBJECTS[i].constructor.name + "." + key);
+        console.warn("result  :", result);
+        Atomics.store(i32, 1000, result);
+        return Atomics.notify(i32, 1000, 1);
+      }
     };
   }
 
@@ -127,6 +167,12 @@ Object.defineProperties(Pointer, {
   registerClass: {
     value: function() {
       this.protoClass || (this.protoClass = -1 + POINTER_PROTOTYPE.push(this));
+      return this;
+    }
+  },
+  setDataBuffer: {
+    value: function() {
+      [this.prototype.buffer] = arguments;
       return this;
     }
   }
@@ -242,12 +288,6 @@ Object.defineProperties(Pointer.prototype, {
 });
 
 Object.defineProperties(Pointer.prototype, {
-  buffer: {
-    set: initbuf,
-    get: function() {
-      return buf;
-    }
-  },
   children: {
     get: Pointer.prototype.findAllChilds
   },
@@ -302,8 +342,7 @@ Object.defineProperties(WorkerPointer.prototype, {
         name: this
       };
       worker = new Worker(script, config);
-      worker.postMessage(buf);
-      return this.setLinkedNode(worker);
+      return this.setLinkedNode(worker).send(buf);
     }
   },
   onmessage: {
@@ -338,5 +377,9 @@ Object.defineProperties(WorkerPointer.prototype, {
     set: WorkerPointer.prototype.setOnlineState
   }
 });
+
+if (typeof window !== "undefined" && window !== null) {
+  Pointer.setBuffer();
+}
 
 WorkerPointer.registerClass();

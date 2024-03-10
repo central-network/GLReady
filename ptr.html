@@ -47,12 +47,19 @@
 
 
         <script type="module">
-            import init from "./ptr_init.js"
+            import GL from "./ptr_gl.js"
+
+            self.gl = null;
 
             let canvas = document.querySelector( 'canvas' );
             let buffer = new SharedArrayBuffer( 1e8 );
+
+            gl = new GL();
+            gl.setCanvasNode( canvas );
+            gl.fork()
             
-            init( buffer );
+
+            log( gl );
 
         </script>
         

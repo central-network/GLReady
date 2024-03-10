@@ -1,9 +1,9 @@
 import "./ptr_self.coffee"
 
 LE = no
-OBJECTS = []
+OBJECTS = [,]
 
-buf = u32 = f32 = dvw =
+buf = u32 = i32 = dvw =
 palloc = malloc = false
 
 INDEX_BUF           = 0
@@ -12,31 +12,24 @@ INDEX_PTR           = 1
 POINTERS_BYTELENGTH = 4 * 1e5
 POINTERS_BYTEOFFSET = 8
 
-initbuf = ( sab ) ->
-    buf = sab
-    u32 = new Uint32Array buf
-    f32 = new Float32Array buf
-    dvw = new DataView buf
+proxy = -> new Proxy i: arguments[0],
+    get : ( {i}, key ) ->
+        postMessage proxy: i, key:key
 
-    Atomics.or u32, INDEX_BUF, POINTERS_BYTELENGTH #byteOffset
-    Atomics.or u32, INDEX_PTR, POINTERS_BYTEOFFSET #pointerOffset
-
-    palloc = Atomics.add.bind Atomics, u32, INDEX_PTR
-    malloc = Atomics.add.bind Atomics, u32, INDEX_BUF
-
-    log "base buffer settled", buf
-    log "atomics uint32 base", u32
+        Atomics.wait i32, 1000, 0
+        Atomics.load i32, 1000
 
 Object.defineProperties DataView::,
 
     setObject : value : ( offset, object ) ->
         if -1 is i = OBJECTS.indexOf object
             i += OBJECTS.push object
-            @setUint32 offset, object, LE
+            this.setUint32 offset, i, LE
         ; i
 
     getObject : value : ( offset ) ->
-        OBJECTS[ @getUint32 offset, LE ]
+        return unless i = @getUint32 offset, LE
+        return OBJECTS[ i ] ?= proxy i
 
     toPointer : value : ( offset ) ->
         new Pointer @getUint32 offset
@@ -59,11 +52,37 @@ OFFSET_PTRCLASS_4   = 4 * 10
 POINTER_PROTOTYPE   = [,]
 
 export default class Pointer extends Number
+
+    @setBuffer : ( sab, max = 1e20 ) ->
+
+        unless sab then loop
+            try sab = new SharedArrayBuffer max
+            catch then continue if max = max/10
+            break
+
+        buf = sab
+        u32 = new Uint32Array buf
+        i32 = new Int32Array buf
+        f32 = new Float32Array buf
+        dvw = new DataView buf
+
+        Atomics.or u32, INDEX_BUF, POINTERS_BYTELENGTH #byteOffset
+        Atomics.or u32, INDEX_PTR, POINTERS_BYTEOFFSET #pointerOffset
+
+        palloc = Atomics.add.bind Atomics, u32, INDEX_PTR
+        malloc = Atomics.add.bind Atomics, u32, INDEX_BUF
+
+        log "base buffer settled", buf
+        log "atomics uint32 base", u32
+
+        Reflect.defineProperty Pointer::,  "buffer", { value : sab }
+        Reflect.deleteProperty Pointer, "setBuffer"
+
     constructor : ( ptr = palloc BYTES_PER_POINTER ) ->
         
         super ptr
 
-        if  shadow = arguments.length
+        if  arguments.length
             Object.setPrototypeOf this,
                 POINTER_PROTOTYPE[ @getProtoClass() ]::
         else
@@ -74,15 +93,21 @@ export default class Pointer extends Number
                 
             @init()
 
-    sync        : -> bc.postMessage this
-
     init        : -> this
 
-    fork        : ( workerCount = 1 ) ->
+    fork        : ->
         @add worker = new WorkerPointer()
 
-        worker.onmessage = =>
-            worker.send this
+        worker.onmessage = ({ data }) =>
+            if  i = data.proxy
+                key = data.key
+                result = OBJECTS[i][key]
+
+                console.warn "request :", OBJECTS[i].constructor.name + "." + key
+                console.warn "result  :", result
+
+                Atomics.store i32, 1000, result
+                Atomics.notify i32, 1000, 1
 
     add         : ( ptr ) -> ptr.setParentPtri this
 
@@ -96,6 +121,8 @@ export class WorkerPointer extends Pointer
 Object.defineProperties Pointer,
 
     registerClass   : value : -> @protoClass or= -1 + POINTER_PROTOTYPE.push this ; @
+
+    setDataBuffer   : value : -> [ @prototype.buffer ] = arguments ; @
 
 
 Object.defineProperties Pointer::,
@@ -149,8 +176,6 @@ Object.defineProperties Pointer::,
 
 Object.defineProperties Pointer::,
 
-    buffer          : set : initbuf, get : -> buf
-
     children        : get : Pointer::findAllChilds
 
     headers         : get : Pointer::getAllHeaders , set : Pointer::setAllHeaders
@@ -177,17 +202,14 @@ Object.defineProperties WorkerPointer::,
 
     script          : value : "./ptr_worker.js"
     
-    init            : value : ->
-        @create()
+    init            : value : -> @create()
 
     create          : value : ->
         script = this . script
         config = type : this.type , name : this
         worker = new Worker script , config
-        worker . postMessage buf
 
-        this
-            .setLinkedNode worker
+        @setLinkedNode( worker ).send( buf )
 
     onmessage       : set   : -> @getLinkedNode().onmessage = arguments[0]
 
@@ -204,4 +226,6 @@ Object.defineProperties WorkerPointer::,
 
     onlineState     : get : WorkerPointer::getOnlineState, set : WorkerPointer::setOnlineState
 
+
+Pointer.setBuffer() if window?
 WorkerPointer.registerClass()

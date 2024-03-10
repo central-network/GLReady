@@ -1,27 +1,28 @@
-var init, node;
+var forker, init, worker;
 
 import Pointer from "./ptr.js";
 
 import GL from "./ptr_gl.js";
 
-node = null;
+worker = null;
+
+forker = null;
 
 init = function(buffer) {
-  Pointer.prototype.buffer = buffer;
-  node = new Pointer(self.name);
-  node.setOnlineState(1);
-  return postMessage(node);
+  Pointer.setBuffer(buffer);
+  worker = new Pointer(self.name);
+  forker = worker.getParentPtrP();
+  worker.setOnlineState(1);
+  console.log({
+    worker: worker,
+    forker: forker
+  });
+  return console.log("locked request gl.FLOAT:", forker.gl.FLOAT);
 };
 
-bc.addEventListener("message", function(e) {
-  return console.warn(new Pointer(e.data));
-});
-
 addEventListener("message", function({data}) {
-  if (!(data instanceof SharedArrayBuffer)) {
-    return console.log({
-      forked: new Pointer(data)
-    });
-  }
+  log("triggering worker init");
   return init(data);
+}, {
+  once: true
 });

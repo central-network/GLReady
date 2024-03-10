@@ -1,19 +1,24 @@
 import Pointer from "./ptr.js"
 import GL from "./ptr_gl.js"
 
-node = null
+worker = null
+forker = null 
+
 init = ( buffer ) ->
-    Pointer::buffer = buffer
 
-    node = new Pointer self.name
-    node.setOnlineState 1
+    Pointer.setBuffer buffer
 
-    postMessage node
+    worker = new Pointer self.name
+    forker = worker.getParentPtrP()
+    worker . setOnlineState 1
 
-bc.addEventListener "message", (e) ->
-    console.warn new Pointer e.data
+    console.log worker: worker, forker: forker
+
+    console.log "locked request gl.FLOAT:", forker.gl.FLOAT
 
 addEventListener "message", ({ data }) ->
-    unless data instanceof SharedArrayBuffer
-        return console.log forked: new Pointer data
+
+    log "triggering worker init"
     init data
+
+, once : yes

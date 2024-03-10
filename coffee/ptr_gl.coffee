@@ -1,11 +1,17 @@
 import Pointer from "./ptr.coffee"
+
 export default class GL extends Pointer
+    @byteLength = 4 * 48
 
+    getCanvasNode   : -> @getLinkedNode().canvas
 
-Object.defineProperties GL.registerClass(),
+    setCanvasNode   : -> @setLinkedNode arguments[0].getContext "webgl2"
 
-    byteLength  : value : 4 * 48
+    Object.defineProperties this::,
 
-Object.defineProperties GL::,
+        gl          : get : GL::getLinkedNode
 
-    gl          : get   : -> 1
+        canvas      : get : GL::getCanvasNode , set : GL::setCanvasNode
+
+GL.registerClass()
+
