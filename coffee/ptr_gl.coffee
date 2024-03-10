@@ -34,11 +34,11 @@ OFFSET_LOOKING      = 4 * 13
 OFFSET_ZOOMING      = 4 * 13 + 1
 OFFSET_PTR_DCLICK   = 4 * 13 + 2
 OFFSET_PTR_CLICK    = 4 * 13 + 3
-OFFSET_ROTATING     = 4 * 14
-OFFSET_DRAGGING     = 4 * 14 + 1
-OFFSET_UX_ENABLED   = 4 * 14 + 2
+OFFSET_PTR_BUTTON   = 4 * 14
+OFFSET_ROTATING     = 4 * 15
+OFFSET_DRAGGING     = 4 * 15 + 1
+OFFSET_UX_ENABLED   = 4 * 15 + 2
 
-OFFSET_VALUES       = 4 * 20
 OFFSET_X            = 4 * 21
 OFFSET_Y            = 4 * 22
 OFFSET_DX           = 4 * 23
@@ -51,7 +51,7 @@ OFFSET_SZ           = 4 * 29
 OFFSET_VX           = 4 * 30
 OFFSET_VY           = 4 * 31
 OFFSET_VZ           = 4 * 32
-OFFSET_FACTOR       = 4 * 33
+OFFSET_SHIFT_RATIO  = 4 * 33
 OFFSET_TIME         = 4 * 34
 
 OFFSET_WIDTH        = 4 * 40
@@ -67,6 +67,46 @@ export default class GL extends Pointer
 
     @typedArray     = Uint32Array
 
+    bindEvents      : ->
+        canvas = @getCanvasNode()
+
+        canvas . addEventListener "pointerup",    @onpointerfree.bind( @ )
+        canvas . addEventListener "pointerdown",  @onpointerhold.bind( @ )
+        canvas . addEventListener "pointermove",  @onpointermove.bind( @ ), passive: !0
+        canvas . addEventListener "click",        @oncanvasclick.bind( @ )
+        canvas . addEventListener "dblclick",     @ondoubleclick.bind( @ )
+        canvas . addEventListener "wheel",        @onmousescroll.bind( @ ), passive: !0
+        canvas . addEventListener "contextmenu",  ( $ ) -> $.preventDefault()
+
+    onpointerfree   : ->
+        @setUint8 OFFSET_PTR_BUTTON + arguments[0].button, 0
+
+    onpointerhold   : ->
+        @setUint8 OFFSET_PTR_BUTTON + arguments[0].button, 1
+
+    onpointermove   : ->
+        { offsetX, offsetY } = arguments[0]
+
+        @setXDelta( -@getX() + @setX offsetX )
+            .setYRotate( -@getXDelta() / 100 ) % Math.PI
+
+        @setYDelta( +@getY() - @setY offsetY )
+            .setXRotate( -@getYDelta() / 100 ) % Math.PI
+
+        @setLooking 1
+
+    onmousescroll   : ->
+        { deltaX, deltaY } = arguments[0]
+
+        @setXScale deltaX
+        @setZScale 0.01 * @setYScale deltaY
+        
+        @setZooming  1
+
+    oncanvasclick   : -> @setPtrClick arguments[0].button
+
+    ondoubleclick   : -> @setPtrDblClick arguments[0].button
+
     getArray        : -> @array
 
     getArrayBuffer  : -> @array.slice().buffer
@@ -77,190 +117,241 @@ export default class GL extends Pointer
 
     getDrawActive   : -> @getUint8 OFFSET_DRAW_ACTIVE
     
-    setDrawActive   : -> @setUint8 OFFSET_DRAW_ACTIVE, arguments[0] 
+    setDrawActive   : -> @setUint8 OFFSET_DRAW_ACTIVE, arguments[0] ; this
 
     getCullEnabled  : -> @getUint8 OFFSET_CULL_ENABLED
     
-    setCullEnabled  : -> @setUint8 OFFSET_CULL_ENABLED, arguments[0] 
+    setCullEnabled  : -> @setUint8 OFFSET_CULL_ENABLED, arguments[0] ; this
 
     getBlendActive  : -> @getUint8 OFFSET_BLEND_ACTIVE
     
-    setBlendActive  : -> @setUint8 OFFSET_BLEND_ACTIVE, arguments[0] 
+    setBlendActive  : -> @setUint8 OFFSET_BLEND_ACTIVE, arguments[0] ; this
 
     getDepthActive  : -> @getUint8 OFFSET_DEPTH_ACTIVE
     
-    setDepthActive  : -> @setUint8 OFFSET_DEPTH_ACTIVE, arguments[0] 
+    setDepthActive  : -> @setUint8 OFFSET_DEPTH_ACTIVE, arguments[0] ; this
 
     getClearDepth   : -> @getFloat32 OFFSET_CLEAR_DEPTH
     
-    setClearDepth   : -> @setFloat32 OFFSET_CLEAR_DEPTH, arguments[0] 
+    setClearDepth   : -> @setFloat32 OFFSET_CLEAR_DEPTH, arguments[0] ; this
 
     keyDepthTest    : -> @keyUint16 OFFSET_DEPTH_TEST
     
     getDepthTest    : -> @getUint16 OFFSET_DEPTH_TEST
     
-    setDepthTest    : -> @setUint16 OFFSET_DEPTH_TEST, arguments[0] 
+    setDepthTest    : -> @setUint16 OFFSET_DEPTH_TEST, arguments[0] ; this
 
     keyCullFace     : -> @keyUint16 OFFSET_CULL_FACE
     
     getCullFace     : -> @getUint16 OFFSET_CULL_FACE
     
-    setCullFace     : -> @setUint16 OFFSET_CULL_FACE, arguments[0] 
+    setCullFace     : -> @setUint16 OFFSET_CULL_FACE, arguments[0] ; this
 
     keyFrontFace    : -> @keyUint16 OFFSET_FRONTFACE
     
     getFrontFace    : -> @getUint16 OFFSET_FRONTFACE
     
-    setFrontFace    : -> @setUint16 OFFSET_FRONTFACE, arguments[0] 
+    setFrontFace    : -> @setUint16 OFFSET_FRONTFACE, arguments[0] ; this
 
     keyDepthFunc    : -> @keyUint16 OFFSET_DEPTH_FUNC
     
     getDepthFunc    : -> @getUint16 OFFSET_DEPTH_FUNC
     
-    setDepthFunc    : -> @setUint16 OFFSET_DEPTH_FUNC, arguments[0] 
+    setDepthFunc    : -> @setUint16 OFFSET_DEPTH_FUNC, arguments[0] ; this
 
     keyClearMask    : -> @keyUint16 OFFSET_CLEAR_MASK
     
     getClearMask    : -> @getUint16 OFFSET_CLEAR_MASK
     
-    setClearMask    : -> @setUint16 OFFSET_CLEAR_MASK, arguments[0] 
+    setClearMask    : -> @setUint16 OFFSET_CLEAR_MASK, arguments[0] ; this
     
     rgbClearColor   : -> @rgbColor4 OFFSET_CLEAR_COLOR
     
     getClearColor   : -> @getColor4 OFFSET_CLEAR_COLOR
     
-    setClearColor   : -> @setColor4 OFFSET_CLEAR_COLOR, arguments[0] 
+    setClearColor   : -> @setColor4 OFFSET_CLEAR_COLOR, arguments[0] ; this
 
     keyBindTarget   : -> @keyUint16 OFFSET_BIND_TARGET
     
     getBindTarget   : -> @getUint16 OFFSET_BIND_TARGET
     
-    setBindTarget   : -> @setUint16 OFFSET_BIND_TARGET, arguments[0] 
+    setBindTarget   : -> @setUint16 OFFSET_BIND_TARGET, arguments[0] ; this
 
     keyBlendEquate  : -> @keyUint16 OFFSET_BLEND_EQUATE
     
     getBlendEquate  : -> @getUint16 OFFSET_BLEND_EQUATE
     
-    setBlendEquate  : -> @setUint16 OFFSET_BLEND_EQUATE, arguments[0] 
+    setBlendEquate  : -> @setUint16 OFFSET_BLEND_EQUATE, arguments[0] ; this
 
     keyBlendInArg   : -> @keyUint16 OFFSET_BLEND_INARG
     
     getBlendInArg   : -> @getUint16 OFFSET_BLEND_INARG
     
-    setBlendInArg   : -> @setUint16 OFFSET_BLEND_INARG, arguments[0] 
+    setBlendInArg   : -> @setUint16 OFFSET_BLEND_INARG, arguments[0] ; this
 
     keyBlendOutArg  : -> @keyUint16 OFFSET_BLEND_OUTARG
     
     getBlendOutArg  : -> @getUint16 OFFSET_BLEND_OUTARG
     
-    setBlendOutArg  : -> @setUint16 OFFSET_BLEND_OUTARG, arguments[0] 
+    setBlendOutArg  : -> @setUint16 OFFSET_BLEND_OUTARG, arguments[0] ; this
 
     keyBlendFunc    : -> @keyUint16 OFFSET_BLEND_FUNC
     
     getBlendFunc    : -> @getUint16 OFFSET_BLEND_FUNC
     
-    setBlendFunc    : -> @setUint16 OFFSET_BLEND_FUNC, arguments[0] 
+    setBlendFunc    : -> @setUint16 OFFSET_BLEND_FUNC, arguments[0] ; this
     
     getWidth        : -> @getFloat32 OFFSET_WIDTH
     
-    setWidth        : -> @setFloat32 OFFSET_WIDTH, arguments[0] 
+    setWidth        : -> @setFloat32 OFFSET_WIDTH, arguments[0] ; this
 
     getHeight       : -> @getFloat32 OFFSET_HEIGHT
     
-    setHeight       : -> @setFloat32 OFFSET_HEIGHT, arguments[0] 
+    setHeight       : -> @setFloat32 OFFSET_HEIGHT, arguments[0] ; this
 
     getLeft         : -> @getFloat32 OFFSET_LEFT
     
-    setLeft         : -> @setFloat32 OFFSET_LEFT, arguments[0] 
+    setLeft         : -> @setFloat32 OFFSET_LEFT, arguments[0] ; this
 
     getTop          : -> @getFloat32 OFFSET_TOP
     
-    setTop          : -> @setFloat32 OFFSET_TOP, arguments[0] 
+    setTop          : -> @setFloat32 OFFSET_TOP, arguments[0] ; this
 
     getPixelRatio   : -> @getFloat32 OFFSET_PIXEL_RATIO
     
-    setPixelRatio   : -> @setFloat32 OFFSET_PIXEL_RATIO, arguments[0] 
+    setPixelRatio   : -> @setFloat32 OFFSET_PIXEL_RATIO, arguments[0] ; this
 
     getAspectRatio  : -> @getFloat32 OFFSET_ASPECT_RATIO
     
-    setAspectRatio  : -> @setFloat32 OFFSET_ASPECT_RATIO, arguments[0] 
+    setAspectRatio  : -> @setFloat32 OFFSET_ASPECT_RATIO, arguments[0] ; this
+
+    getShiftRatio   : -> @getFloat32 OFFSET_SHIFT_RATIO
+    
+    setShiftRatio   : -> @setFloat32 OFFSET_SHIFT_RATIO, arguments[0] ; this
 
     getWalking      : -> @getUint8 OFFSET_WALKING
     
-    setWalking      : -> @setUint8 OFFSET_WALKING, arguments[0] 
+    setWalking      : -> @setUint8 OFFSET_WALKING, arguments[0] ; this
 
     getJumping      : -> @getUint8 OFFSET_JUMPING
     
-    setJumping      : -> @setUint8 OFFSET_JUMPING, arguments[0] 
+    setJumping      : -> @setUint8 OFFSET_JUMPING, arguments[0] ; this 
 
     getLooking      : -> @getUint8 OFFSET_LOOKING
     
-    setLooking      : -> @setUint8 OFFSET_LOOKING, arguments[0] 
+    setLooking      : -> @setUint8 OFFSET_LOOKING, arguments[0] ; this
 
     getZooming      : -> @getUint8 OFFSET_ZOOMING
     
-    setZooming      : -> @setUint8 OFFSET_ZOOMING, arguments[0] 
+    setZooming      : -> @setUint8 OFFSET_ZOOMING, arguments[0] ; this
 
     getDragging     : -> @getUint8 OFFSET_DRAGGING
     
-    setDragging     : -> @setUint8 OFFSET_DRAGGING, arguments[0] 
+    setDragging     : -> @setUint8 OFFSET_DRAGGING, arguments[0] ; this
 
     getRotating     : -> @getUint8 OFFSET_ROTATING
     
-    setRotating     : -> @setUint8 OFFSET_ROTATING, arguments[0] 
+    setRotating     : -> @setUint8 OFFSET_ROTATING, arguments[0] ; this
 
     getKeyMeta      : -> @getUint8 OFFSET_KEY_META
     
-    setKeyMeta      : -> @setUint8 OFFSET_KEY_META, arguments[0] 
+    setKeyMeta      : -> @setUint8 OFFSET_KEY_META, arguments[0] ; this
 
     getKeyCtrl      : -> @getUint8 OFFSET_KEY_CTRL
     
-    setKeyCtrl      : -> @setUint8 OFFSET_KEY_CTRL, arguments[0] 
+    setKeyCtrl      : -> @setUint8 OFFSET_KEY_CTRL, arguments[0] ; this
 
     getKeyShift     : -> @getUint8 OFFSET_KEY_SHIFT
     
-    setKeyShift     : -> @setUint8 OFFSET_KEY_SHIFT, arguments[0] 
+    setKeyShift     : -> @setUint8 OFFSET_KEY_SHIFT, arguments[0] ; this
 
     getKeyAlt       : -> @getUint8 OFFSET_KEY_ALT
     
-    setKeyAlt       : -> @setUint8 OFFSET_KEY_ALT, arguments[0] 
+    setKeyAlt       : -> @setUint8 OFFSET_KEY_ALT, arguments[0] ; this
 
     getMoveFwd      : -> @getUint8 OFFSET_MOVE_FWD
     
-    setMoveFwd      : -> @setUint8 OFFSET_MOVE_FWD, arguments[0] 
+    setMoveFwd      : -> @setUint8 OFFSET_MOVE_FWD, arguments[0] ; this
 
     getMoveBack     : -> @getUint8 OFFSET_MOVE_BACK
     
-    setMoveBack     : -> @setUint8 OFFSET_MOVE_BACK, arguments[0] 
+    setMoveBack     : -> @setUint8 OFFSET_MOVE_BACK, arguments[0] ; this
 
     getMoveLeft     : -> @getUint8 OFFSET_MOVE_LEFT
     
-    setMoveLeft     : -> @setUint8 OFFSET_MOVE_LEFT, arguments[0] 
+    setMoveLeft     : -> @setUint8 OFFSET_MOVE_LEFT, arguments[0] ; this
 
     getMoveRight    : -> @getUint8 OFFSET_MOVE_RIGHT
     
-    setMoveRight    : -> @setUint8 OFFSET_MOVE_RIGHT, arguments[0] 
+    setMoveRight    : -> @setUint8 OFFSET_MOVE_RIGHT, arguments[0] ; this
 
     getMoveUp       : -> @getUint8 OFFSET_MOVE_UP
     
-    setMoveUp       : -> @setUint8 OFFSET_MOVE_UP, arguments[0] 
+    setMoveUp       : -> @setUint8 OFFSET_MOVE_UP, arguments[0] ; this
 
     getMoveDown     : -> @getUint8 OFFSET_MOVE_DOWN
     
-    setMoveDown     : -> @setUint8 OFFSET_MOVE_DOWN, arguments[0] 
+    setMoveDown     : -> @setUint8 OFFSET_MOVE_DOWN, arguments[0] ; this
 
     getPtrClick     : -> @getUint8 OFFSET_PTR_CLICK
     
-    setPtrClick     : -> @setUint8 OFFSET_PTR_CLICK, arguments[0] 
+    setPtrClick     : -> @setUint8 OFFSET_PTR_CLICK, arguments[0] ; this
 
     getPtrDblClick  : -> @getUint8 OFFSET_PTR_DCLICK
     
-    setPtrDblClick  : -> @setUint8 OFFSET_PTR_DCLICK, arguments[0] 
+    setPtrDblClick  : -> @setUint8 OFFSET_PTR_DCLICK, arguments[0] ; this
 
     getUXEnabled    : -> @getUint8 OFFSET_UX_ENABLED
     
-    setUXEnabled    : -> @setUint8 OFFSET_UX_ENABLED, arguments[0] 
+    setUXEnabled    : -> @setUint8 OFFSET_UX_ENABLED, arguments[0] ; this
 
+    getX            : -> @getFloat32 OFFSET_X
+
+    setX            : -> @setFloat32 OFFSET_X, arguments[0]
+
+    getXDelta       : -> @getFloat32 OFFSET_DX
+
+    setXDelta       : -> @setFloat32 OFFSET_DX, arguments[0] ; this
+
+    getXRotate      : -> @getFloat32 OFFSET_RX
+
+    setXRotate      : -> @setFloat32 OFFSET_RX, arguments[0]
+
+    getXScale       : -> @getFloat32 OFFSET_SX
+
+    setXScale       : -> @setFloat32 OFFSET_SX, arguments[0]
+
+    getXVector      : -> @getFloat32 OFFSET_VX
+
+    setXVector      : -> @setFloat32 OFFSET_VX, arguments[0]
+
+    getY            : -> @getFloat32 OFFSET_Y
+
+    setY            : -> @setFloat32 OFFSET_Y, arguments[0]
+
+    getYDelta       : -> @getFloat32 OFFSET_DY
+
+    setYDelta       : -> @setFloat32 OFFSET_DY, arguments[0] ; this
+
+    getYRotate      : -> @getFloat32 OFFSET_RY
+
+    setYRotate      : -> @setFloat32 OFFSET_RY, arguments[0]
+    
+    getYScale       : -> @getFloat32 OFFSET_SY
+
+    setYScale       : -> @setFloat32 OFFSET_SY, arguments[0]
+
+    getYVector      : -> @getFloat32 OFFSET_VY
+
+    setYVector      : -> @setFloat32 OFFSET_VY, arguments[0]
+
+    getZScale       : -> @getFloat32 OFFSET_SZ
+
+    setZScale       : -> @setFloat32 OFFSET_SZ, arguments[0]
+
+    getZVector      : -> @getFloat32 OFFSET_VZ
+
+    setZVector      : -> @setFloat32 OFFSET_VZ, arguments[0]
 
     Object.defineProperties this::,
 
@@ -314,6 +405,8 @@ export default class GL extends Pointer
         
         ratioAspect     : get : GL::getAspectRatio  , set : GL::setAspectRatio
         
+        ratioShift      : get : GL::getShiftRatio   , set : GL::setShiftRatio
+        
         uxActive        : get : GL::getUXEnabled    , set : GL::setUXEnabled
 
         uxMoveWalking   : get : GL::getWalking      , set : GL::setWalking
@@ -352,5 +445,29 @@ export default class GL extends Pointer
         
         uxMoveDown      : get : GL::getMoveDown     , set : GL::setMoveDown
 
+        x               : get : GL::getX            , set : GL::setX
+
+        xDelta          : get : GL::getXDelta       , set : GL::setXDelta
+
+        xRotate         : get : GL::getXRotate      , set : GL::setXRotate
+
+        xScale          : get : GL::getXScale       , set : GL::setXScale
+
+        xVector         : get : GL::getXVector      , set : GL::setXVector
+
+        y               : get : GL::getY            , set : GL::setY
+
+        yDelta          : get : GL::getYDelta       , set : GL::setYDelta
+
+        yRotate         : get : GL::getYRotate      , set : GL::setYRotate
+
+        yScale          : get : GL::getYScale       , set : GL::setYScale
+
+        yVector         : get : GL::getYVector      , set : GL::setYVector
+
+        zScale          : get : GL::getZScale       , set : GL::setZScale
+
+        zVector         : get : GL::getZVector      , set : GL::setZVector
+        
 GL.registerClass()
 

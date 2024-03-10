@@ -55,7 +55,7 @@
             let buffer = new SharedArrayBuffer( 1e8 );
 
             gl = new GL();
-            gl.setCanvasNode( canvas );
+            gl.setCanvasNode( canvas ).bindEvents();
             //gl.fork()
             
             gl.glCullEnabled = true;

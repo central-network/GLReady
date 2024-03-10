@@ -1,4 +1,4 @@
-var GL, OFFSET_ASPECT_RATIO, OFFSET_BIND_TARGET, OFFSET_BLEND_ACTIVE, OFFSET_BLEND_EQUATE, OFFSET_BLEND_FUNC, OFFSET_BLEND_INARG, OFFSET_BLEND_OUTARG, OFFSET_CLEAR_COLOR, OFFSET_CLEAR_DEPTH, OFFSET_CLEAR_MASK, OFFSET_CULL_ENABLED, OFFSET_CULL_FACE, OFFSET_DEPTH_ACTIVE, OFFSET_DEPTH_FUNC, OFFSET_DEPTH_TEST, OFFSET_DRAGGING, OFFSET_DRAW_ACTIVE, OFFSET_DX, OFFSET_DY, OFFSET_FACTOR, OFFSET_FRONTFACE, OFFSET_HEIGHT, OFFSET_JUMPING, OFFSET_KEY_ALT, OFFSET_KEY_CTRL, OFFSET_KEY_META, OFFSET_KEY_SHIFT, OFFSET_LEFT, OFFSET_LOOKING, OFFSET_MOVE_BACK, OFFSET_MOVE_DOWN, OFFSET_MOVE_FWD, OFFSET_MOVE_LEFT, OFFSET_MOVE_RIGHT, OFFSET_MOVE_UP, OFFSET_PIXEL_RATIO, OFFSET_PTR_CLICK, OFFSET_PTR_DCLICK, OFFSET_ROTATING, OFFSET_RX, OFFSET_RY, OFFSET_SX, OFFSET_SY, OFFSET_SZ, OFFSET_TIME, OFFSET_TOP, OFFSET_UX_ENABLED, OFFSET_VALUES, OFFSET_VX, OFFSET_VY, OFFSET_VZ, OFFSET_WALKING, OFFSET_WIDTH, OFFSET_X, OFFSET_Y, OFFSET_ZOOMING;
+var GL, OFFSET_ASPECT_RATIO, OFFSET_BIND_TARGET, OFFSET_BLEND_ACTIVE, OFFSET_BLEND_EQUATE, OFFSET_BLEND_FUNC, OFFSET_BLEND_INARG, OFFSET_BLEND_OUTARG, OFFSET_CLEAR_COLOR, OFFSET_CLEAR_DEPTH, OFFSET_CLEAR_MASK, OFFSET_CULL_ENABLED, OFFSET_CULL_FACE, OFFSET_DEPTH_ACTIVE, OFFSET_DEPTH_FUNC, OFFSET_DEPTH_TEST, OFFSET_DRAGGING, OFFSET_DRAW_ACTIVE, OFFSET_DX, OFFSET_DY, OFFSET_FRONTFACE, OFFSET_HEIGHT, OFFSET_JUMPING, OFFSET_KEY_ALT, OFFSET_KEY_CTRL, OFFSET_KEY_META, OFFSET_KEY_SHIFT, OFFSET_LEFT, OFFSET_LOOKING, OFFSET_MOVE_BACK, OFFSET_MOVE_DOWN, OFFSET_MOVE_FWD, OFFSET_MOVE_LEFT, OFFSET_MOVE_RIGHT, OFFSET_MOVE_UP, OFFSET_PIXEL_RATIO, OFFSET_PTR_BUTTON, OFFSET_PTR_CLICK, OFFSET_PTR_DCLICK, OFFSET_ROTATING, OFFSET_RX, OFFSET_RY, OFFSET_SHIFT_RATIO, OFFSET_SX, OFFSET_SY, OFFSET_SZ, OFFSET_TIME, OFFSET_TOP, OFFSET_UX_ENABLED, OFFSET_VX, OFFSET_VY, OFFSET_VZ, OFFSET_WALKING, OFFSET_WIDTH, OFFSET_X, OFFSET_Y, OFFSET_ZOOMING;
 
 import Pointer from "./ptr.js";
 
@@ -66,13 +66,13 @@ OFFSET_PTR_DCLICK = 4 * 13 + 2;
 
 OFFSET_PTR_CLICK = 4 * 13 + 3;
 
-OFFSET_ROTATING = 4 * 14;
+OFFSET_PTR_BUTTON = 4 * 14;
 
-OFFSET_DRAGGING = 4 * 14 + 1;
+OFFSET_ROTATING = 4 * 15;
 
-OFFSET_UX_ENABLED = 4 * 14 + 2;
+OFFSET_DRAGGING = 4 * 15 + 1;
 
-OFFSET_VALUES = 4 * 20;
+OFFSET_UX_ENABLED = 4 * 15 + 2;
 
 OFFSET_X = 4 * 21;
 
@@ -98,7 +98,7 @@ OFFSET_VY = 4 * 31;
 
 OFFSET_VZ = 4 * 32;
 
-OFFSET_FACTOR = 4 * 33;
+OFFSET_SHIFT_RATIO = 4 * 33;
 
 OFFSET_TIME = 4 * 34;
 
@@ -116,6 +116,56 @@ OFFSET_ASPECT_RATIO = 4 * 45;
 
 export default GL = (function() {
   class GL extends Pointer {
+    bindEvents() {
+      var canvas;
+      canvas = this.getCanvasNode();
+      canvas.addEventListener("pointerup", this.onpointerfree.bind(this));
+      canvas.addEventListener("pointerdown", this.onpointerhold.bind(this));
+      canvas.addEventListener("pointermove", this.onpointermove.bind(this), {
+        passive: !0
+      });
+      canvas.addEventListener("click", this.oncanvasclick.bind(this));
+      canvas.addEventListener("dblclick", this.ondoubleclick.bind(this));
+      canvas.addEventListener("wheel", this.onmousescroll.bind(this), {
+        passive: !0
+      });
+      return canvas.addEventListener("contextmenu", function($) {
+        return $.preventDefault();
+      });
+    }
+
+    onpointerfree() {
+      return this.setUint8(OFFSET_PTR_BUTTON + arguments[0].button, 0);
+    }
+
+    onpointerhold() {
+      return this.setUint8(OFFSET_PTR_BUTTON + arguments[0].button, 1);
+    }
+
+    onpointermove() {
+      var offsetX, offsetY;
+      ({offsetX, offsetY} = arguments[0]);
+      this.setXDelta(-this.getX() + this.setX(offsetX)).setYRotate(-this.getXDelta() / 100) % Math.PI;
+      this.setYDelta(+this.getY() - this.setY(offsetY)).setXRotate(-this.getYDelta() / 100) % Math.PI;
+      return this.setLooking(1);
+    }
+
+    onmousescroll() {
+      var deltaX, deltaY;
+      ({deltaX, deltaY} = arguments[0]);
+      this.setXScale(deltaX);
+      this.setZScale(0.01 * this.setYScale(deltaY));
+      return this.setZooming(1);
+    }
+
+    oncanvasclick() {
+      return this.setPtrClick(arguments[0].button);
+    }
+
+    ondoubleclick() {
+      return this.setPtrDblClick(arguments[0].button);
+    }
+
     getArray() {
       return this.array;
     }
@@ -137,7 +187,8 @@ export default GL = (function() {
     }
 
     setDrawActive() {
-      return this.setUint8(OFFSET_DRAW_ACTIVE, arguments[0]);
+      this.setUint8(OFFSET_DRAW_ACTIVE, arguments[0]);
+      return this;
     }
 
     getCullEnabled() {
@@ -145,7 +196,8 @@ export default GL = (function() {
     }
 
     setCullEnabled() {
-      return this.setUint8(OFFSET_CULL_ENABLED, arguments[0]);
+      this.setUint8(OFFSET_CULL_ENABLED, arguments[0]);
+      return this;
     }
 
     getBlendActive() {
@@ -153,7 +205,8 @@ export default GL = (function() {
     }
 
     setBlendActive() {
-      return this.setUint8(OFFSET_BLEND_ACTIVE, arguments[0]);
+      this.setUint8(OFFSET_BLEND_ACTIVE, arguments[0]);
+      return this;
     }
 
     getDepthActive() {
@@ -161,7 +214,8 @@ export default GL = (function() {
     }
 
     setDepthActive() {
-      return this.setUint8(OFFSET_DEPTH_ACTIVE, arguments[0]);
+      this.setUint8(OFFSET_DEPTH_ACTIVE, arguments[0]);
+      return this;
     }
 
     getClearDepth() {
@@ -169,7 +223,8 @@ export default GL = (function() {
     }
 
     setClearDepth() {
-      return this.setFloat32(OFFSET_CLEAR_DEPTH, arguments[0]);
+      this.setFloat32(OFFSET_CLEAR_DEPTH, arguments[0]);
+      return this;
     }
 
     keyDepthTest() {
@@ -181,7 +236,8 @@ export default GL = (function() {
     }
 
     setDepthTest() {
-      return this.setUint16(OFFSET_DEPTH_TEST, arguments[0]);
+      this.setUint16(OFFSET_DEPTH_TEST, arguments[0]);
+      return this;
     }
 
     keyCullFace() {
@@ -193,7 +249,8 @@ export default GL = (function() {
     }
 
     setCullFace() {
-      return this.setUint16(OFFSET_CULL_FACE, arguments[0]);
+      this.setUint16(OFFSET_CULL_FACE, arguments[0]);
+      return this;
     }
 
     keyFrontFace() {
@@ -205,7 +262,8 @@ export default GL = (function() {
     }
 
     setFrontFace() {
-      return this.setUint16(OFFSET_FRONTFACE, arguments[0]);
+      this.setUint16(OFFSET_FRONTFACE, arguments[0]);
+      return this;
     }
 
     keyDepthFunc() {
@@ -217,7 +275,8 @@ export default GL = (function() {
     }
 
     setDepthFunc() {
-      return this.setUint16(OFFSET_DEPTH_FUNC, arguments[0]);
+      this.setUint16(OFFSET_DEPTH_FUNC, arguments[0]);
+      return this;
     }
 
     keyClearMask() {
@@ -229,7 +288,8 @@ export default GL = (function() {
     }
 
     setClearMask() {
-      return this.setUint16(OFFSET_CLEAR_MASK, arguments[0]);
+      this.setUint16(OFFSET_CLEAR_MASK, arguments[0]);
+      return this;
     }
 
     rgbClearColor() {
@@ -241,7 +301,8 @@ export default GL = (function() {
     }
 
     setClearColor() {
-      return this.setColor4(OFFSET_CLEAR_COLOR, arguments[0]);
+      this.setColor4(OFFSET_CLEAR_COLOR, arguments[0]);
+      return this;
     }
 
     keyBindTarget() {
@@ -253,7 +314,8 @@ export default GL = (function() {
     }
 
     setBindTarget() {
-      return this.setUint16(OFFSET_BIND_TARGET, arguments[0]);
+      this.setUint16(OFFSET_BIND_TARGET, arguments[0]);
+      return this;
     }
 
     keyBlendEquate() {
@@ -265,7 +327,8 @@ export default GL = (function() {
     }
 
     setBlendEquate() {
-      return this.setUint16(OFFSET_BLEND_EQUATE, arguments[0]);
+      this.setUint16(OFFSET_BLEND_EQUATE, arguments[0]);
+      return this;
     }
 
     keyBlendInArg() {
@@ -277,7 +340,8 @@ export default GL = (function() {
     }
 
     setBlendInArg() {
-      return this.setUint16(OFFSET_BLEND_INARG, arguments[0]);
+      this.setUint16(OFFSET_BLEND_INARG, arguments[0]);
+      return this;
     }
 
     keyBlendOutArg() {
@@ -289,7 +353,8 @@ export default GL = (function() {
     }
 
     setBlendOutArg() {
-      return this.setUint16(OFFSET_BLEND_OUTARG, arguments[0]);
+      this.setUint16(OFFSET_BLEND_OUTARG, arguments[0]);
+      return this;
     }
 
     keyBlendFunc() {
@@ -301,7 +366,8 @@ export default GL = (function() {
     }
 
     setBlendFunc() {
-      return this.setUint16(OFFSET_BLEND_FUNC, arguments[0]);
+      this.setUint16(OFFSET_BLEND_FUNC, arguments[0]);
+      return this;
     }
 
     getWidth() {
@@ -309,7 +375,8 @@ export default GL = (function() {
     }
 
     setWidth() {
-      return this.setFloat32(OFFSET_WIDTH, arguments[0]);
+      this.setFloat32(OFFSET_WIDTH, arguments[0]);
+      return this;
     }
 
     getHeight() {
@@ -317,7 +384,8 @@ export default GL = (function() {
     }
 
     setHeight() {
-      return this.setFloat32(OFFSET_HEIGHT, arguments[0]);
+      this.setFloat32(OFFSET_HEIGHT, arguments[0]);
+      return this;
     }
 
     getLeft() {
@@ -325,7 +393,8 @@ export default GL = (function() {
     }
 
     setLeft() {
-      return this.setFloat32(OFFSET_LEFT, arguments[0]);
+      this.setFloat32(OFFSET_LEFT, arguments[0]);
+      return this;
     }
 
     getTop() {
@@ -333,7 +402,8 @@ export default GL = (function() {
     }
 
     setTop() {
-      return this.setFloat32(OFFSET_TOP, arguments[0]);
+      this.setFloat32(OFFSET_TOP, arguments[0]);
+      return this;
     }
 
     getPixelRatio() {
@@ -341,7 +411,8 @@ export default GL = (function() {
     }
 
     setPixelRatio() {
-      return this.setFloat32(OFFSET_PIXEL_RATIO, arguments[0]);
+      this.setFloat32(OFFSET_PIXEL_RATIO, arguments[0]);
+      return this;
     }
 
     getAspectRatio() {
@@ -349,7 +420,17 @@ export default GL = (function() {
     }
 
     setAspectRatio() {
-      return this.setFloat32(OFFSET_ASPECT_RATIO, arguments[0]);
+      this.setFloat32(OFFSET_ASPECT_RATIO, arguments[0]);
+      return this;
+    }
+
+    getShiftRatio() {
+      return this.getFloat32(OFFSET_SHIFT_RATIO);
+    }
+
+    setShiftRatio() {
+      this.setFloat32(OFFSET_SHIFT_RATIO, arguments[0]);
+      return this;
     }
 
     getWalking() {
@@ -357,7 +438,8 @@ export default GL = (function() {
     }
 
     setWalking() {
-      return this.setUint8(OFFSET_WALKING, arguments[0]);
+      this.setUint8(OFFSET_WALKING, arguments[0]);
+      return this;
     }
 
     getJumping() {
@@ -365,7 +447,8 @@ export default GL = (function() {
     }
 
     setJumping() {
-      return this.setUint8(OFFSET_JUMPING, arguments[0]);
+      this.setUint8(OFFSET_JUMPING, arguments[0]);
+      return this;
     }
 
     getLooking() {
@@ -373,7 +456,8 @@ export default GL = (function() {
     }
 
     setLooking() {
-      return this.setUint8(OFFSET_LOOKING, arguments[0]);
+      this.setUint8(OFFSET_LOOKING, arguments[0]);
+      return this;
     }
 
     getZooming() {
@@ -381,7 +465,8 @@ export default GL = (function() {
     }
 
     setZooming() {
-      return this.setUint8(OFFSET_ZOOMING, arguments[0]);
+      this.setUint8(OFFSET_ZOOMING, arguments[0]);
+      return this;
     }
 
     getDragging() {
@@ -389,7 +474,8 @@ export default GL = (function() {
     }
 
     setDragging() {
-      return this.setUint8(OFFSET_DRAGGING, arguments[0]);
+      this.setUint8(OFFSET_DRAGGING, arguments[0]);
+      return this;
     }
 
     getRotating() {
@@ -397,7 +483,8 @@ export default GL = (function() {
     }
 
     setRotating() {
-      return this.setUint8(OFFSET_ROTATING, arguments[0]);
+      this.setUint8(OFFSET_ROTATING, arguments[0]);
+      return this;
     }
 
     getKeyMeta() {
@@ -405,7 +492,8 @@ export default GL = (function() {
     }
 
     setKeyMeta() {
-      return this.setUint8(OFFSET_KEY_META, arguments[0]);
+      this.setUint8(OFFSET_KEY_META, arguments[0]);
+      return this;
     }
 
     getKeyCtrl() {
@@ -413,7 +501,8 @@ export default GL = (function() {
     }
 
     setKeyCtrl() {
-      return this.setUint8(OFFSET_KEY_CTRL, arguments[0]);
+      this.setUint8(OFFSET_KEY_CTRL, arguments[0]);
+      return this;
     }
 
     getKeyShift() {
@@ -421,7 +510,8 @@ export default GL = (function() {
     }
 
     setKeyShift() {
-      return this.setUint8(OFFSET_KEY_SHIFT, arguments[0]);
+      this.setUint8(OFFSET_KEY_SHIFT, arguments[0]);
+      return this;
     }
 
     getKeyAlt() {
@@ -429,7 +519,8 @@ export default GL = (function() {
     }
 
     setKeyAlt() {
-      return this.setUint8(OFFSET_KEY_ALT, arguments[0]);
+      this.setUint8(OFFSET_KEY_ALT, arguments[0]);
+      return this;
     }
 
     getMoveFwd() {
@@ -437,7 +528,8 @@ export default GL = (function() {
     }
 
     setMoveFwd() {
-      return this.setUint8(OFFSET_MOVE_FWD, arguments[0]);
+      this.setUint8(OFFSET_MOVE_FWD, arguments[0]);
+      return this;
     }
 
     getMoveBack() {
@@ -445,7 +537,8 @@ export default GL = (function() {
     }
 
     setMoveBack() {
-      return this.setUint8(OFFSET_MOVE_BACK, arguments[0]);
+      this.setUint8(OFFSET_MOVE_BACK, arguments[0]);
+      return this;
     }
 
     getMoveLeft() {
@@ -453,7 +546,8 @@ export default GL = (function() {
     }
 
     setMoveLeft() {
-      return this.setUint8(OFFSET_MOVE_LEFT, arguments[0]);
+      this.setUint8(OFFSET_MOVE_LEFT, arguments[0]);
+      return this;
     }
 
     getMoveRight() {
@@ -461,7 +555,8 @@ export default GL = (function() {
     }
 
     setMoveRight() {
-      return this.setUint8(OFFSET_MOVE_RIGHT, arguments[0]);
+      this.setUint8(OFFSET_MOVE_RIGHT, arguments[0]);
+      return this;
     }
 
     getMoveUp() {
@@ -469,7 +564,8 @@ export default GL = (function() {
     }
 
     setMoveUp() {
-      return this.setUint8(OFFSET_MOVE_UP, arguments[0]);
+      this.setUint8(OFFSET_MOVE_UP, arguments[0]);
+      return this;
     }
 
     getMoveDown() {
@@ -477,7 +573,8 @@ export default GL = (function() {
     }
 
     setMoveDown() {
-      return this.setUint8(OFFSET_MOVE_DOWN, arguments[0]);
+      this.setUint8(OFFSET_MOVE_DOWN, arguments[0]);
+      return this;
     }
 
     getPtrClick() {
@@ -485,7 +582,8 @@ export default GL = (function() {
     }
 
     setPtrClick() {
-      return this.setUint8(OFFSET_PTR_CLICK, arguments[0]);
+      this.setUint8(OFFSET_PTR_CLICK, arguments[0]);
+      return this;
     }
 
     getPtrDblClick() {
@@ -493,7 +591,8 @@ export default GL = (function() {
     }
 
     setPtrDblClick() {
-      return this.setUint8(OFFSET_PTR_DCLICK, arguments[0]);
+      this.setUint8(OFFSET_PTR_DCLICK, arguments[0]);
+      return this;
     }
 
     getUXEnabled() {
@@ -501,7 +600,106 @@ export default GL = (function() {
     }
 
     setUXEnabled() {
-      return this.setUint8(OFFSET_UX_ENABLED, arguments[0]);
+      this.setUint8(OFFSET_UX_ENABLED, arguments[0]);
+      return this;
+    }
+
+    getX() {
+      return this.getFloat32(OFFSET_X);
+    }
+
+    setX() {
+      return this.setFloat32(OFFSET_X, arguments[0]);
+    }
+
+    getXDelta() {
+      return this.getFloat32(OFFSET_DX);
+    }
+
+    setXDelta() {
+      this.setFloat32(OFFSET_DX, arguments[0]);
+      return this;
+    }
+
+    getXRotate() {
+      return this.getFloat32(OFFSET_RX);
+    }
+
+    setXRotate() {
+      return this.setFloat32(OFFSET_RX, arguments[0]);
+    }
+
+    getXScale() {
+      return this.getFloat32(OFFSET_SX);
+    }
+
+    setXScale() {
+      return this.setFloat32(OFFSET_SX, arguments[0]);
+    }
+
+    getXVector() {
+      return this.getFloat32(OFFSET_VX);
+    }
+
+    setXVector() {
+      return this.setFloat32(OFFSET_VX, arguments[0]);
+    }
+
+    getY() {
+      return this.getFloat32(OFFSET_Y);
+    }
+
+    setY() {
+      return this.setFloat32(OFFSET_Y, arguments[0]);
+    }
+
+    getYDelta() {
+      return this.getFloat32(OFFSET_DY);
+    }
+
+    setYDelta() {
+      this.setFloat32(OFFSET_DY, arguments[0]);
+      return this;
+    }
+
+    getYRotate() {
+      return this.getFloat32(OFFSET_RY);
+    }
+
+    setYRotate() {
+      return this.setFloat32(OFFSET_RY, arguments[0]);
+    }
+
+    getYScale() {
+      return this.getFloat32(OFFSET_SY);
+    }
+
+    setYScale() {
+      return this.setFloat32(OFFSET_SY, arguments[0]);
+    }
+
+    getYVector() {
+      return this.getFloat32(OFFSET_VY);
+    }
+
+    setYVector() {
+      return this.setFloat32(OFFSET_VY, arguments[0]);
+    }
+
+    getZScale() {
+      return this.getFloat32(OFFSET_SZ);
+    }
+
+    setZScale() {
+      return this.setFloat32(OFFSET_SZ, arguments[0]);
+    }
+
+    getZVector() {
+      return this.getFloat32(OFFSET_VZ);
+    }
+
+    setZVector() {
+      return this.setFloat32(OFFSET_VZ, arguments[0]);
     }
 
   };
@@ -609,6 +807,10 @@ export default GL = (function() {
       get: GL.prototype.getAspectRatio,
       set: GL.prototype.setAspectRatio
     },
+    ratioShift: {
+      get: GL.prototype.getShiftRatio,
+      set: GL.prototype.setShiftRatio
+    },
     uxActive: {
       get: GL.prototype.getUXEnabled,
       set: GL.prototype.setUXEnabled
@@ -684,6 +886,54 @@ export default GL = (function() {
     uxMoveDown: {
       get: GL.prototype.getMoveDown,
       set: GL.prototype.setMoveDown
+    },
+    x: {
+      get: GL.prototype.getX,
+      set: GL.prototype.setX
+    },
+    xDelta: {
+      get: GL.prototype.getXDelta,
+      set: GL.prototype.setXDelta
+    },
+    xRotate: {
+      get: GL.prototype.getXRotate,
+      set: GL.prototype.setXRotate
+    },
+    xScale: {
+      get: GL.prototype.getXScale,
+      set: GL.prototype.setXScale
+    },
+    xVector: {
+      get: GL.prototype.getXVector,
+      set: GL.prototype.setXVector
+    },
+    y: {
+      get: GL.prototype.getY,
+      set: GL.prototype.setY
+    },
+    yDelta: {
+      get: GL.prototype.getYDelta,
+      set: GL.prototype.setYDelta
+    },
+    yRotate: {
+      get: GL.prototype.getYRotate,
+      set: GL.prototype.setYRotate
+    },
+    yScale: {
+      get: GL.prototype.getYScale,
+      set: GL.prototype.setYScale
+    },
+    yVector: {
+      get: GL.prototype.getYVector,
+      set: GL.prototype.setYVector
+    },
+    zScale: {
+      get: GL.prototype.getZScale,
+      set: GL.prototype.setZScale
+    },
+    zVector: {
+      get: GL.prototype.getZVector,
+      set: GL.prototype.setZVector
     }
   });
 

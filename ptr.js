@@ -463,7 +463,8 @@ Object.defineProperties(Pointer.prototype, {
   },
   setUint8: {
     value: function() {
-      return dvw.setUint8(this.byteOffset + arguments[0], arguments[1]);
+      dvw.setUint8(this.byteOffset + arguments[0], arguments[1]);
+      return arguments[1];
     }
   },
   keyUint16: {
@@ -478,7 +479,8 @@ Object.defineProperties(Pointer.prototype, {
   },
   setUint16: {
     value: function() {
-      return dvw.setUint16(this.byteOffset + arguments[0], arguments[1], LE);
+      dvw.setUint16(this.byteOffset + arguments[0], arguments[1], LE);
+      return arguments[1];
     }
   },
   getFloat32: {
@@ -488,7 +490,8 @@ Object.defineProperties(Pointer.prototype, {
   },
   setFloat32: {
     value: function() {
-      return dvw.setFloat32(this.byteOffset + arguments[0], arguments[1], LE);
+      dvw.setFloat32(this.byteOffset + arguments[0], arguments[1], LE);
+      return arguments[1];
     }
   },
   rgbColor4: {
@@ -503,7 +506,8 @@ Object.defineProperties(Pointer.prototype, {
   },
   setColor4: {
     value: function() {
-      return dvw.setUint32(this.byteOffset + arguments[0], Color4.u32(arguments[1]), LE);
+      dvw.setUint32(this.byteOffset + arguments[0], Color4.u32(arguments[1]), LE);
+      return arguments[1];
     }
   }
 });

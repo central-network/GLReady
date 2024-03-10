@@ -300,23 +300,23 @@ Object.defineProperties Pointer::,
 
     getUint8        : value : -> dvw.getUint8 @byteOffset + arguments[0]
     
-    setUint8        : value : -> dvw.setUint8 @byteOffset + arguments[0], arguments[1]
+    setUint8        : value : -> dvw.setUint8 @byteOffset + arguments[0], arguments[1] ; arguments[1]
 
     keyUint16       : value : -> dvw.keyUint16 @byteOffset + arguments[0], arguments[1]
 
     getUint16       : value : -> dvw.getUint16 @byteOffset + arguments[0]
     
-    setUint16       : value : -> dvw.setUint16 @byteOffset + arguments[0], arguments[1], LE
+    setUint16       : value : -> dvw.setUint16 @byteOffset + arguments[0], arguments[1], LE ; arguments[1]
 
     getFloat32      : value : -> dvw.getFloat32 @byteOffset + arguments[0]
     
-    setFloat32      : value : -> dvw.setFloat32 @byteOffset + arguments[0], arguments[1], LE
+    setFloat32      : value : -> dvw.setFloat32 @byteOffset + arguments[0], arguments[1], LE ; arguments[1]
 
     rgbColor4       : value : -> @getColor4( ...arguments ).f32
     
     getColor4       : value : -> new Color4 dvw.getUint32 @byteOffset + arguments[0], LE
     
-    setColor4       : value : -> dvw.setUint32 @byteOffset + arguments[0], Color4.u32(arguments[1]), LE
+    setColor4       : value : -> dvw.setUint32 @byteOffset + arguments[0], Color4.u32(arguments[1]), LE ; arguments[1]
 
 Object.defineProperties Pointer::,
 
