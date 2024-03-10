@@ -1,4 +1,4 @@
-var GL, OFFSET_BIND_TARGET, OFFSET_BLEND_ACTIVE, OFFSET_BLEND_EQUATE, OFFSET_BLEND_FUNC, OFFSET_BLEND_INARG, OFFSET_BLEND_OUTARG, OFFSET_CLEAR_COLOR, OFFSET_CLEAR_DEPTH, OFFSET_CLEAR_MASK, OFFSET_CULL_ENABLED, OFFSET_CULL_FACE, OFFSET_DEPTH_ACTIVE, OFFSET_DEPTH_FUNC, OFFSET_DEPTH_TEST, OFFSET_DRAW_ACTIVE, OFFSET_FRONTFACE;
+var GL, OFFSET_ASPECT_RATIO, OFFSET_BIND_TARGET, OFFSET_BLEND_ACTIVE, OFFSET_BLEND_EQUATE, OFFSET_BLEND_FUNC, OFFSET_BLEND_INARG, OFFSET_BLEND_OUTARG, OFFSET_CLEAR_COLOR, OFFSET_CLEAR_DEPTH, OFFSET_CLEAR_MASK, OFFSET_CULL_ENABLED, OFFSET_CULL_FACE, OFFSET_DEPTH_ACTIVE, OFFSET_DEPTH_FUNC, OFFSET_DEPTH_TEST, OFFSET_DRAGGING, OFFSET_DRAW_ACTIVE, OFFSET_DX, OFFSET_DY, OFFSET_FACTOR, OFFSET_FRONTFACE, OFFSET_HEIGHT, OFFSET_JUMPING, OFFSET_KEY_ALT, OFFSET_KEY_CTRL, OFFSET_KEY_META, OFFSET_KEY_SHIFT, OFFSET_LEFT, OFFSET_LOOKING, OFFSET_MOVE_BACK, OFFSET_MOVE_DOWN, OFFSET_MOVE_FWD, OFFSET_MOVE_LEFT, OFFSET_MOVE_RIGHT, OFFSET_MOVE_UP, OFFSET_PIXEL_RATIO, OFFSET_PTR_CLICK, OFFSET_PTR_DCLICK, OFFSET_ROTATING, OFFSET_RX, OFFSET_RY, OFFSET_SX, OFFSET_SY, OFFSET_SZ, OFFSET_TIME, OFFSET_TOP, OFFSET_UX_ENABLED, OFFSET_VALUES, OFFSET_VX, OFFSET_VY, OFFSET_VZ, OFFSET_WALKING, OFFSET_WIDTH, OFFSET_X, OFFSET_Y, OFFSET_ZOOMING;
 
 import Pointer from "./ptr.js";
 
@@ -33,6 +33,86 @@ OFFSET_BLEND_OUTARG = 4 * 8 + 2;
 OFFSET_BLEND_FUNC = 4 * 9;
 
 OFFSET_DEPTH_TEST = 4 * 9 + 2;
+
+OFFSET_WALKING = 4 * 10;
+
+OFFSET_JUMPING = 4 * 10 + 1;
+
+OFFSET_KEY_SHIFT = 4 * 10 + 2;
+
+OFFSET_KEY_ALT = 4 * 10 + 3;
+
+OFFSET_KEY_CTRL = 4 * 11;
+
+OFFSET_KEY_META = 4 * 11 + 1;
+
+OFFSET_MOVE_FWD = 4 * 11 + 2;
+
+OFFSET_MOVE_BACK = 4 * 11 + 3;
+
+OFFSET_MOVE_LEFT = 4 * 12;
+
+OFFSET_MOVE_RIGHT = 4 * 12 + 1;
+
+OFFSET_MOVE_UP = 4 * 12 + 2;
+
+OFFSET_MOVE_DOWN = 4 * 12 + 3;
+
+OFFSET_LOOKING = 4 * 13;
+
+OFFSET_ZOOMING = 4 * 13 + 1;
+
+OFFSET_PTR_DCLICK = 4 * 13 + 2;
+
+OFFSET_PTR_CLICK = 4 * 13 + 3;
+
+OFFSET_ROTATING = 4 * 14;
+
+OFFSET_DRAGGING = 4 * 14 + 1;
+
+OFFSET_UX_ENABLED = 4 * 14 + 2;
+
+OFFSET_VALUES = 4 * 20;
+
+OFFSET_X = 4 * 21;
+
+OFFSET_Y = 4 * 22;
+
+OFFSET_DX = 4 * 23;
+
+OFFSET_DY = 4 * 24;
+
+OFFSET_RX = 4 * 25;
+
+OFFSET_RY = 4 * 26;
+
+OFFSET_SX = 4 * 27;
+
+OFFSET_SY = 4 * 28;
+
+OFFSET_SZ = 4 * 29;
+
+OFFSET_VX = 4 * 30;
+
+OFFSET_VY = 4 * 31;
+
+OFFSET_VZ = 4 * 32;
+
+OFFSET_FACTOR = 4 * 33;
+
+OFFSET_TIME = 4 * 34;
+
+OFFSET_WIDTH = 4 * 40;
+
+OFFSET_HEIGHT = 4 * 41;
+
+OFFSET_LEFT = 4 * 42;
+
+OFFSET_TOP = 4 * 43;
+
+OFFSET_PIXEL_RATIO = 4 * 44;
+
+OFFSET_ASPECT_RATIO = 4 * 45;
 
 export default GL = (function() {
   class GL extends Pointer {
@@ -224,6 +304,206 @@ export default GL = (function() {
       return this.setUint16(OFFSET_BLEND_FUNC, arguments[0]);
     }
 
+    getWidth() {
+      return this.getFloat32(OFFSET_WIDTH);
+    }
+
+    setWidth() {
+      return this.setFloat32(OFFSET_WIDTH, arguments[0]);
+    }
+
+    getHeight() {
+      return this.getFloat32(OFFSET_HEIGHT);
+    }
+
+    setHeight() {
+      return this.setFloat32(OFFSET_HEIGHT, arguments[0]);
+    }
+
+    getLeft() {
+      return this.getFloat32(OFFSET_LEFT);
+    }
+
+    setLeft() {
+      return this.setFloat32(OFFSET_LEFT, arguments[0]);
+    }
+
+    getTop() {
+      return this.getFloat32(OFFSET_TOP);
+    }
+
+    setTop() {
+      return this.setFloat32(OFFSET_TOP, arguments[0]);
+    }
+
+    getPixelRatio() {
+      return this.getFloat32(OFFSET_PIXEL_RATIO);
+    }
+
+    setPixelRatio() {
+      return this.setFloat32(OFFSET_PIXEL_RATIO, arguments[0]);
+    }
+
+    getAspectRatio() {
+      return this.getFloat32(OFFSET_ASPECT_RATIO);
+    }
+
+    setAspectRatio() {
+      return this.setFloat32(OFFSET_ASPECT_RATIO, arguments[0]);
+    }
+
+    getWalking() {
+      return this.getUint8(OFFSET_WALKING);
+    }
+
+    setWalking() {
+      return this.setUint8(OFFSET_WALKING, arguments[0]);
+    }
+
+    getJumping() {
+      return this.getUint8(OFFSET_JUMPING);
+    }
+
+    setJumping() {
+      return this.setUint8(OFFSET_JUMPING, arguments[0]);
+    }
+
+    getLooking() {
+      return this.getUint8(OFFSET_LOOKING);
+    }
+
+    setLooking() {
+      return this.setUint8(OFFSET_LOOKING, arguments[0]);
+    }
+
+    getZooming() {
+      return this.getUint8(OFFSET_ZOOMING);
+    }
+
+    setZooming() {
+      return this.setUint8(OFFSET_ZOOMING, arguments[0]);
+    }
+
+    getDragging() {
+      return this.getUint8(OFFSET_DRAGGING);
+    }
+
+    setDragging() {
+      return this.setUint8(OFFSET_DRAGGING, arguments[0]);
+    }
+
+    getRotating() {
+      return this.getUint8(OFFSET_ROTATING);
+    }
+
+    setRotating() {
+      return this.setUint8(OFFSET_ROTATING, arguments[0]);
+    }
+
+    getKeyMeta() {
+      return this.getUint8(OFFSET_KEY_META);
+    }
+
+    setKeyMeta() {
+      return this.setUint8(OFFSET_KEY_META, arguments[0]);
+    }
+
+    getKeyCtrl() {
+      return this.getUint8(OFFSET_KEY_CTRL);
+    }
+
+    setKeyCtrl() {
+      return this.setUint8(OFFSET_KEY_CTRL, arguments[0]);
+    }
+
+    getKeyShift() {
+      return this.getUint8(OFFSET_KEY_SHIFT);
+    }
+
+    setKeyShift() {
+      return this.setUint8(OFFSET_KEY_SHIFT, arguments[0]);
+    }
+
+    getKeyAlt() {
+      return this.getUint8(OFFSET_KEY_ALT);
+    }
+
+    setKeyAlt() {
+      return this.setUint8(OFFSET_KEY_ALT, arguments[0]);
+    }
+
+    getMoveFwd() {
+      return this.getUint8(OFFSET_MOVE_FWD);
+    }
+
+    setMoveFwd() {
+      return this.setUint8(OFFSET_MOVE_FWD, arguments[0]);
+    }
+
+    getMoveBack() {
+      return this.getUint8(OFFSET_MOVE_BACK);
+    }
+
+    setMoveBack() {
+      return this.setUint8(OFFSET_MOVE_BACK, arguments[0]);
+    }
+
+    getMoveLeft() {
+      return this.getUint8(OFFSET_MOVE_LEFT);
+    }
+
+    setMoveLeft() {
+      return this.setUint8(OFFSET_MOVE_LEFT, arguments[0]);
+    }
+
+    getMoveRight() {
+      return this.getUint8(OFFSET_MOVE_RIGHT);
+    }
+
+    setMoveRight() {
+      return this.setUint8(OFFSET_MOVE_RIGHT, arguments[0]);
+    }
+
+    getMoveUp() {
+      return this.getUint8(OFFSET_MOVE_UP);
+    }
+
+    setMoveUp() {
+      return this.setUint8(OFFSET_MOVE_UP, arguments[0]);
+    }
+
+    getMoveDown() {
+      return this.getUint8(OFFSET_MOVE_DOWN);
+    }
+
+    setMoveDown() {
+      return this.setUint8(OFFSET_MOVE_DOWN, arguments[0]);
+    }
+
+    getPtrClick() {
+      return this.getUint8(OFFSET_PTR_CLICK);
+    }
+
+    setPtrClick() {
+      return this.setUint8(OFFSET_PTR_CLICK, arguments[0]);
+    }
+
+    getPtrDblClick() {
+      return this.getUint8(OFFSET_PTR_DCLICK);
+    }
+
+    setPtrDblClick() {
+      return this.setUint8(OFFSET_PTR_DCLICK, arguments[0]);
+    }
+
+    getUXEnabled() {
+      return this.getUint8(OFFSET_UX_ENABLED);
+    }
+
+    setUXEnabled() {
+      return this.setUint8(OFFSET_UX_ENABLED, arguments[0]);
+    }
+
   };
 
   GL.byteLength = 4 * 48;
@@ -234,76 +514,176 @@ export default GL = (function() {
     gl: {
       get: GL.prototype.getLinkedNode
     },
-    arrayBuffer: {
+    nodeBuffer: {
       get: GL.prototype.getArrayBuffer
     },
-    canvas: {
+    nodeCanvas: {
       get: GL.prototype.getCanvasNode,
       set: GL.prototype.setCanvasNode
     },
-    drawActive: {
+    glActive: {
       get: GL.prototype.getDrawActive,
       set: GL.prototype.setDrawActive
     },
-    cullEnabled: {
+    glCullEnabled: {
       get: GL.prototype.getCullEnabled,
       set: GL.prototype.setCullEnabled
     },
-    cullFace: {
+    glCullFace: {
       get: GL.prototype.keyCullFace,
       set: GL.prototype.setCullFace
     },
-    frontFace: {
+    glFrontFace: {
       get: GL.prototype.keyFrontFace,
       set: GL.prototype.setFrontFace
     },
-    blendActive: {
+    glBlendEnabled: {
       get: GL.prototype.getBlendActive,
       set: GL.prototype.setBlendActive
     },
-    blendEquate: {
+    glBlendEquation: {
       get: GL.prototype.keyBlendEquate,
       set: GL.prototype.setBlendEquate
     },
-    blendFunc: {
+    glBlendFunc: {
       get: GL.prototype.keyBlendFunc,
       set: GL.prototype.setBlendFunc
     },
-    blendInArg: {
+    glBlendInArg: {
       get: GL.prototype.keyBlendInArg,
       set: GL.prototype.setBlendInArg
     },
-    blendOutArg: {
+    glBlendOutArg: {
       get: GL.prototype.keyBlendOutArg,
       set: GL.prototype.setBlendOutArg
     },
-    depthActive: {
+    glDepthEnabled: {
       get: GL.prototype.getDepthActive,
       set: GL.prototype.setDepthActive
     },
-    depthTest: {
+    glDepthTest: {
       get: GL.prototype.keyDepthTest,
       set: GL.prototype.setDepthTest
     },
-    depthFunc: {
+    glDepthFunc: {
       get: GL.prototype.keyDepthFunc,
       set: GL.prototype.setDepthFunc
     },
-    clearMask: {
+    glClearMask: {
       get: GL.prototype.keyClearMask,
       set: GL.prototype.setClearMask
     },
-    bindTarget: {
+    glBindTarget: {
       get: GL.prototype.keyBindTarget,
       set: GL.prototype.setBindTarget
     },
-    clearDepth: {
+    glClearDepth: {
       get: GL.prototype.getClearDepth,
       set: GL.prototype.setClearDepth
     },
-    clearColor: {
+    glClearColor: {
       get: GL.prototype.getClearColor,
       set: GL.prototype.setClearColor
+    },
+    pxWidth: {
+      get: GL.prototype.getWidth,
+      set: GL.prototype.setWidth
+    },
+    pxHeight: {
+      get: GL.prototype.getHeight,
+      set: GL.prototype.setHeight
+    },
+    pxLeft: {
+      get: GL.prototype.getLeft,
+      set: GL.prototype.setLeft
+    },
+    pxTop: {
+      get: GL.prototype.getTop,
+      set: GL.prototype.setTop
+    },
+    ratioPixel: {
+      get: GL.prototype.getPixelRatio,
+      set: GL.prototype.setPixelRatio
+    },
+    ratioAspect: {
+      get: GL.prototype.getAspectRatio,
+      set: GL.prototype.setAspectRatio
+    },
+    uxActive: {
+      get: GL.prototype.getUXEnabled,
+      set: GL.prototype.setUXEnabled
+    },
+    uxMoveWalking: {
+      get: GL.prototype.getWalking,
+      set: GL.prototype.setWalking
+    },
+    uxMoveJumping: {
+      get: GL.prototype.getJumping,
+      set: GL.prototype.setJumping
+    },
+    uxKeyShift: {
+      get: GL.prototype.getKeyShift,
+      set: GL.prototype.setKeyShift
+    },
+    uxKeyAlt: {
+      get: GL.prototype.getKeyAlt,
+      set: GL.prototype.setKeyAlt
+    },
+    uxKeyMeta: {
+      get: GL.prototype.getKeyMeta,
+      set: GL.prototype.setKeyMeta
+    },
+    uxKeyCtrl: {
+      get: GL.prototype.getKeyCtrl,
+      set: GL.prototype.setKeyCtrl
+    },
+    uxPtrClick: {
+      get: GL.prototype.getPtrClick,
+      set: GL.prototype.setPtrClick
+    },
+    uxPtrDblClick: {
+      get: GL.prototype.getPtrDblClick,
+      set: GL.prototype.setPtrDblClick
+    },
+    uxPtrLooking: {
+      get: GL.prototype.getLooking,
+      set: GL.prototype.setLooking
+    },
+    uxPtrZooming: {
+      get: GL.prototype.getZooming,
+      set: GL.prototype.setZooming
+    },
+    uxPtrDragging: {
+      get: GL.prototype.getDragging,
+      set: GL.prototype.setDragging
+    },
+    uxPtrRotating: {
+      get: GL.prototype.getRotating,
+      set: GL.prototype.setRotating
+    },
+    uxMoveFwd: {
+      get: GL.prototype.getMoveFwd,
+      set: GL.prototype.setMoveFwd
+    },
+    uxMoveBack: {
+      get: GL.prototype.getMoveBack,
+      set: GL.prototype.setMoveBack
+    },
+    uxMoveLeft: {
+      get: GL.prototype.getMoveLeft,
+      set: GL.prototype.setMoveLeft
+    },
+    uxMoveRight: {
+      get: GL.prototype.getMoveRight,
+      set: GL.prototype.setMoveRight
+    },
+    uxMoveUp: {
+      get: GL.prototype.getMoveUp,
+      set: GL.prototype.setMoveUp
+    },
+    uxMoveDown: {
+      get: GL.prototype.getMoveDown,
+      set: GL.prototype.setMoveDown
     }
   });
 
