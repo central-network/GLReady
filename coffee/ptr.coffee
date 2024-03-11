@@ -6,11 +6,14 @@ OBJECTS = [,]
 buf = u32 = i32 = dvw =
 palloc = malloc = false
 
-INDEX_BUF           = 0
-INDEX_PTR           = 1
+INDEX_NOW           = 0
+INDEX_HIT           = 1
+INDEX_FPS           = 2
+INDEX_PTR           = 3
+INDEX_BUF           = 4
 
 POINTERS_BYTELENGTH = 4 * 1e5
-POINTERS_BYTEOFFSET = 8
+POINTERS_BYTEOFFSET = 4 * 16
 
 proxy = -> new Proxy i: arguments[0],
     get : ( {i}, key ) ->
@@ -184,6 +187,13 @@ export default class Pointer extends Number
 
         Reflect.defineProperty Pointer::,  "buffer", { value : sab }
         Reflect.deleteProperty Pointer, "setBuffer"
+
+        ƒ T = 0 if window? and T = ƒ = ( t ) ->
+            u32[ INDEX_NOW ] = t
+            u32[ INDEX_HIT ]++ % 1e2 or
+            u32[ INDEX_FPS ] = 1e5 / (-T+T=t)
+
+            ; requestAnimationFrame ƒ
 
     constructor : ( ptr = palloc BYTES_PER_POINTER ) ->
         

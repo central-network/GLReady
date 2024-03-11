@@ -73,10 +73,15 @@ export default class GL extends Pointer
         canvas . addEventListener "pointerup",    @onpointerfree.bind( @ )
         canvas . addEventListener "pointerdown",  @onpointerhold.bind( @ )
         canvas . addEventListener "pointermove",  @onpointermove.bind( @ ), passive: !0
-        canvas . addEventListener "click",        @oncanvasclick.bind( @ )
         canvas . addEventListener "dblclick",     @ondoubleclick.bind( @ )
+        canvas . addEventListener "click",        @oncanvasclick.bind( @ )
         canvas . addEventListener "wheel",        @onmousescroll.bind( @ ), passive: !0
-        canvas . addEventListener "contextmenu",  ( $ ) -> $.preventDefault()
+        canvas . addEventListener "contextmenu",  @onpreventcall.bind( @ )
+
+        this
+
+    onpreventcall   : ->
+        arguments[0].preventDefault()
 
     onpointerfree   : ->
         @setUint8 OFFSET_PTR_BUTTON + arguments[0].button, 0

@@ -1,4 +1,4 @@
-var BYTES_PER_POINTER, Color4, DEPTH_N_COLOR_BIT, INDEX_BUF, INDEX_PTR, KEYED, LE, LENGTH_OF_POINTER, NONE, OBJECTS, OFFSET_BYTELENGTH, OFFSET_BYTEOFFSET, OFFSET_LINKEDNODE, OFFSET_PARENT_PTR, OFFSET_PROTOCLASS, OFFSET_PTRCLASS_0, OFFSET_PTRCLASS_1, OFFSET_PTRCLASS_2, OFFSET_PTRCLASS_3, OFFSET_PTRCLASS_4, POINTERS_BYTELENGTH, POINTERS_BYTEOFFSET, POINTER_PROTOTYPE, Pointer, buf, dvw, i32, k, malloc, palloc, proxy, u32, v;
+var BYTES_PER_POINTER, Color4, DEPTH_N_COLOR_BIT, INDEX_BUF, INDEX_FPS, INDEX_HIT, INDEX_NOW, INDEX_PTR, KEYED, LE, LENGTH_OF_POINTER, NONE, OBJECTS, OFFSET_BYTELENGTH, OFFSET_BYTEOFFSET, OFFSET_LINKEDNODE, OFFSET_PARENT_PTR, OFFSET_PROTOCLASS, OFFSET_PTRCLASS_0, OFFSET_PTRCLASS_1, OFFSET_PTRCLASS_2, OFFSET_PTRCLASS_3, OFFSET_PTRCLASS_4, POINTERS_BYTELENGTH, POINTERS_BYTEOFFSET, POINTER_PROTOTYPE, Pointer, buf, dvw, i32, k, malloc, palloc, proxy, u32, v;
 
 import "./ptr_self.js";
 
@@ -8,13 +8,19 @@ OBJECTS = [, ];
 
 buf = u32 = i32 = dvw = palloc = malloc = false;
 
-INDEX_BUF = 0;
+INDEX_NOW = 0;
 
-INDEX_PTR = 1;
+INDEX_HIT = 1;
+
+INDEX_FPS = 2;
+
+INDEX_PTR = 3;
+
+INDEX_BUF = 4;
 
 POINTERS_BYTELENGTH = 4 * 1e5;
 
-POINTERS_BYTEOFFSET = 8;
+POINTERS_BYTEOFFSET = 4 * 16;
 
 proxy = function() {
   return new Proxy({
@@ -232,7 +238,7 @@ POINTER_PROTOTYPE = [, ];
 
 export default Pointer = class Pointer extends Number {
   static setBuffer(sab, max = 1e20) {
-    var f32;
+    var T, f32, ƒ;
     if (!sab) {
       while (true) {
         try {
@@ -259,7 +265,14 @@ export default Pointer = class Pointer extends Number {
     Reflect.defineProperty(Pointer.prototype, "buffer", {
       value: sab
     });
-    return Reflect.deleteProperty(Pointer, "setBuffer");
+    Reflect.deleteProperty(Pointer, "setBuffer");
+    if ((typeof window !== "undefined" && window !== null) && (T = ƒ = function(t) {
+      u32[INDEX_NOW] = t;
+      u32[INDEX_HIT]++ % 1e2 || (u32[INDEX_FPS] = 1e5 / (-T + (T = t)));
+      return requestAnimationFrame(ƒ);
+    })) {
+      return ƒ(T = 0);
+    }
   }
 
   constructor(ptr = palloc(BYTES_PER_POINTER)) {

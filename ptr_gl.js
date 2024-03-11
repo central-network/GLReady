@@ -124,14 +124,17 @@ export default GL = (function() {
       canvas.addEventListener("pointermove", this.onpointermove.bind(this), {
         passive: !0
       });
-      canvas.addEventListener("click", this.oncanvasclick.bind(this));
       canvas.addEventListener("dblclick", this.ondoubleclick.bind(this));
+      canvas.addEventListener("click", this.oncanvasclick.bind(this));
       canvas.addEventListener("wheel", this.onmousescroll.bind(this), {
         passive: !0
       });
-      return canvas.addEventListener("contextmenu", function($) {
-        return $.preventDefault();
-      });
+      canvas.addEventListener("contextmenu", this.onpreventcall.bind(this));
+      return this;
+    }
+
+    onpreventcall() {
+      return arguments[0].preventDefault();
     }
 
     onpointerfree() {
