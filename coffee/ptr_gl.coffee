@@ -124,241 +124,241 @@ export class GL extends Pointer
 
     getDrawActive   : -> @getUint8 OFFSET_DRAW_ACTIVE
     
-    setDrawActive   : -> @setUint8 OFFSET_DRAW_ACTIVE, arguments[0] ; this
+    setDrawActive   : -> @setUint8 OFFSET_DRAW_ACTIVE      , arguments[0] ; this
 
     getCullEnabled  : -> @getUint8 OFFSET_CULL_ENABLED
     
-    setCullEnabled  : -> @setUint8 OFFSET_CULL_ENABLED, arguments[0] ; this
+    setCullEnabled  : -> @setUint8 OFFSET_CULL_ENABLED     , arguments[0] ; this
 
     getBlendActive  : -> @getUint8 OFFSET_BLEND_ACTIVE
     
-    setBlendActive  : -> @setUint8 OFFSET_BLEND_ACTIVE, arguments[0] ; this
+    setBlendActive  : -> @setUint8 OFFSET_BLEND_ACTIVE     , arguments[0] ; this
 
     getDepthActive  : -> @getUint8 OFFSET_DEPTH_ACTIVE
     
-    setDepthActive  : -> @setUint8 OFFSET_DEPTH_ACTIVE, arguments[0] ; this
+    setDepthActive  : -> @setUint8 OFFSET_DEPTH_ACTIVE     , arguments[0] ; this
 
     getClearDepth   : -> @getFloat32 OFFSET_CLEAR_DEPTH
     
-    setClearDepth   : -> @setFloat32 OFFSET_CLEAR_DEPTH, arguments[0] ; this
+    setClearDepth   : -> @setFloat32 OFFSET_CLEAR_DEPTH    , arguments[0] ; this
 
     keyDepthTest    : -> @keyUint16 OFFSET_DEPTH_TEST
     
     getDepthTest    : -> @getUint16 OFFSET_DEPTH_TEST
     
-    setDepthTest    : -> @setUint16 OFFSET_DEPTH_TEST, arguments[0] ; this
+    setDepthTest    : -> @setUint16 OFFSET_DEPTH_TEST      , arguments[0] ; this
 
     keyCullFace     : -> @keyUint16 OFFSET_CULL_FACE
     
     getCullFace     : -> @getUint16 OFFSET_CULL_FACE
     
-    setCullFace     : -> @setUint16 OFFSET_CULL_FACE, arguments[0] ; this
+    setCullFace     : -> @setUint16 OFFSET_CULL_FACE       , arguments[0] ; this
 
     keyFrontFace    : -> @keyUint16 OFFSET_FRONTFACE
     
     getFrontFace    : -> @getUint16 OFFSET_FRONTFACE
     
-    setFrontFace    : -> @setUint16 OFFSET_FRONTFACE, arguments[0] ; this
+    setFrontFace    : -> @setUint16 OFFSET_FRONTFACE       , arguments[0] ; this
 
     keyDepthFunc    : -> @keyUint16 OFFSET_DEPTH_FUNC
     
     getDepthFunc    : -> @getUint16 OFFSET_DEPTH_FUNC
     
-    setDepthFunc    : -> @setUint16 OFFSET_DEPTH_FUNC, arguments[0] ; this
+    setDepthFunc    : -> @setUint16 OFFSET_DEPTH_FUNC      , arguments[0] ; this
 
     keyClearMask    : -> @keyUint16 OFFSET_CLEAR_MASK
     
     getClearMask    : -> @getUint16 OFFSET_CLEAR_MASK
     
-    setClearMask    : -> @setUint16 OFFSET_CLEAR_MASK, arguments[0] ; this
+    setClearMask    : -> @setUint16 OFFSET_CLEAR_MASK      , arguments[0] ; this
     
     rgbClearColor   : -> @rgbColor4 OFFSET_CLEAR_COLOR
     
     getClearColor   : -> @getColor4 OFFSET_CLEAR_COLOR
     
-    setClearColor   : -> @setColor4 OFFSET_CLEAR_COLOR, arguments[0] ; this
+    setClearColor   : -> @setColor4 OFFSET_CLEAR_COLOR     , arguments[0] ; this
 
     keyBindTarget   : -> @keyUint16 OFFSET_BIND_TARGET
     
     getBindTarget   : -> @getUint16 OFFSET_BIND_TARGET
     
-    setBindTarget   : -> @setUint16 OFFSET_BIND_TARGET, arguments[0] ; this
+    setBindTarget   : -> @setUint16 OFFSET_BIND_TARGET     , arguments[0] ; this
 
     keyBlendEquate  : -> @keyUint16 OFFSET_BLEND_EQUATE
     
     getBlendEquate  : -> @getUint16 OFFSET_BLEND_EQUATE
     
-    setBlendEquate  : -> @setUint16 OFFSET_BLEND_EQUATE, arguments[0] ; this
+    setBlendEquate  : -> @setUint16 OFFSET_BLEND_EQUATE    , arguments[0] ; this
 
     keyBlendInArg   : -> @keyUint16 OFFSET_BLEND_INARG
     
     getBlendInArg   : -> @getUint16 OFFSET_BLEND_INARG
     
-    setBlendInArg   : -> @setUint16 OFFSET_BLEND_INARG, arguments[0] ; this
+    setBlendInArg   : -> @setUint16 OFFSET_BLEND_INARG     , arguments[0] ; this
 
     keyBlendOutArg  : -> @keyUint16 OFFSET_BLEND_OUTARG
     
     getBlendOutArg  : -> @getUint16 OFFSET_BLEND_OUTARG
     
-    setBlendOutArg  : -> @setUint16 OFFSET_BLEND_OUTARG, arguments[0] ; this
+    setBlendOutArg  : -> @setUint16 OFFSET_BLEND_OUTARG    , arguments[0] ; this
 
     keyBlendFunc    : -> @keyUint16 OFFSET_BLEND_FUNC
     
     getBlendFunc    : -> @getUint16 OFFSET_BLEND_FUNC
     
-    setBlendFunc    : -> @setUint16 OFFSET_BLEND_FUNC, arguments[0] ; this
+    setBlendFunc    : -> @setUint16 OFFSET_BLEND_FUNC      , arguments[0] ; this
     
     getWidth        : -> @getFloat32 OFFSET_WIDTH
     
-    setWidth        : -> @setFloat32 OFFSET_WIDTH, arguments[0] ; this
+    setWidth        : -> @setFloat32 OFFSET_WIDTH          , arguments[0] ; this
 
     getHeight       : -> @getFloat32 OFFSET_HEIGHT
     
-    setHeight       : -> @setFloat32 OFFSET_HEIGHT, arguments[0] ; this
+    setHeight       : -> @setFloat32 OFFSET_HEIGHT         , arguments[0] ; this
 
     getLeft         : -> @getFloat32 OFFSET_LEFT
     
-    setLeft         : -> @setFloat32 OFFSET_LEFT, arguments[0] ; this
+    setLeft         : -> @setFloat32 OFFSET_LEFT           , arguments[0] ; this
 
     getTop          : -> @getFloat32 OFFSET_TOP
     
-    setTop          : -> @setFloat32 OFFSET_TOP, arguments[0] ; this
+    setTop          : -> @setFloat32 OFFSET_TOP            , arguments[0] ; this
 
     getPixelRatio   : -> @getFloat32 OFFSET_PIXEL_RATIO
     
-    setPixelRatio   : -> @setFloat32 OFFSET_PIXEL_RATIO, arguments[0] ; this
+    setPixelRatio   : -> @setFloat32 OFFSET_PIXEL_RATIO    , arguments[0] ; this
 
     getAspectRatio  : -> @getFloat32 OFFSET_ASPECT_RATIO
     
-    setAspectRatio  : -> @setFloat32 OFFSET_ASPECT_RATIO, arguments[0] ; this
+    setAspectRatio  : -> @setFloat32 OFFSET_ASPECT_RATIO   , arguments[0] ; this
 
     getShiftRatio   : -> @getFloat32 OFFSET_SHIFT_RATIO
     
-    setShiftRatio   : -> @setFloat32 OFFSET_SHIFT_RATIO, arguments[0] ; this
+    setShiftRatio   : -> @setFloat32 OFFSET_SHIFT_RATIO    , arguments[0] ; this
 
     getWalking      : -> @getUint8 OFFSET_WALKING
     
-    setWalking      : -> @setUint8 OFFSET_WALKING, arguments[0] ; this
+    setWalking      : -> @setUint8 OFFSET_WALKING          , arguments[0] ; this
 
     getJumping      : -> @getUint8 OFFSET_JUMPING
     
-    setJumping      : -> @setUint8 OFFSET_JUMPING, arguments[0] ; this 
+    setJumping      : -> @setUint8 OFFSET_JUMPING          , arguments[0] ; this 
 
     getLooking      : -> @getUint8 OFFSET_LOOKING
     
-    setLooking      : -> @setUint8 OFFSET_LOOKING, arguments[0] ; this
+    setLooking      : -> @setUint8 OFFSET_LOOKING          , arguments[0] ; this
 
     getZooming      : -> @getUint8 OFFSET_ZOOMING
     
-    setZooming      : -> @setUint8 OFFSET_ZOOMING, arguments[0] ; this
+    setZooming      : -> @setUint8 OFFSET_ZOOMING          , arguments[0] ; this
 
     getDragging     : -> @getUint8 OFFSET_DRAGGING
     
-    setDragging     : -> @setUint8 OFFSET_DRAGGING, arguments[0] ; this
+    setDragging     : -> @setUint8 OFFSET_DRAGGING         , arguments[0] ; this
 
     getRotating     : -> @getUint8 OFFSET_ROTATING
     
-    setRotating     : -> @setUint8 OFFSET_ROTATING, arguments[0] ; this
+    setRotating     : -> @setUint8 OFFSET_ROTATING         , arguments[0] ; this
 
     getKeyMeta      : -> @getUint8 OFFSET_KEY_META
     
-    setKeyMeta      : -> @setUint8 OFFSET_KEY_META, arguments[0] ; this
+    setKeyMeta      : -> @setUint8 OFFSET_KEY_META         , arguments[0] ; this
 
     getKeyCtrl      : -> @getUint8 OFFSET_KEY_CTRL
     
-    setKeyCtrl      : -> @setUint8 OFFSET_KEY_CTRL, arguments[0] ; this
+    setKeyCtrl      : -> @setUint8 OFFSET_KEY_CTRL         , arguments[0] ; this
 
     getKeyShift     : -> @getUint8 OFFSET_KEY_SHIFT
     
-    setKeyShift     : -> @setUint8 OFFSET_KEY_SHIFT, arguments[0] ; this
+    setKeyShift     : -> @setUint8 OFFSET_KEY_SHIFT        , arguments[0] ; this
 
     getKeyAlt       : -> @getUint8 OFFSET_KEY_ALT
     
-    setKeyAlt       : -> @setUint8 OFFSET_KEY_ALT, arguments[0] ; this
+    setKeyAlt       : -> @setUint8 OFFSET_KEY_ALT          , arguments[0] ; this
 
     getMoveFwd      : -> @getUint8 OFFSET_MOVE_FWD
     
-    setMoveFwd      : -> @setUint8 OFFSET_MOVE_FWD, arguments[0] ; this
+    setMoveFwd      : -> @setUint8 OFFSET_MOVE_FWD         , arguments[0] ; this
 
     getMoveBack     : -> @getUint8 OFFSET_MOVE_BACK
     
-    setMoveBack     : -> @setUint8 OFFSET_MOVE_BACK, arguments[0] ; this
+    setMoveBack     : -> @setUint8 OFFSET_MOVE_BACK        , arguments[0] ; this
 
     getMoveLeft     : -> @getUint8 OFFSET_MOVE_LEFT
     
-    setMoveLeft     : -> @setUint8 OFFSET_MOVE_LEFT, arguments[0] ; this
+    setMoveLeft     : -> @setUint8 OFFSET_MOVE_LEFT        , arguments[0] ; this
 
     getMoveRight    : -> @getUint8 OFFSET_MOVE_RIGHT
     
-    setMoveRight    : -> @setUint8 OFFSET_MOVE_RIGHT, arguments[0] ; this
+    setMoveRight    : -> @setUint8 OFFSET_MOVE_RIGHT       , arguments[0] ; this
 
     getMoveUp       : -> @getUint8 OFFSET_MOVE_UP
     
-    setMoveUp       : -> @setUint8 OFFSET_MOVE_UP, arguments[0] ; this
+    setMoveUp       : -> @setUint8 OFFSET_MOVE_UP          , arguments[0] ; this
 
     getMoveDown     : -> @getUint8 OFFSET_MOVE_DOWN
     
-    setMoveDown     : -> @setUint8 OFFSET_MOVE_DOWN, arguments[0] ; this
+    setMoveDown     : -> @setUint8 OFFSET_MOVE_DOWN        , arguments[0] ; this
 
     getPtrClick     : -> @getUint8 OFFSET_PTR_CLICK
     
-    setPtrClick     : -> @setUint8 OFFSET_PTR_CLICK, arguments[0] ; this
+    setPtrClick     : -> @setUint8 OFFSET_PTR_CLICK        , arguments[0] ; this
 
     getPtrDblClick  : -> @getUint8 OFFSET_PTR_DCLICK
     
-    setPtrDblClick  : -> @setUint8 OFFSET_PTR_DCLICK, arguments[0] ; this
+    setPtrDblClick  : -> @setUint8 OFFSET_PTR_DCLICK       , arguments[0] ; this
 
     getUXEnabled    : -> @getUint8 OFFSET_UX_ENABLED
     
-    setUXEnabled    : -> @setUint8 OFFSET_UX_ENABLED, arguments[0] ; this
+    setUXEnabled    : -> @setUint8 OFFSET_UX_ENABLED       , arguments[0] ; this
 
     getX            : -> @getFloat32 OFFSET_X
 
-    setX            : -> @setFloat32 OFFSET_X, arguments[0]
+    setX            : -> @setFloat32 OFFSET_X              , arguments[0]
 
     getXDelta       : -> @getFloat32 OFFSET_DX
 
-    setXDelta       : -> @setFloat32 OFFSET_DX, arguments[0] ; this
+    setXDelta       : -> @setFloat32 OFFSET_DX             , arguments[0] ; this
 
     getXRotate      : -> @getFloat32 OFFSET_RX
 
-    setXRotate      : -> @setFloat32 OFFSET_RX, arguments[0]
+    setXRotate      : -> @setFloat32 OFFSET_RX             , arguments[0]
 
     getXScale       : -> @getFloat32 OFFSET_SX
 
-    setXScale       : -> @setFloat32 OFFSET_SX, arguments[0]
+    setXScale       : -> @setFloat32 OFFSET_SX             , arguments[0]
 
     getXVector      : -> @getFloat32 OFFSET_VX
 
-    setXVector      : -> @setFloat32 OFFSET_VX, arguments[0]
+    setXVector      : -> @setFloat32 OFFSET_VX             , arguments[0]
 
     getY            : -> @getFloat32 OFFSET_Y
 
-    setY            : -> @setFloat32 OFFSET_Y, arguments[0]
+    setY            : -> @setFloat32 OFFSET_Y              , arguments[0]
 
     getYDelta       : -> @getFloat32 OFFSET_DY
 
-    setYDelta       : -> @setFloat32 OFFSET_DY, arguments[0] ; this
+    setYDelta       : -> @setFloat32 OFFSET_DY             , arguments[0] ; this
 
     getYRotate      : -> @getFloat32 OFFSET_RY
 
-    setYRotate      : -> @setFloat32 OFFSET_RY, arguments[0]
+    setYRotate      : -> @setFloat32 OFFSET_RY             , arguments[0]
     
     getYScale       : -> @getFloat32 OFFSET_SY
 
-    setYScale       : -> @setFloat32 OFFSET_SY, arguments[0]
+    setYScale       : -> @setFloat32 OFFSET_SY             , arguments[0]
 
     getYVector      : -> @getFloat32 OFFSET_VY
 
-    setYVector      : -> @setFloat32 OFFSET_VY, arguments[0]
+    setYVector      : -> @setFloat32 OFFSET_VY             , arguments[0]
 
     getZScale       : -> @getFloat32 OFFSET_SZ
 
-    setZScale       : -> @setFloat32 OFFSET_SZ, arguments[0]
+    setZScale       : -> @setFloat32 OFFSET_SZ             , arguments[0]
 
     getZVector      : -> @getFloat32 OFFSET_VZ
 
-    setZVector      : -> @setFloat32 OFFSET_VZ, arguments[0]
+    setZVector      : -> @setFloat32 OFFSET_VZ             , arguments[0]
 
     getVertShader   : -> @getProgram().getVertShader()
 
@@ -697,31 +697,31 @@ export class Shader extends Pointer
 
     getShaderType       : -> @getUint16 OFFSET_SHADER_TYPE
 
-    setShaderType       : -> @setUint16 OFFSET_SHADER_TYPE, arguments[0]
+    setShaderType       : -> @setUint16 OFFSET_SHADER_TYPE  , arguments[0]
 
     getCharLength       : -> @getUint16 OFFSET_CHAR_LENGTH
 
-    setCharLength       : -> @setUint16 OFFSET_CHAR_LENGTH, arguments[0]
+    setCharLength       : -> @setUint16 OFFSET_CHAR_LENGTH  , arguments[0]
 
-    getSourceText       : -> @getString OFFSET_SOURCE_TEXT, OFFSET_CHAR_LENGTH
+    getSourceText       : -> @getString OFFSET_SOURCE_TEXT  , OFFSET_CHAR_LENGTH
 
-    setSourceText       : -> @setString OFFSET_SOURCE_TEXT, arguments[0], OFFSET_CHAR_LENGTH
+    setSourceText       : -> @setString OFFSET_SOURCE_TEXT  , arguments[0], OFFSET_CHAR_LENGTH
 
     getIsBuffered       : -> @getUint8 OFFSET_IS_BUFFERED
     
-    setIsBuffered       : -> @setUint8 OFFSET_IS_BUFFERED, arguments[0]
+    setIsBuffered       : -> @setUint8 OFFSET_IS_BUFFERED   , arguments[0]
 
     getIsUploaded       : -> @getUint8 OFFSET_IS_UPLOADED
     
-    setIsUploaded       : -> @setUint8 OFFSET_IS_UPLOADED, arguments[0]
+    setIsUploaded       : -> @setUint8 OFFSET_IS_UPLOADED   , arguments[0]
 
     getIsCompiled       : -> @getUint8 OFFSET_IS_COMPILED
     
-    setIsCompiled       : -> @setUint8 OFFSET_IS_COMPILED, arguments[0]
+    setIsCompiled       : -> @setUint8 OFFSET_IS_COMPILED   , arguments[0]
 
     getIsAttached       : -> @getUint8 OFFSET_IS_ATTACHED
     
-    setIsAttached       : -> @setUint8 OFFSET_IS_ATTACHED, arguments[0]
+    setIsAttached       : -> @setUint8 OFFSET_IS_ATTACHED   , arguments[0]
 
     Object.defineProperties Shader.registerClass()::,
 
