@@ -1,4 +1,4 @@
-var OFFSET_ASPECT_RATIO, OFFSET_BIND_TARGET, OFFSET_BLEND_ACTIVE, OFFSET_BLEND_EQUATE, OFFSET_BLEND_FUNC, OFFSET_BLEND_INARG, OFFSET_BLEND_OUTARG, OFFSET_CLEAR_COLOR, OFFSET_CLEAR_DEPTH, OFFSET_CLEAR_MASK, OFFSET_CULL_ENABLED, OFFSET_CULL_FACE, OFFSET_DEPTH_ACTIVE, OFFSET_DEPTH_FUNC, OFFSET_DEPTH_TEST, OFFSET_DRAGGING, OFFSET_DRAW_ACTIVE, OFFSET_DX, OFFSET_DY, OFFSET_FRONTFACE, OFFSET_HEIGHT, OFFSET_INUSE_STATUS, OFFSET_JUMPING, OFFSET_KEY_ALT, OFFSET_KEY_CTRL, OFFSET_KEY_META, OFFSET_KEY_SHIFT, OFFSET_LEFT, OFFSET_LINKED_STATUS, OFFSET_LOOKING, OFFSET_MOVE_BACK, OFFSET_MOVE_DOWN, OFFSET_MOVE_FWD, OFFSET_MOVE_LEFT, OFFSET_MOVE_RIGHT, OFFSET_MOVE_UP, OFFSET_PIXEL_RATIO, OFFSET_PTR_BUTTON, OFFSET_PTR_CLICK, OFFSET_PTR_DCLICK, OFFSET_ROTATING, OFFSET_RX, OFFSET_RY, OFFSET_SHIFT_RATIO, OFFSET_SX, OFFSET_SY, OFFSET_SZ, OFFSET_TIME, OFFSET_TOP, OFFSET_UX_ENABLED, OFFSET_VX, OFFSET_VY, OFFSET_VZ, OFFSET_WALKING, OFFSET_WIDTH, OFFSET_X, OFFSET_Y, OFFSET_ZOOMING;
+var OFFSET_ASPECT_RATIO, OFFSET_BIND_TARGET, OFFSET_BLEND_ACTIVE, OFFSET_BLEND_EQUATE, OFFSET_BLEND_FUNC, OFFSET_BLEND_INARG, OFFSET_BLEND_OUTARG, OFFSET_CHAR_LENGTH, OFFSET_CLEAR_COLOR, OFFSET_CLEAR_DEPTH, OFFSET_CLEAR_MASK, OFFSET_CULL_ENABLED, OFFSET_CULL_FACE, OFFSET_DEPTH_ACTIVE, OFFSET_DEPTH_FUNC, OFFSET_DEPTH_TEST, OFFSET_DRAGGING, OFFSET_DRAW_ACTIVE, OFFSET_DX, OFFSET_DY, OFFSET_FRONTFACE, OFFSET_HEIGHT, OFFSET_INUSE_STATUS, OFFSET_IS_ATTACHED, OFFSET_IS_BUFFERED, OFFSET_IS_COMPILED, OFFSET_IS_UPLOADED, OFFSET_JUMPING, OFFSET_KEY_ALT, OFFSET_KEY_CTRL, OFFSET_KEY_META, OFFSET_KEY_SHIFT, OFFSET_LEFT, OFFSET_LINKED_STATUS, OFFSET_LOOKING, OFFSET_MOVE_BACK, OFFSET_MOVE_DOWN, OFFSET_MOVE_FWD, OFFSET_MOVE_LEFT, OFFSET_MOVE_RIGHT, OFFSET_MOVE_UP, OFFSET_PIXEL_RATIO, OFFSET_PTR_BUTTON, OFFSET_PTR_CLICK, OFFSET_PTR_DCLICK, OFFSET_ROTATING, OFFSET_RX, OFFSET_RY, OFFSET_SHADER_TYPE, OFFSET_SHIFT_RATIO, OFFSET_SOURCE_TEXT, OFFSET_SX, OFFSET_SY, OFFSET_SZ, OFFSET_TIME, OFFSET_TOP, OFFSET_UX_ENABLED, OFFSET_VX, OFFSET_VY, OFFSET_VZ, OFFSET_WALKING, OFFSET_WIDTH, OFFSET_X, OFFSET_Y, OFFSET_ZOOMING;
 
 import Pointer from "./ptr.js";
 
@@ -1026,6 +1026,24 @@ export var Program = (function() {
       return this.getUint8(OFFSET_LINKED_STATUS, arguments[0]);
     }
 
+    getAllShaders() {
+      return this.findAllChilds().filter(function(v) {
+        return v instanceof Shader;
+      });
+    }
+
+    getVertShader() {
+      return this.getAllShaders().find(function(v) {
+        return v.isVertexShader(); //TODO is active??
+      });
+    }
+
+    setVertShader() {} //TODO --> parse if it is a source text for type
+
+    getGLVertShader() {
+      return this.getVertShader().getGLShader();
+    }
+
   };
 
   Program.byteLength = 4 * 8;
@@ -1052,6 +1070,9 @@ Object.defineProperties(Program.registerClass().prototype, {
   glIsProgram: {
     get: Program.prototype.getGLIsProgram
   },
+  glVertexShader: {
+    get: Program.prototype.getGLVertShader
+  },
   glProgram: {
     get: Program.prototype.getGLProgram,
     set: Program.prototype.setGLProgram
@@ -1063,13 +1084,43 @@ Object.defineProperties(Program.registerClass().prototype, {
   isIsUse: {
     get: Program.prototype.getInUseStatus,
     set: Program.prototype.setInUseStatus
+  },
+  shaders: {
+    get: Program.prototype.getAllShaders
+  },
+  vertexShader: {
+    get: Program.prototype.getVertShader,
+    set: Program.prototype.setVertShader
   }
 });
+
+OFFSET_SHADER_TYPE = 4 * 0;
+
+OFFSET_IS_UPLOADED = 4 * 0 + 2;
+
+OFFSET_IS_COMPILED = 4 * 0 + 3;
+
+OFFSET_IS_ATTACHED = 4 * 1;
+
+OFFSET_IS_BUFFERED = 4 * 1 + 1;
+
+OFFSET_CHAR_LENGTH = 4 * 1 + 2;
+
+OFFSET_SOURCE_TEXT = 4 * 2;
 
 export var Shader = (function() {
   class Shader extends Pointer {
     create() {
-      return this.getGL().createShader(this.getShaderType());
+      return this.getGL().createShader(this.getShaderType() || this.setShaderType(35633));
+    }
+
+    delete() {
+      this.getGL().deleteShader(this.getLinkedNode());
+      return this;
+    }
+
+    change() {
+      return this.create(this.delete().setShaderType(arguments[0]));
     }
 
     getGL() {
@@ -1077,7 +1128,7 @@ export var Shader = (function() {
     }
 
     getGLProgram() {
-      return this.getParentPtrP().getLinkedNode();
+      return this.getParentPtrP().getGLProgram();
     }
 
     getGLShader() {
@@ -1088,8 +1139,68 @@ export var Shader = (function() {
       return this.setLinkedNode(arguments[0]);
     }
 
+    isVertexShader() {
+      return this.getShaderType() === 35633;
+    }
+
+    keyShaderType() {
+      return this.keyUint16(OFFSET_SHADER_TYPE);
+    }
+
     getShaderType() {
-      return WebGL2RenderingContext.VERTEX_SHADER;
+      return this.getUint16(OFFSET_SHADER_TYPE);
+    }
+
+    setShaderType() {
+      return this.setUint16(OFFSET_SHADER_TYPE, arguments[0]);
+    }
+
+    getCharLength() {
+      return this.getUint16(OFFSET_CHAR_LENGTH);
+    }
+
+    setCharLength() {
+      return this.setUint16(OFFSET_CHAR_LENGTH, arguments[0]);
+    }
+
+    getSourceText() {
+      return this.getString(OFFSET_SOURCE_TEXT, OFFSET_CHAR_LENGTH);
+    }
+
+    setSourceText() {
+      return this.setString(OFFSET_SOURCE_TEXT, arguments[0], OFFSET_CHAR_LENGTH);
+    }
+
+    getIsBuffered() {
+      return this.getUint8(OFFSET_IS_BUFFERED);
+    }
+
+    setIsBuffered() {
+      return this.setUint8(OFFSET_IS_BUFFERED, arguments[0]);
+    }
+
+    getIsUploaded() {
+      return this.getUint8(OFFSET_IS_UPLOADED);
+    }
+
+    setIsUploaded() {
+      return this.setUint8(OFFSET_IS_UPLOADED, arguments[0]);
+    }
+
+    getIsCompiled() {
+      return this.getUint8(OFFSET_IS_COMPILED);
+    }
+
+    setIsCompiled() {
+      return this.setUint8(OFFSET_IS_COMPILED, arguments[0]);
+    }
+
+    getIsAttached() {
+      return this.getUint8(OFFSET_IS_ATTACHED);
+    }
+
+    setIsAttached() {
+      return this.setUint8(OFFSET_IS_ATTACHED, arguments[0]);
     }
 
   };
@@ -1112,5 +1223,45 @@ Object.defineProperties(Shader.registerClass().prototype, {
   glShader: {
     get: Shader.prototype.getGLShader,
     set: Shader.prototype.setGLShader
+  },
+  type: {
+    get: Shader.prototype.keyShaderType,
+    set: Shader.prototype.setShaderType
+  },
+  source: {
+    get: Shader.prototype.getSourceText,
+    set: Shader.prototype.setSourceText
+  },
+  charLength: {
+    get: Shader.prototype.getCharLength,
+    set: Shader.prototype.setCharLength
+  },
+  isUploaded: {
+    get: Shader.prototype.getIsUploaded,
+    set: Shader.prototype.setIsUploaded
+  },
+  isCompiled: {
+    get: Shader.prototype.getIsCompiled,
+    set: Shader.prototype.setIsCompiledd
+  },
+  isAttached: {
+    get: Shader.prototype.getIsAttached,
+    set: Shader.prototype.setIsAttached
+  },
+  isBuffered: {
+    get: Shader.prototype.getIsBuffered,
+    set: Shader.prototype.setIsBuffered
+  },
+  toFragment: {
+    get: function() {
+      this.change(35632);
+      return this;
+    }
+  },
+  toVertex: {
+    get: function() {
+      this.change(35633);
+      return this;
+    }
   }
 });

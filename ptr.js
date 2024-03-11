@@ -250,11 +250,15 @@ export default Pointer = class Pointer extends Number {
           if (max = max / 10) {
             continue;
           }
+        } finally {
+          sab = null;
         }
         break;
       }
     }
-    buf = sab;
+    buf = new SharedArrayBuffer(max / 10, {
+      maxByteLength: max
+    });
     u32 = new Uint32Array(buf);
     i32 = new Int32Array(buf);
     f32 = new Float32Array(buf);
@@ -266,7 +270,7 @@ export default Pointer = class Pointer extends Number {
     log("base buffer settled", buf);
     log("atomics uint32 base", u32);
     Reflect.defineProperty(Pointer.prototype, "buffer", {
-      value: sab
+      value: buf
     });
     Reflect.deleteProperty(Pointer, "setBuffer");
     if ((typeof window !== "undefined" && window !== null) && (T = ƒ = function(t) {
@@ -286,6 +290,30 @@ export default Pointer = class Pointer extends Number {
       this.setByteLength(this.constructor.byteLength).setProtoClass(this.constructor.protoClass).setByteOffset(malloc(this.getByteLength()));
       this.init();
     }
+  }
+
+  resize() {
+    var $byteLength, $byteOffset, j, length, old, ptr, ref, tarray, tis;
+    //TODO this clones object buffer and creates new pointer for cloned onw
+    //TODO ---> no need to clone, just change byteLength and length <3 
+    tarray = new Uint8Array(this.buffer, this.byteOffset, this.byteLength);
+    for (length = j = ref = this.byteLength; (ref <= 0 ? j <= 0 : j >= 0); length = ref <= 0 ? ++j : --j) {
+      if (tarray[length]) {
+        break;
+      }
+    }
+    tarray.slice(0, $byteLength = ++length);
+    $byteOffset = malloc($byteLength);
+    ptr = palloc(BYTES_PER_POINTER);
+    old = new Uint32Array(this.buffer, this, LENGTH_OF_POINTER);
+    tis = new Uint32Array(this.buffer, ptr, LENGTH_OF_POINTER);
+    tis.set(old);
+    dvw.setUint32(ptr + OFFSET_BYTELENGTH, $byteLength, LE);
+    dvw.setUint32(ptr + OFFSET_BYTEOFFSET, $byteOffset, LE);
+    old = new Uint8Array(this.buffer, this.byteOffset, $byteLength);
+    tis = new Uint8Array(this.buffer, $byteOffset, $byteLength);
+    tis.set(old);
+    return new this.constructor(ptr);
   }
 
   init() {
@@ -488,7 +516,7 @@ Object.defineProperties(Pointer.prototype, {
   },
   getUint16: {
     value: function() {
-      return dvw.getUint16(this.byteOffset + arguments[0]);
+      return dvw.getUint16(this.byteOffset + arguments[0], LE);
     }
   },
   setUint16: {
@@ -499,7 +527,7 @@ Object.defineProperties(Pointer.prototype, {
   },
   getFloat32: {
     value: function() {
-      return dvw.getFloat32(this.byteOffset + arguments[0]);
+      return dvw.getFloat32(this.byteOffset + arguments[0], LE);
     }
   },
   setFloat32: {
@@ -522,6 +550,35 @@ Object.defineProperties(Pointer.prototype, {
     value: function() {
       dvw.setUint32(this.byteOffset + arguments[0], Color4.u32(arguments[1]), LE);
       return arguments[1];
+    }
+  },
+  getString: {
+    value: function() {
+      var j, length, lengthOffset, ref, startOffset, tarray;
+      [startOffset, lengthOffset] = [...arguments];
+      (startOffset = this.byteOffset + startOffset);
+      tarray = new Uint8Array(this.buffer, startOffset, this.byteLength);
+      if (!lengthOffset || !(length = this.getUint16(lengthOffset))) {
+        for (length = j = ref = tarray.length; (ref <= 0 ? j <= 0 : j >= 0); length = ref <= 0 ? ++j : --j) {
+          if (tarray[length] && length++) {
+            break;
+          }
+        }
+      }
+      return new TextDecoder().decode(tarray.slice(0, length));
+    }
+  },
+  setString: {
+    value: function() {
+      var lengthOffset, source, startOffset, stringSource, tarray;
+      [startOffset, stringSource, lengthOffset] = [...arguments];
+      source = new TextEncoder().encode(stringSource);
+      tarray = new Uint8Array(this.buffer, this.byteOffset, this.byteLength);
+      tarray.set(source, startOffset);
+      if (lengthOffset) {
+        this.setUint16(lengthOffset, source.byteLength);
+      }
+      return this;
     }
   }
 });

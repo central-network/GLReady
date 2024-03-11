@@ -168,9 +168,10 @@ export default class Pointer extends Number
         unless sab then loop
             try sab = new SharedArrayBuffer max
             catch then continue if max = max/10
+            finally sab = null
             break
 
-        buf = sab
+        buf = new SharedArrayBuffer max/10, { maxByteLength: max }
         u32 = new Uint32Array buf
         i32 = new Int32Array buf
         f32 = new Float32Array buf
@@ -185,7 +186,7 @@ export default class Pointer extends Number
         log "base buffer settled", buf
         log "atomics uint32 base", u32
 
-        Reflect.defineProperty Pointer::,  "buffer", { value : sab }
+        Reflect.defineProperty Pointer::,  "buffer", { value : buf }
         Reflect.deleteProperty Pointer, "setBuffer"
 
         ƒ T = 0 if window? and T = ƒ = ( t ) ->
@@ -209,6 +210,33 @@ export default class Pointer extends Number
                 .setByteOffset malloc @getByteLength()
                 
             @init()
+
+    resize      : ->
+        #TODO this clones object buffer and creates new pointer for cloned onw
+        #TODO ---> no need to clone, just change byteLength and length <3 
+
+        tarray = new Uint8Array @buffer, @byteOffset, @byteLength
+        for length in [ @byteLength .. 0 ]
+            break if tarray[ length ]
+        tarray . slice 0, $byteLength = ++length
+
+        $byteOffset = malloc $byteLength 
+        ptr = palloc BYTES_PER_POINTER
+
+        old = new Uint32Array( @buffer, this, LENGTH_OF_POINTER )
+        tis = new Uint32Array( @buffer, ptr, LENGTH_OF_POINTER )
+
+        tis.set old
+        
+        dvw.setUint32 ptr + OFFSET_BYTELENGTH, $byteLength, LE
+        dvw.setUint32 ptr + OFFSET_BYTEOFFSET, $byteOffset, LE
+
+        old = new Uint8Array( @buffer, @byteOffset, $byteLength )
+        tis = new Uint8Array( @buffer, $byteOffset, $byteLength )
+
+        tis.set old
+
+        new this.constructor ptr
 
     init        : ->
         this
@@ -239,7 +267,6 @@ export default class Pointer extends Number
 
     add         : ->
         arguments[0].setParentPtri this
-
         
 export class BufferPointer extends Pointer
 export class OffsetPointer extends Pointer
@@ -256,7 +283,7 @@ Object.defineProperties Pointer,
 
 Object.defineProperties Pointer::,
 
-    getHeader       : value : -> dvw.getUint32 this + arguments[0] * 4
+    getHeader       : value : -> dvw.getUint32 this + arguments[0] * 4    
 
     getTypedArray   : value : -> new this.constructor.typedArray @buffer, @byteOffset, @length
 
@@ -314,11 +341,11 @@ Object.defineProperties Pointer::,
 
     keyUint16       : value : -> dvw.keyUint16 @byteOffset + arguments[0], arguments[1]
 
-    getUint16       : value : -> dvw.getUint16 @byteOffset + arguments[0]
+    getUint16       : value : -> dvw.getUint16 @byteOffset + arguments[0], LE
     
     setUint16       : value : -> dvw.setUint16 @byteOffset + arguments[0], arguments[1], LE ; arguments[1]
 
-    getFloat32      : value : -> dvw.getFloat32 @byteOffset + arguments[0]
+    getFloat32      : value : -> dvw.getFloat32 @byteOffset + arguments[0], LE
     
     setFloat32      : value : -> dvw.setFloat32 @byteOffset + arguments[0], arguments[1], LE ; arguments[1]
 
@@ -327,6 +354,29 @@ Object.defineProperties Pointer::,
     getColor4       : value : -> new Color4 dvw.getUint32 @byteOffset + arguments[0], LE
     
     setColor4       : value : -> dvw.setUint32 @byteOffset + arguments[0], Color4.u32(arguments[1]), LE ; arguments[1]
+
+    getString       : value : ->
+        [ startOffset , lengthOffset ] = [ ...arguments ]
+        ( startOffset = @byteOffset + startOffset )
+
+        tarray = new Uint8Array @buffer, startOffset, @byteLength
+
+        if !lengthOffset or !(length = @getUint16 lengthOffset)
+            for length in [ tarray.length .. 0 ]
+                break if tarray[ length ] and length++
+            
+        new TextDecoder().decode tarray.slice 0, length
+
+    setString       : value : ->
+        [ startOffset, stringSource, lengthOffset ] = [ ...arguments ]
+
+        source = new TextEncoder().encode stringSource 
+        tarray = new Uint8Array @buffer, @byteOffset, @byteLength
+        
+        tarray.set source, startOffset
+        @setUint16 lengthOffset, source.byteLength if lengthOffset
+
+        ; @
 
 Object.defineProperties Pointer::,
 
@@ -347,8 +397,6 @@ Object.defineProperties Pointer::,
     #linkedNode     : get : Pointer::getLinkedNode , set : Pointer::setLinkedNode
     
     parent          : get : Pointer::getParentPtrP , set : Pointer::setParentPtri
-
-    
 
 
 Object.defineProperties WorkerPointer,

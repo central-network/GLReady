@@ -523,6 +523,14 @@ export class Program extends Pointer
         
         setLinkedStatus : -> @getUint8 OFFSET_LINKED_STATUS, arguments[0]
 
+        getAllShaders   : -> @findAllChilds().filter (v) -> v instanceof Shader
+
+        getVertShader   : -> @getAllShaders().find (v) -> v.isVertexShader() #TODO is active??
+
+        setVertShader   : -> #TODO --> parse if it is a source text for type
+
+        getGLVertShader : -> @getVertShader().getGLShader()
+
     Object.defineProperties Program.registerClass()::,
 
         gl              : get : Program::getParentPtrO
@@ -535,11 +543,31 @@ export class Program extends Pointer
 
         glIsProgram     : get : Program::getGLIsProgram
 
+        glVertexShader  : get : Program::getGLVertShader
+
         glProgram       : get : Program::getGLProgram    , set : Program::setGLProgram
         
         isLinked        : get : Program::getLinkedStatus , set : Program::setLinkedNode
         
         isIsUse         : get : Program::getInUseStatus  , set : Program::setInUseStatus
+
+        shaders         : get : Program::getAllShaders
+
+        vertexShader    : get : Program::getVertShader   , set : Program::setVertShader
+
+OFFSET_SHADER_TYPE      = 4 * 0
+
+OFFSET_IS_UPLOADED      = 4 * 0 + 2
+
+OFFSET_IS_COMPILED      = 4 * 0 + 3
+
+OFFSET_IS_ATTACHED      = 4 * 1
+
+OFFSET_IS_BUFFERED      = 4 * 1 + 1
+
+OFFSET_CHAR_LENGTH      = 4 * 1 + 2
+
+OFFSET_SOURCE_TEXT      = 4 * 2
 
 export class Shader extends Pointer
 
@@ -547,17 +575,51 @@ export class Shader extends Pointer
 
         @typedArray     : Uint8Array
 
-        create          : -> @getGL().createShader @getShaderType()
+        create          : -> @getGL().createShader @getShaderType() or @setShaderType 35633
+
+        delete          : -> @getGL().deleteShader @getLinkedNode() ; @
+
+        change          : -> @create @delete().setShaderType( arguments[0] )
 
         getGL           : -> @getParentPtrP().getParentPtrO()
 
-        getGLProgram    : -> @getParentPtrP().getLinkedNode()
+        getGLProgram    : -> @getParentPtrP().getGLProgram()
 
         getGLShader     : -> @getLinkedNode() or @setGLShader @create()
 
         setGLShader     : -> @setLinkedNode( arguments[0] )
 
-        getShaderType   : -> WebGL2RenderingContext.VERTEX_SHADER
+        isVertexShader  : -> @getShaderType() is 35633
+
+        keyShaderType   : -> @keyUint16 OFFSET_SHADER_TYPE
+
+        getShaderType   : -> @getUint16 OFFSET_SHADER_TYPE
+
+        setShaderType   : -> @setUint16 OFFSET_SHADER_TYPE, arguments[0]
+
+        getCharLength   : -> @getUint16 OFFSET_CHAR_LENGTH
+
+        setCharLength   : -> @setUint16 OFFSET_CHAR_LENGTH, arguments[0]
+
+        getSourceText   : -> @getString OFFSET_SOURCE_TEXT, OFFSET_CHAR_LENGTH
+
+        setSourceText   : -> @setString OFFSET_SOURCE_TEXT, arguments[0], OFFSET_CHAR_LENGTH
+
+        getIsBuffered   : -> @getUint8 OFFSET_IS_BUFFERED
+        
+        setIsBuffered   : -> @setUint8 OFFSET_IS_BUFFERED, arguments[0]
+
+        getIsUploaded   : -> @getUint8 OFFSET_IS_UPLOADED
+        
+        setIsUploaded   : -> @setUint8 OFFSET_IS_UPLOADED, arguments[0]
+
+        getIsCompiled   : -> @getUint8 OFFSET_IS_COMPILED
+        
+        setIsCompiled   : -> @setUint8 OFFSET_IS_COMPILED, arguments[0]
+
+        getIsAttached   : -> @getUint8 OFFSET_IS_ATTACHED
+        
+        setIsAttached   : -> @setUint8 OFFSET_IS_ATTACHED, arguments[0]
 
     Object.defineProperties Shader.registerClass()::,
 
@@ -565,4 +627,22 @@ export class Shader extends Pointer
 
         glProgram       : get : Shader::getGLProgram
 
-        glShader        : get : Shader::getGLShader  , set : Shader::setGLShader
+        glShader        : get : Shader::getGLShader     , set : Shader::setGLShader
+
+        type            : get : Shader::keyShaderType   , set : Shader::setShaderType
+
+        source          : get : Shader::getSourceText   , set : Shader::setSourceText
+
+        charLength      : get : Shader::getCharLength   , set : Shader::setCharLength
+
+        isUploaded      : get : Shader::getIsUploaded   , set : Shader::setIsUploaded
+
+        isCompiled      : get : Shader::getIsCompiled   , set : Shader::setIsCompiledd
+
+        isAttached      : get : Shader::getIsAttached   , set : Shader::setIsAttached
+
+        isBuffered      : get : Shader::getIsBuffered   , set : Shader::setIsBuffered
+
+        toFragment      : get : -> @change 35632 ; @
+
+        toVertex        : get : -> @change 35633 ; @
