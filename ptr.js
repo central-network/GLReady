@@ -23,9 +23,10 @@ POINTERS_BYTELENGTH = 4 * 1e5;
 POINTERS_BYTEOFFSET = 4 * 16;
 
 proxy = function() {
-  return new Proxy({
-    i: arguments[0]
-  }, {
+  var o;
+  o = WebGL2RenderingContext.prototype;
+  o.i = arguments[0];
+  return new Proxy(o, {
     get: function({i}, key) {
       var result;
       //* request sent to window --->
@@ -35,13 +36,13 @@ proxy = function() {
         key: key
       });
       //* proxy locked now --->
-      Atomics.wait(i32, 1000, 0);
+      Atomics.wait(i32, 11000, 0);
       //TODO window processing request
       //TODO notify 1000 index for one time 
       //TODO when result is ready
 
       //* proxy unlocked now --->
-      result = Atomics.load(i32, 1000);
+      result = Atomics.load(i32, 11000);
       //TODO window written result to that index
       //TODO we need to implement more complex ones
 
@@ -84,7 +85,7 @@ Object.defineProperties(DataView.prototype, {
   toPointer: {
     value: function(offset) {
       var i;
-      if (i = this.getUint32(offset)) {
+      if (i = this.getUint32(offset, LE)) {
         return new Pointer(i);
       }
     }
@@ -240,25 +241,23 @@ OFFSET_PTRCLASS_4 = 4 * 10;
 POINTER_PROTOTYPE = [, ];
 
 export default Pointer = class Pointer extends Number {
-  static setBuffer(sab, max = 1e20) {
+  static setBuffer(buf, max = 1e20) {
     var T, f32, ƒ;
-    if (!sab) {
+    if (!arguments.length) { //? this blocks worker
       while (true) {
         try {
-          sab = new SharedArrayBuffer(max);
+          buf = new SharedArrayBuffer(max);
         } catch (error) {
           if (max = max / 10) {
             continue;
           }
         } finally {
-          sab = null;
+          buf = null;
         }
         break;
       }
+      buf = new SharedArrayBuffer(max);
     }
-    buf = new SharedArrayBuffer(max / 10, {
-      maxByteLength: max
-    });
     u32 = new Uint32Array(buf);
     i32 = new Int32Array(buf);
     f32 = new Float32Array(buf);
@@ -285,7 +284,9 @@ export default Pointer = class Pointer extends Number {
   constructor(ptr = palloc(BYTES_PER_POINTER)) {
     super(ptr);
     if (arguments.length) {
-      Object.setPrototypeOf(this, POINTER_PROTOTYPE[this.getProtoClass()].prototype);
+      if (this.constructor === Pointer) {
+        Object.setPrototypeOf(this, POINTER_PROTOTYPE[this.getProtoClass()].prototype);
+      }
     } else {
       this.setByteLength(this.constructor.byteLength).setProtoClass(this.constructor.protoClass).setByteOffset(malloc(this.getByteLength()));
       this.init();
@@ -341,9 +342,9 @@ export default Pointer = class Pointer extends Number {
           result: result
         });
         //TODO store result to Int32 array
-        Atomics.store(i32, 1000, result);
+        Atomics.store(i32, 11000, result);
         //TODO notify cell to unlock
-        return Atomics.notify(i32, 1000, 1);
+        return Atomics.notify(i32, 11000, 1);
       }
     };
   }
@@ -383,7 +384,7 @@ Object.defineProperties(Pointer, {
 Object.defineProperties(Pointer.prototype, {
   getHeader: {
     value: function() {
-      return dvw.getUint32(this + arguments[0] * 4);
+      return dvw.getUint32(this + arguments[0] * 4, LE);
     }
   },
   getTypedArray: {
@@ -461,12 +462,12 @@ Object.defineProperties(Pointer.prototype, {
   },
   getLinkedNode: {
     value: function() {
-      return dvw.getObject(this + OFFSET_LINKEDNODE, LE);
+      return dvw.getObject(this + OFFSET_LINKEDNODE);
     }
   },
   setLinkedNode: {
     value: function() {
-      return dvw.setObject(this + OFFSET_LINKEDNODE, arguments[0], LE);
+      return dvw.setObject(this + OFFSET_LINKEDNODE, arguments[0]);
     }
   },
   getParentPtri: {
@@ -482,17 +483,17 @@ Object.defineProperties(Pointer.prototype, {
   },
   getParentPtrO: {
     value: function() {
-      return dvw.getObject(this.getParentPtri() + OFFSET_LINKEDNODE, LE);
+      return dvw.getObject(this.getParentPtri() + OFFSET_LINKEDNODE);
     }
   },
   setParentPtrO: {
     value: function() {
-      return dvw.setObject(this + OFFSET_PARENT_PTR, arguments[0], LE);
+      return dvw.setObject(this + OFFSET_PARENT_PTR, arguments[0]);
     }
   },
   getParentPtrP: {
     value: function() {
-      return dvw.toPointer(this + OFFSET_PARENT_PTR, LE);
+      return dvw.toPointer(this + OFFSET_PARENT_PTR);
     }
   }
 });
@@ -642,7 +643,7 @@ Object.defineProperties(WorkerPointer.prototype, {
         name: this
       };
       worker = new Worker(script, config);
-      return this.setLinkedNode(worker).send(buf);
+      return this.setLinkedNode(worker).postMessage(this.buffer);
     }
   },
   onmessage: {

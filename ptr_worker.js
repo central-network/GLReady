@@ -1,18 +1,28 @@
 var forker, init, worker;
 
+import {
+  WorkerPointer
+} from "./ptr.js";
+
 import Pointer from "./ptr.js";
 
-import GL from "./ptr_gl.js";
+import {
+  GL,
+  Program,
+  Shader
+} from "./ptr_gl.js";
 
 worker = null;
 
 forker = null;
 
 init = function(buffer) {
+  if (!buffer) {
+    return;
+  }
   Pointer.setBuffer(buffer);
-  worker = new Pointer(self.name);
+  worker = new WorkerPointer(self.name);
   forker = worker.getParentPtrP();
-  worker.setOnlineState(1);
   log({
     worker: worker,
     forker: forker

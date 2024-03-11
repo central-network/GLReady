@@ -15,26 +15,29 @@ INDEX_BUF           = 4
 POINTERS_BYTELENGTH = 4 * 1e5
 POINTERS_BYTEOFFSET = 4 * 16
 
-proxy = -> new Proxy i: arguments[0],
-    get : ( {i}, key ) ->
+proxy = ->
+    o = WebGL2RenderingContext::
+    o.i = arguments[0]
+    new Proxy o,
+        get : ( {i}, key ) ->
 
-        #* request sent to window --->
-        #TODO integrate arguments for fns
-        postMessage proxy: i, key:key
+            #* request sent to window --->
+            #TODO integrate arguments for fns
+            postMessage proxy: i, key:key
 
-        #* proxy locked now --->
-        Atomics.wait i32, 1000, 0
-        #TODO window processing request
-        #TODO notify 1000 index for one time 
-        #TODO when result is ready
-        
-        #* proxy unlocked now --->
-        result = Atomics.load i32, 1000
-        #TODO window written result to that index
-        #TODO we need to implement more complex ones
+            #* proxy locked now --->
+            Atomics.wait i32, 11000, 0
+            #TODO window processing request
+            #TODO notify 1000 index for one time 
+            #TODO when result is ready
+            
+            #* proxy unlocked now --->
+            result = Atomics.load i32, 11000
+            #TODO window written result to that index
+            #TODO we need to implement more complex ones
 
-        #TODO hey beyb: that's sync on window and worker
-        return result #? awesome :))) <3
+            #TODO hey beyb: that's sync on window and worker
+            return result #? awesome :))) <3
 
 KEYED =
     0       : new (class NONE extends Number) 0
@@ -48,7 +51,7 @@ Object.defineProperties DataView::,
     setObject : value : ( offset, object ) ->
         if -1 is i = OBJECTS.indexOf object
             i += OBJECTS.push object
-            this.setUint32 offset, i, LE
+            @setUint32 offset, i, LE
         OBJECTS[ i ]
 
     getObject : value : ( offset ) ->
@@ -56,7 +59,7 @@ Object.defineProperties DataView::,
         return OBJECTS[ i ] ?= proxy i
 
     toPointer : value : ( offset ) ->
-        new Pointer i if i = @getUint32 offset
+        new Pointer i if i = @getUint32 offset, LE
 
     keyUint16 : value : ( offset ) ->
         KEYED[ @getUint16 offset, LE ]
@@ -163,15 +166,16 @@ POINTER_PROTOTYPE   = [,]
 
 export default class Pointer extends Number
 
-    @setBuffer  : ( sab, max = 1e20 ) ->
+    @setBuffer  : ( buf, max = 1e20 ) ->
 
-        unless sab then loop
-            try sab = new SharedArrayBuffer max
-            catch then continue if max = max/10
-            finally sab = null
-            break
-
-        buf = new SharedArrayBuffer max/10, { maxByteLength: max }
+        unless arguments.length
+            loop #? this blocks worker
+                try buf = new SharedArrayBuffer max
+                catch then continue if max = max/10
+                finally buf = null
+                break
+            buf = new SharedArrayBuffer max
+            
         u32 = new Uint32Array buf
         i32 = new Int32Array buf
         f32 = new Float32Array buf
@@ -201,8 +205,9 @@ export default class Pointer extends Number
         super ptr
 
         if  arguments.length
-            Object.setPrototypeOf this,
-                POINTER_PROTOTYPE[ @getProtoClass() ]::
+            if  this.constructor is Pointer
+                Object.setPrototypeOf this,
+                    POINTER_PROTOTYPE[ @getProtoClass() ]::
         else
             this
                 .setByteLength @constructor.byteLength
@@ -258,10 +263,10 @@ export default class Pointer extends Number
                 log result: result
 
                 #TODO store result to Int32 array
-                Atomics.store i32, 1000, result
+                Atomics.store i32, 11000, result
 
                 #TODO notify cell to unlock
-                Atomics.notify i32, 1000, 1
+                Atomics.notify i32, 11000, 1
 
                 #* proxy unlocked now --->
 
@@ -283,7 +288,7 @@ Object.defineProperties Pointer,
 
 Object.defineProperties Pointer::,
 
-    getHeader       : value : -> dvw.getUint32 this + arguments[0] * 4    
+    getHeader       : value : -> dvw.getUint32 this + arguments[0] * 4, LE    
 
     getTypedArray   : value : -> new this.constructor.typedArray @buffer, @byteOffset, @length
 
@@ -318,19 +323,19 @@ Object.defineProperties Pointer::,
 
     setProtoClass   : value : -> dvw.setUint32 this + OFFSET_PROTOCLASS, arguments[0], LE ; @
 
-    getLinkedNode   : value : -> dvw.getObject this + OFFSET_LINKEDNODE, LE
+    getLinkedNode   : value : -> dvw.getObject this + OFFSET_LINKEDNODE
 
-    setLinkedNode   : value : -> dvw.setObject this + OFFSET_LINKEDNODE, arguments[0], LE
+    setLinkedNode   : value : -> dvw.setObject this + OFFSET_LINKEDNODE, arguments[0]
 
     getParentPtri   : value : -> dvw.getUint32 this + OFFSET_PARENT_PTR, LE
 
     setParentPtri   : value : -> dvw.setUint32 this + OFFSET_PARENT_PTR, arguments[0], LE ; arguments[0]
 
-    getParentPtrO   : value : -> dvw.getObject this . getParentPtri() + OFFSET_LINKEDNODE, LE
+    getParentPtrO   : value : -> dvw.getObject this . getParentPtri() + OFFSET_LINKEDNODE
 
-    setParentPtrO   : value : -> dvw.setObject this + OFFSET_PARENT_PTR, arguments[0], LE
+    setParentPtrO   : value : -> dvw.setObject this + OFFSET_PARENT_PTR, arguments[0]
 
-    getParentPtrP   : value : -> dvw.toPointer this + OFFSET_PARENT_PTR, LE
+    getParentPtrP   : value : -> dvw.toPointer this + OFFSET_PARENT_PTR
 
 
 Object.defineProperties Pointer::,
@@ -415,7 +420,7 @@ Object.defineProperties WorkerPointer::,
         config = type : this.type , name : this
         worker = new Worker script , config
 
-        @setLinkedNode( worker ).send( buf )
+        @setLinkedNode( worker ).postMessage( @buffer )
 
     onmessage       : set   : -> @getLinkedNode().onmessage = arguments[0]
 
@@ -429,7 +434,8 @@ Object.defineProperties WorkerPointer::,
 
 Object.defineProperties WorkerPointer::,
 
-    onlineState     : get : WorkerPointer::getOnlineState, set : WorkerPointer::setOnlineState
+    onlineState     :
+        get : WorkerPointer::getOnlineState,
+        set : WorkerPointer::setOnlineState
 
 Pointer.setBuffer() if window?
-

@@ -169,18 +169,18 @@ export var GL = (function() {
       return this.setPtrDblClick(arguments[0].button);
     }
 
-    getPrograms() {
-      return this.children.filter(function(v) {
+    getAllPrograms() {
+      return this.findAllChilds().filter(function(v) {
         return v instanceof Program;
       });
     }
 
-    getArray() {
-      return this.array;
+    getProgram() {
+      return this.getAllPrograms().at(0); //TODO get active one
     }
 
     getArrayBuffer() {
-      return this.array.slice().buffer;
+      return this.getTypedArray().slice().buffer;
     }
 
     getCanvasNode() {
@@ -712,6 +712,35 @@ export var GL = (function() {
       return this.setFloat32(OFFSET_VZ, arguments[0]);
     }
 
+    getVertShader() {
+      return this.getProgram().getVertShader();
+    }
+
+    setVertShader() {
+      var program, vShader;
+      program = this.getProgram();
+      if (!(vShader = program.getVertShader())) {
+        program.add(vShader = new Shader());
+      }
+      vShader.setSourceText(arguments[0]).upload().compile().attach().check();
+      return this;
+    }
+
+    getFragShader() {
+      return this.getProgram().getFragShader();
+    }
+
+    setFragShader() {
+      var fShader, program;
+      program = this.getProgram();
+      if (!(fShader = program.getFragShader())) {
+        program.add(fShader = new Shader());
+        fShader.change(Shader.prototype.FRAGMENT);
+      }
+      fShader.setSourceText(arguments[0]).upload().compile().attach().check();
+      return this;
+    }
+
   };
 
   GL.byteLength = 4 * 48;
@@ -721,9 +750,6 @@ export var GL = (function() {
   Object.defineProperties(GL.prototype, {
     gl: {
       get: GL.prototype.getLinkedNode
-    },
-    glPrograms: {
-      get: GL.prototype.getPrograms
     },
     nodeBuffer: {
       get: GL.prototype.getArrayBuffer
@@ -947,6 +973,14 @@ export var GL = (function() {
     zVector: {
       get: GL.prototype.getZVector,
       set: GL.prototype.setZVector
+    },
+    shaderVertex: {
+      get: GL.prototype.getVertShader,
+      set: GL.prototype.setVertShader
+    },
+    shaderFragment: {
+      get: GL.prototype.getFragShader,
+      set: GL.prototype.setFragShader
     }
   });
 
@@ -1010,6 +1044,10 @@ export var Program = (function() {
       return this.getParentPtrO().isProgram(this.getGLProgram());
     }
 
+    getGLShaders() {
+      return this.getParentPtrO().getAttachedShaders(this.getGLProgram());
+    }
+
     getInUseStatus() {
       return this.getUint8(OFFSET_INUSE_STATUS);
     }
@@ -1044,6 +1082,18 @@ export var Program = (function() {
       return this.getVertShader().getGLShader();
     }
 
+    getFragShader() {
+      return this.getAllShaders().find(function(v) {
+        return !v.isVertexShader(); //TODO is active??
+      });
+    }
+
+    setFragShader() {} //TODO --> parse if it is a source text for type
+
+    getGLFragShader() {
+      return this.getFragShader().getGLShader();
+    }
+
   };
 
   Program.byteLength = 4 * 8;
@@ -1061,6 +1111,9 @@ Object.defineProperties(Program.registerClass().prototype, {
   glLinkStatus: {
     get: Program.prototype.getGLLinkStatus
   },
+  glShaders: {
+    get: Program.prototype.getGLShaders
+  },
   glValidate: {
     get: Program.prototype.getGLValidate
   },
@@ -1074,8 +1127,10 @@ Object.defineProperties(Program.registerClass().prototype, {
     get: Program.prototype.getGLVertShader
   },
   glProgram: {
-    get: Program.prototype.getGLProgram,
-    set: Program.prototype.setGLProgram
+    get: Program.prototype.getGLProgram
+  },
+  shaders: {
+    get: Program.prototype.getAllShaders
   },
   isLinked: {
     get: Program.prototype.getLinkedStatus,
@@ -1085,12 +1140,13 @@ Object.defineProperties(Program.registerClass().prototype, {
     get: Program.prototype.getInUseStatus,
     set: Program.prototype.setInUseStatus
   },
-  shaders: {
-    get: Program.prototype.getAllShaders
-  },
   vertexShader: {
     get: Program.prototype.getVertShader,
     set: Program.prototype.setVertShader
+  },
+  fragmentShader: {
+    get: Program.prototype.getFragShader,
+    set: Program.prototype.setFragShader
   }
 });
 
@@ -1110,8 +1166,12 @@ OFFSET_SOURCE_TEXT = 4 * 2;
 
 export var Shader = (function() {
   class Shader extends Pointer {
+    static Fragment() {
+      return new this().change(this.FRAGMENT);
+    }
+
     create() {
-      return this.getGL().createShader(this.getShaderType() || this.setShaderType(35633));
+      return this.getGL().createShader(this.getShaderType() || this.setShaderType(this.VERTEX));
     }
 
     delete() {
@@ -1123,8 +1183,61 @@ export var Shader = (function() {
       return this.create(this.delete().setShaderType(arguments[0]));
     }
 
+    attach() {
+      this.getGL().attachShader(this.getGLProgram(), this.getGLShader());
+      return this;
+    }
+
+    upload() {
+      this.getGL().shaderSource(this.getGLShader(), this.getSourceText());
+      return this;
+    }
+
+    compile() {
+      this.getGL().compileShader(this.getGLShader());
+      return this;
+    }
+
+    check() {
+      this.setIsUploaded(this.getSourceText() === this.getGLSource());
+      this.setIsCompiled(this.getGLCompileStatus());
+      return this.setIsAttached(this.getProgram().getGLShaders().includes(this.getGLShader()));
+    }
+
+    getProgram() {
+      return this.getParentPtrP();
+    }
+
     getGL() {
       return this.getParentPtrP().getParentPtrO();
+    }
+
+    getGLParameter() {
+      return this.getGL().getShaderParameter(this.getGLShader(), arguments[0]);
+    }
+
+    getGLInfoLog() {
+      return this.getGL().getShaderInfoLog(this.getGLShader());
+    }
+
+    getGLIsShader() {
+      return this.getGL().isShader(this.getGLShader());
+    }
+
+    getGLPrecision() {
+      return this.getGL().getShaderPrecisionFormat(arguments[0], arguments[1]);
+    }
+
+    getGLShaderType() {
+      return this.getGLParameter(this.SHADER_TYPE);
+    }
+
+    getGLCompileStatus() {
+      return this.getGLParameter(this.COMPILE_STATUS);
+    }
+
+    getGLDeleteStatus() {
+      return this.getGLParameter(this.DELETE_STATUS);
     }
 
     getGLProgram() {
@@ -1139,8 +1252,12 @@ export var Shader = (function() {
       return this.setLinkedNode(arguments[0]);
     }
 
+    getGLSource() {
+      return this.getGL().getShaderSource(this.getGLShader());
+    }
+
     isVertexShader() {
-      return this.getShaderType() === 35633;
+      return this.getShaderType() === this.VERTEX;
     }
 
     keyShaderType() {
@@ -1209,59 +1326,72 @@ export var Shader = (function() {
 
   Shader.typedArray = Uint8Array;
 
+  Shader.prototype.SHADER_TYPE = WebGLRenderingContext.SHADER_TYPE;
+
+  Shader.prototype.COMPILE_STATUS = WebGLRenderingContext.COMPILE_STATUS;
+
+  Shader.prototype.DELETE_STATUS = WebGLRenderingContext.DELETE_STATUS;
+
+  Shader.prototype.VERTEX = WebGLRenderingContext.VERTEX_SHADER;
+
+  Shader.prototype.FRAGMENT = WebGLRenderingContext.FRAGMENT_SHADER;
+
+  Shader.prototype.LOW_FLOAT = WebGLRenderingContext.LOW_FLOAT;
+
+  Shader.prototype.LOW_INT = WebGLRenderingContext.LOW_INT;
+
+  Shader.prototype.MEDIUM_FLOAT = WebGLRenderingContext.MEDIUM_FLOAT;
+
+  Shader.prototype.HIGH_FLOAT = WebGLRenderingContext.HIGH_FLOAT;
+
+  Shader.prototype.MEDIUM_INT = WebGLRenderingContext.MEDIUM_INT;
+
+  Shader.prototype.HIGH_INT = WebGLRenderingContext.HIGH_INT;
+
+  Object.defineProperties(Shader.registerClass().prototype, {
+    gl: {
+      get: Shader.prototype.getGL
+    },
+    glProgram: {
+      get: Shader.prototype.getGLProgram
+    },
+    glSource: {
+      get: Shader.prototype.getGLSource
+    },
+    glShader: {
+      get: Shader.prototype.getGLShader,
+      set: Shader.prototype.setGLShader
+    },
+    type: {
+      get: Shader.prototype.keyShaderType,
+      set: Shader.prototype.setShaderType
+    },
+    source: {
+      get: Shader.prototype.getSourceText,
+      set: Shader.prototype.setSourceText
+    },
+    charLength: {
+      get: Shader.prototype.getCharLength,
+      set: Shader.prototype.setCharLength
+    },
+    isUploaded: {
+      get: Shader.prototype.getIsUploaded,
+      set: Shader.prototype.setIsUploaded
+    },
+    isCompiled: {
+      get: Shader.prototype.getIsCompiled,
+      set: Shader.prototype.setIsCompiledd
+    },
+    isAttached: {
+      get: Shader.prototype.getIsAttached,
+      set: Shader.prototype.setIsAttached
+    },
+    isBuffered: {
+      get: Shader.prototype.getIsBuffered,
+      set: Shader.prototype.setIsBuffered
+    }
+  });
+
   return Shader;
 
 }).call(this);
-
-Object.defineProperties(Shader.registerClass().prototype, {
-  gl: {
-    get: Shader.prototype.getGL
-  },
-  glProgram: {
-    get: Shader.prototype.getGLProgram
-  },
-  glShader: {
-    get: Shader.prototype.getGLShader,
-    set: Shader.prototype.setGLShader
-  },
-  type: {
-    get: Shader.prototype.keyShaderType,
-    set: Shader.prototype.setShaderType
-  },
-  source: {
-    get: Shader.prototype.getSourceText,
-    set: Shader.prototype.setSourceText
-  },
-  charLength: {
-    get: Shader.prototype.getCharLength,
-    set: Shader.prototype.setCharLength
-  },
-  isUploaded: {
-    get: Shader.prototype.getIsUploaded,
-    set: Shader.prototype.setIsUploaded
-  },
-  isCompiled: {
-    get: Shader.prototype.getIsCompiled,
-    set: Shader.prototype.setIsCompiledd
-  },
-  isAttached: {
-    get: Shader.prototype.getIsAttached,
-    set: Shader.prototype.setIsAttached
-  },
-  isBuffered: {
-    get: Shader.prototype.getIsBuffered,
-    set: Shader.prototype.setIsBuffered
-  },
-  toFragment: {
-    get: function() {
-      this.change(35632);
-      return this;
-    }
-  },
-  toVertex: {
-    get: function() {
-      this.change(35633);
-      return this;
-    }
-  }
-});
