@@ -60,7 +60,8 @@
             program = new Program();
 
             gl.setCanvasNode( canvas ).bindEvents();
-            gl.fork()
+            gl.add( program );
+            //gl.fork()
             
             gl.glCullEnabled    = true;
             gl.glCullFace       = WebGL2RenderingContext.CULL_FACE;
@@ -74,12 +75,10 @@
             gl.glBlendInArg     = WebGL2RenderingContext.SRC_COLOR;
             gl.glBlendOutArg    = WebGL2RenderingContext.DST_COLOR;
             gl.glBindTarget     = WebGL2RenderingContext.ARRAY_BUFFER;
-            gl.glClearMask      = (
+            gl.glClearMask      =
                 WebGL2RenderingContext.DEPTH_BUFFER_BIT |
-                WebGL2RenderingContext.COLOR_BUFFER_BIT
-            );
+                WebGL2RenderingContext.COLOR_BUFFER_BIT ;
 
-            gl.add( program );
 
             gl.shaderVertex = `
                 attribute vec3     a_Vertex;
@@ -102,7 +101,7 @@
             `;
 
             log( gl );
-            log( program );
+            log( gl.program );
             log( gl.shaderVertex );
 
 

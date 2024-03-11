@@ -751,6 +751,9 @@ export var GL = (function() {
     gl: {
       get: GL.prototype.getLinkedNode
     },
+    program: {
+      get: GL.prototype.getProgram
+    },
     nodeBuffer: {
       get: GL.prototype.getArrayBuffer
     },

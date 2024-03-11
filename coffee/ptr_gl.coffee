@@ -397,6 +397,8 @@ export class GL extends Pointer
 
         gl              : get : GL::getLinkedNode
 
+        program         : get : GL::getProgram
+
         nodeBuffer      : get : GL::getArrayBuffer
 
         nodeCanvas      : get : GL::getCanvasNode   , set : GL::setCanvasNode
