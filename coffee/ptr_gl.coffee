@@ -604,7 +604,6 @@ export class Program extends Pointer
         
         fragmentShader  : get : Program::getFragShader   , set : Program::setFragShader
 
-
 OFFSET_SHADER_TYPE      = 4 * 0
 
 OFFSET_IS_UPLOADED      = 4 * 0 + 2
