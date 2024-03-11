@@ -47,9 +47,11 @@
 
 
         <script type="module">
-            import GL from "./ptr_gl.js"
+            import { GL, Program, Shader } from "./ptr_gl.js"
 
             self.gl = null;
+            self.vshader = null;
+            self.program = null;
 
             let canvas = document.querySelector( 'canvas' );
             let buffer = new SharedArrayBuffer( 1e8 );
@@ -75,7 +77,16 @@
                 WebGL2RenderingContext.COLOR_BUFFER_BIT
             );
 
+            program = new Program();
+            vshader = new Shader(); 
+
+            gl.add( program );
+            program.add( vshader );
+
             log( gl );
+            log( program );
+            log( vshader );
+
 
         </script>
         

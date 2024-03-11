@@ -69,7 +69,7 @@ Object.defineProperties(DataView.prototype, {
         i += OBJECTS.push(object);
         this.setUint32(offset, i, LE);
       }
-      return i;
+      return OBJECTS[i];
     }
   },
   getObject: {
@@ -83,7 +83,10 @@ Object.defineProperties(DataView.prototype, {
   },
   toPointer: {
     value: function(offset) {
-      return new Pointer(this.getUint32(offset));
+      var i;
+      if (i = this.getUint32(offset)) {
+        return new Pointer(i);
+      }
     }
   },
   keyUint16: {
@@ -435,8 +438,7 @@ Object.defineProperties(Pointer.prototype, {
   },
   setLinkedNode: {
     value: function() {
-      dvw.setObject(this + OFFSET_LINKEDNODE, arguments[0], LE);
-      return this;
+      return dvw.setObject(this + OFFSET_LINKEDNODE, arguments[0], LE);
     }
   },
   getParentPtri: {
@@ -447,18 +449,17 @@ Object.defineProperties(Pointer.prototype, {
   setParentPtri: {
     value: function() {
       dvw.setUint32(this + OFFSET_PARENT_PTR, arguments[0], LE);
-      return this;
+      return arguments[0];
     }
   },
   getParentPtrO: {
     value: function() {
-      return dvw.getObject(this + OFFSET_PARENT_PTR, LE);
+      return dvw.getObject(this.getParentPtri() + OFFSET_LINKEDNODE, LE);
     }
   },
   setParentPtrO: {
     value: function() {
-      dvw.setObject(this + OFFSET_PARENT_PTR, arguments[0], LE);
-      return this;
+      return dvw.setObject(this + OFFSET_PARENT_PTR, arguments[0], LE);
     }
   },
   getParentPtrP: {
@@ -549,10 +550,8 @@ Object.defineProperties(Pointer.prototype, {
   },
   
   //protoClass     : get : Pointer::getProtoClass , set : Pointer::setProtoClass
-  linkedNode: {
-    get: Pointer.prototype.getLinkedNode,
-    set: Pointer.prototype.setLinkedNode
-  },
+
+  //linkedNode     : get : Pointer::getLinkedNode , set : Pointer::setLinkedNode
   parent: {
     get: Pointer.prototype.getParentPtrP,
     set: Pointer.prototype.setParentPtri

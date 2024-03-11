@@ -61,7 +61,7 @@ OFFSET_TOP          = 4 * 43
 OFFSET_PIXEL_RATIO  = 4 * 44
 OFFSET_ASPECT_RATIO = 4 * 45
 
-export default class GL extends Pointer
+export class GL extends Pointer
 
     @byteLength     = 4 * 48
 
@@ -112,13 +112,15 @@ export default class GL extends Pointer
 
     ondoubleclick   : -> @setPtrDblClick arguments[0].button
 
+    getPrograms     : -> @children.filter (v) -> v instanceof Program
+
     getArray        : -> @array
 
     getArrayBuffer  : -> @array.slice().buffer
 
     getCanvasNode   : -> @getLinkedNode().canvas
 
-    setCanvasNode   : -> @setLinkedNode arguments[0].getContext "webgl2"
+    setCanvasNode   : -> @setLinkedNode arguments[0].getContext "webgl2" ; @
 
     getDrawActive   : -> @getUint8 OFFSET_DRAW_ACTIVE
     
@@ -362,6 +364,8 @@ export default class GL extends Pointer
 
         gl              : get : GL::getLinkedNode
 
+        glPrograms      : get : GL::getPrograms
+
         nodeBuffer      : get : GL::getArrayBuffer
 
         nodeCanvas      : get : GL::getCanvasNode   , set : GL::setCanvasNode
@@ -474,5 +478,91 @@ export default class GL extends Pointer
 
         zVector         : get : GL::getZVector      , set : GL::setZVector
         
-GL.registerClass()
+export default GL.registerClass()
 
+OFFSET_INUSE_STATUS     = 1
+
+OFFSET_LINKED_STATUS    = 1 + 1
+
+export class Program extends Pointer
+
+        @byteLength     : 4 * 8
+
+        @typedArray     : Int32Array
+
+        link            : ->
+            return if @getLinkedStatus()
+            return unless gl = @getParentPtrO()
+            
+            gl.linkProgram @getGLProgram()
+            @setLinkedStatus @getGLLinkStatus()
+
+        create          : -> @getParentPtrO().createProgram()
+
+        delete          : -> @getParentPtrO().deleteProgram @getGLProgram()
+
+        getGLProgram    : -> @getLinkedNode() or @setGLProgram @create()
+        
+        setGLProgram    : -> @setLinkedNode( arguments[0] )
+
+        getGLParameter  : -> @getParentPtrO().getProgramParameter @getGLProgram(), arguments[0]
+
+        getGLLinkStatus : -> @getGLParameter WebGL2RenderingContext.LINK_STATUS 
+        
+        getGLValidate   : -> @getParentPtrO().validateProgram @getGLProgram() 
+        
+        getGLInfoLog    : -> @getParentPtrO().getProgramInfoLog @getGLProgram() 
+        
+        getGLIsProgram  : -> @getParentPtrO().isProgram @getGLProgram() 
+
+        getInUseStatus  : -> @getUint8 OFFSET_INUSE_STATUS
+
+        setInUseStatus  : -> @getUint8 OFFSET_INUSE_STATUS, arguments[0]
+
+        getLinkedStatus : -> @getUint8 OFFSET_LINKED_STATUS
+        
+        setLinkedStatus : -> @getUint8 OFFSET_LINKED_STATUS, arguments[0]
+
+    Object.defineProperties Program.registerClass()::,
+
+        gl              : get : Program::getParentPtrO
+
+        glLinkStatus    : get : Program::getGLLinkStatus
+
+        glValidate      : get : Program::getGLValidate
+        
+        glInfoLog       : get : Program::getGLInfoLog
+
+        glIsProgram     : get : Program::getGLIsProgram
+
+        glProgram       : get : Program::getGLProgram    , set : Program::setGLProgram
+        
+        isLinked        : get : Program::getLinkedStatus , set : Program::setLinkedNode
+        
+        isIsUse         : get : Program::getInUseStatus  , set : Program::setInUseStatus
+
+export class Shader extends Pointer
+
+        @byteLength     : 256 * 256
+
+        @typedArray     : Uint8Array
+
+        create          : -> @getGL().createShader @getShaderType()
+
+        getGL           : -> @getParentPtrP().getParentPtrO()
+
+        getGLProgram    : -> @getParentPtrP().getLinkedNode()
+
+        getGLShader     : -> @getLinkedNode() or @setGLShader @create()
+
+        setGLShader     : -> @setLinkedNode( arguments[0] )
+
+        getShaderType   : -> WebGL2RenderingContext.VERTEX_SHADER
+
+    Object.defineProperties Shader.registerClass()::,
+
+        gl              : get : Shader::getGL
+
+        glProgram       : get : Shader::getGLProgram
+
+        glShader        : get : Shader::getGLShader  , set : Shader::setGLShader

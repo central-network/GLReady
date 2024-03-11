@@ -49,14 +49,14 @@ Object.defineProperties DataView::,
         if -1 is i = OBJECTS.indexOf object
             i += OBJECTS.push object
             this.setUint32 offset, i, LE
-        ; i
+        OBJECTS[ i ]
 
     getObject : value : ( offset ) ->
         return unless i = @getUint32 offset, LE
         return OBJECTS[ i ] ?= proxy i
 
     toPointer : value : ( offset ) ->
-        new Pointer @getUint32 offset
+        new Pointer i if i = @getUint32 offset
 
     keyUint16 : value : ( offset ) ->
         KEYED[ @getUint16 offset, LE ]
@@ -293,15 +293,15 @@ Object.defineProperties Pointer::,
 
     getLinkedNode   : value : -> dvw.getObject this + OFFSET_LINKEDNODE, LE
 
-    setLinkedNode   : value : -> dvw.setObject this + OFFSET_LINKEDNODE, arguments[0], LE ; @
+    setLinkedNode   : value : -> dvw.setObject this + OFFSET_LINKEDNODE, arguments[0], LE
 
     getParentPtri   : value : -> dvw.getUint32 this + OFFSET_PARENT_PTR, LE
 
-    setParentPtri   : value : -> dvw.setUint32 this + OFFSET_PARENT_PTR, arguments[0], LE ; @
+    setParentPtri   : value : -> dvw.setUint32 this + OFFSET_PARENT_PTR, arguments[0], LE ; arguments[0]
 
-    getParentPtrO   : value : -> dvw.getObject this + OFFSET_PARENT_PTR, LE
+    getParentPtrO   : value : -> dvw.getObject this . getParentPtri() + OFFSET_LINKEDNODE, LE
 
-    setParentPtrO   : value : -> dvw.setObject this + OFFSET_PARENT_PTR, arguments[0], LE ; @
+    setParentPtrO   : value : -> dvw.setObject this + OFFSET_PARENT_PTR, arguments[0], LE
 
     getParentPtrP   : value : -> dvw.toPointer this + OFFSET_PARENT_PTR, LE
 
@@ -344,7 +344,7 @@ Object.defineProperties Pointer::,
     
     #protoClass     : get : Pointer::getProtoClass , set : Pointer::setProtoClass
 
-    linkedNode      : get : Pointer::getLinkedNode , set : Pointer::setLinkedNode
+    #linkedNode     : get : Pointer::getLinkedNode , set : Pointer::setLinkedNode
     
     parent          : get : Pointer::getParentPtrP , set : Pointer::setParentPtri
 

@@ -1,4 +1,4 @@
-var GL, OFFSET_ASPECT_RATIO, OFFSET_BIND_TARGET, OFFSET_BLEND_ACTIVE, OFFSET_BLEND_EQUATE, OFFSET_BLEND_FUNC, OFFSET_BLEND_INARG, OFFSET_BLEND_OUTARG, OFFSET_CLEAR_COLOR, OFFSET_CLEAR_DEPTH, OFFSET_CLEAR_MASK, OFFSET_CULL_ENABLED, OFFSET_CULL_FACE, OFFSET_DEPTH_ACTIVE, OFFSET_DEPTH_FUNC, OFFSET_DEPTH_TEST, OFFSET_DRAGGING, OFFSET_DRAW_ACTIVE, OFFSET_DX, OFFSET_DY, OFFSET_FRONTFACE, OFFSET_HEIGHT, OFFSET_JUMPING, OFFSET_KEY_ALT, OFFSET_KEY_CTRL, OFFSET_KEY_META, OFFSET_KEY_SHIFT, OFFSET_LEFT, OFFSET_LOOKING, OFFSET_MOVE_BACK, OFFSET_MOVE_DOWN, OFFSET_MOVE_FWD, OFFSET_MOVE_LEFT, OFFSET_MOVE_RIGHT, OFFSET_MOVE_UP, OFFSET_PIXEL_RATIO, OFFSET_PTR_BUTTON, OFFSET_PTR_CLICK, OFFSET_PTR_DCLICK, OFFSET_ROTATING, OFFSET_RX, OFFSET_RY, OFFSET_SHIFT_RATIO, OFFSET_SX, OFFSET_SY, OFFSET_SZ, OFFSET_TIME, OFFSET_TOP, OFFSET_UX_ENABLED, OFFSET_VX, OFFSET_VY, OFFSET_VZ, OFFSET_WALKING, OFFSET_WIDTH, OFFSET_X, OFFSET_Y, OFFSET_ZOOMING;
+var OFFSET_ASPECT_RATIO, OFFSET_BIND_TARGET, OFFSET_BLEND_ACTIVE, OFFSET_BLEND_EQUATE, OFFSET_BLEND_FUNC, OFFSET_BLEND_INARG, OFFSET_BLEND_OUTARG, OFFSET_CLEAR_COLOR, OFFSET_CLEAR_DEPTH, OFFSET_CLEAR_MASK, OFFSET_CULL_ENABLED, OFFSET_CULL_FACE, OFFSET_DEPTH_ACTIVE, OFFSET_DEPTH_FUNC, OFFSET_DEPTH_TEST, OFFSET_DRAGGING, OFFSET_DRAW_ACTIVE, OFFSET_DX, OFFSET_DY, OFFSET_FRONTFACE, OFFSET_HEIGHT, OFFSET_INUSE_STATUS, OFFSET_JUMPING, OFFSET_KEY_ALT, OFFSET_KEY_CTRL, OFFSET_KEY_META, OFFSET_KEY_SHIFT, OFFSET_LEFT, OFFSET_LINKED_STATUS, OFFSET_LOOKING, OFFSET_MOVE_BACK, OFFSET_MOVE_DOWN, OFFSET_MOVE_FWD, OFFSET_MOVE_LEFT, OFFSET_MOVE_RIGHT, OFFSET_MOVE_UP, OFFSET_PIXEL_RATIO, OFFSET_PTR_BUTTON, OFFSET_PTR_CLICK, OFFSET_PTR_DCLICK, OFFSET_ROTATING, OFFSET_RX, OFFSET_RY, OFFSET_SHIFT_RATIO, OFFSET_SX, OFFSET_SY, OFFSET_SZ, OFFSET_TIME, OFFSET_TOP, OFFSET_UX_ENABLED, OFFSET_VX, OFFSET_VY, OFFSET_VZ, OFFSET_WALKING, OFFSET_WIDTH, OFFSET_X, OFFSET_Y, OFFSET_ZOOMING;
 
 import Pointer from "./ptr.js";
 
@@ -114,7 +114,7 @@ OFFSET_PIXEL_RATIO = 4 * 44;
 
 OFFSET_ASPECT_RATIO = 4 * 45;
 
-export default GL = (function() {
+export var GL = (function() {
   class GL extends Pointer {
     bindEvents() {
       var canvas;
@@ -169,6 +169,12 @@ export default GL = (function() {
       return this.setPtrDblClick(arguments[0].button);
     }
 
+    getPrograms() {
+      return this.children.filter(function(v) {
+        return v instanceof Program;
+      });
+    }
+
     getArray() {
       return this.array;
     }
@@ -182,7 +188,8 @@ export default GL = (function() {
     }
 
     setCanvasNode() {
-      return this.setLinkedNode(arguments[0].getContext("webgl2"));
+      this.setLinkedNode(arguments[0].getContext("webgl2"));
+      return this;
     }
 
     getDrawActive() {
@@ -715,6 +722,9 @@ export default GL = (function() {
     gl: {
       get: GL.prototype.getLinkedNode
     },
+    glPrograms: {
+      get: GL.prototype.getPrograms
+    },
     nodeBuffer: {
       get: GL.prototype.getArrayBuffer
     },
@@ -944,4 +954,163 @@ export default GL = (function() {
 
 }).call(this);
 
-GL.registerClass();
+export default GL.registerClass();
+
+OFFSET_INUSE_STATUS = 1;
+
+OFFSET_LINKED_STATUS = 1 + 1;
+
+export var Program = (function() {
+  class Program extends Pointer {
+    link() {
+      var gl;
+      if (this.getLinkedStatus()) {
+        return;
+      }
+      if (!(gl = this.getParentPtrO())) {
+        return;
+      }
+      gl.linkProgram(this.getGLProgram());
+      return this.setLinkedStatus(this.getGLLinkStatus());
+    }
+
+    create() {
+      return this.getParentPtrO().createProgram();
+    }
+
+    delete() {
+      return this.getParentPtrO().deleteProgram(this.getGLProgram());
+    }
+
+    getGLProgram() {
+      return this.getLinkedNode() || this.setGLProgram(this.create());
+    }
+
+    setGLProgram() {
+      return this.setLinkedNode(arguments[0]);
+    }
+
+    getGLParameter() {
+      return this.getParentPtrO().getProgramParameter(this.getGLProgram(), arguments[0]);
+    }
+
+    getGLLinkStatus() {
+      return this.getGLParameter(WebGL2RenderingContext.LINK_STATUS);
+    }
+
+    getGLValidate() {
+      return this.getParentPtrO().validateProgram(this.getGLProgram());
+    }
+
+    getGLInfoLog() {
+      return this.getParentPtrO().getProgramInfoLog(this.getGLProgram());
+    }
+
+    getGLIsProgram() {
+      return this.getParentPtrO().isProgram(this.getGLProgram());
+    }
+
+    getInUseStatus() {
+      return this.getUint8(OFFSET_INUSE_STATUS);
+    }
+
+    setInUseStatus() {
+      return this.getUint8(OFFSET_INUSE_STATUS, arguments[0]);
+    }
+
+    getLinkedStatus() {
+      return this.getUint8(OFFSET_LINKED_STATUS);
+    }
+
+    setLinkedStatus() {
+      return this.getUint8(OFFSET_LINKED_STATUS, arguments[0]);
+    }
+
+  };
+
+  Program.byteLength = 4 * 8;
+
+  Program.typedArray = Int32Array;
+
+  return Program;
+
+}).call(this);
+
+Object.defineProperties(Program.registerClass().prototype, {
+  gl: {
+    get: Program.prototype.getParentPtrO
+  },
+  glLinkStatus: {
+    get: Program.prototype.getGLLinkStatus
+  },
+  glValidate: {
+    get: Program.prototype.getGLValidate
+  },
+  glInfoLog: {
+    get: Program.prototype.getGLInfoLog
+  },
+  glIsProgram: {
+    get: Program.prototype.getGLIsProgram
+  },
+  glProgram: {
+    get: Program.prototype.getGLProgram,
+    set: Program.prototype.setGLProgram
+  },
+  isLinked: {
+    get: Program.prototype.getLinkedStatus,
+    set: Program.prototype.setLinkedNode
+  },
+  isIsUse: {
+    get: Program.prototype.getInUseStatus,
+    set: Program.prototype.setInUseStatus
+  }
+});
+
+export var Shader = (function() {
+  class Shader extends Pointer {
+    create() {
+      return this.getGL().createShader(this.getShaderType());
+    }
+
+    getGL() {
+      return this.getParentPtrP().getParentPtrO();
+    }
+
+    getGLProgram() {
+      return this.getParentPtrP().getLinkedNode();
+    }
+
+    getGLShader() {
+      return this.getLinkedNode() || this.setGLShader(this.create());
+    }
+
+    setGLShader() {
+      return this.setLinkedNode(arguments[0]);
+    }
+
+    getShaderType() {
+      return WebGL2RenderingContext.VERTEX_SHADER;
+    }
+
+  };
+
+  Shader.byteLength = 256 * 256;
+
+  Shader.typedArray = Uint8Array;
+
+  return Shader;
+
+}).call(this);
+
+Object.defineProperties(Shader.registerClass().prototype, {
+  gl: {
+    get: Shader.prototype.getGL
+  },
+  glProgram: {
+    get: Shader.prototype.getGLProgram
+  },
+  glShader: {
+    get: Shader.prototype.getGLShader,
+    set: Shader.prototype.setGLShader
+  }
+});
