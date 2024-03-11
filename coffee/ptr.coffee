@@ -398,8 +398,7 @@ Object.defineProperties Pointer::,
     
     parent          : get : Pointer::getParentPtrP , set : Pointer::setParentPtri
 
-
-Object.defineProperties WorkerPointer,
+Object.defineProperties WorkerPointer.registerClass(),
     
     byteLength      : value : 4 * 64
 
@@ -428,11 +427,9 @@ Object.defineProperties WorkerPointer::,
 
     setOnlineState  : value : -> dvw.setUint32 this + OFFSET_PTRCLASS_0, arguments[0], LE ; @
 
-
 Object.defineProperties WorkerPointer::,
 
     onlineState     : get : WorkerPointer::getOnlineState, set : WorkerPointer::setOnlineState
 
-
 Pointer.setBuffer() if window?
-WorkerPointer.registerClass()
+

@@ -615,7 +615,7 @@ Object.defineProperties(Pointer.prototype, {
   }
 });
 
-Object.defineProperties(WorkerPointer, {
+Object.defineProperties(WorkerPointer.registerClass(), {
   byteLength: {
     value: 4 * 64
   }
@@ -681,5 +681,3 @@ Object.defineProperties(WorkerPointer.prototype, {
 if (typeof window !== "undefined" && window !== null) {
   Pointer.setBuffer();
 }
-
-WorkerPointer.registerClass();
