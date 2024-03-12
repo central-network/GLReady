@@ -114,7 +114,9 @@ export class GL extends Pointer
 
     getAllPrograms  : -> @findAllChilds().filter (v) -> v instanceof Program
 
-    getProgram      : -> @getAllPrograms().at 0 #TODO get active one
+    getProgram      : -> @getAllPrograms().find (p) -> p.getInUseStatus()
+
+    getAllShaders   : -> @getAllPrograms().map((p) -> p.getAllShaders()).flat()
 
     getArrayBuffer  : -> @getTypedArray().slice().buffer
 
@@ -366,6 +368,10 @@ export class GL extends Pointer
 
         program         : get : GL::getProgram
 
+       #allPrograms     : get : GL::getAllPrograms
+
+       #allShaders      : get : GL::getAllShaders
+
         nodeBuffer      : get : GL::getArrayBuffer
 
         nodeCanvas      : get : GL::getCanvasNode   , set : GL::setCanvasNode
@@ -484,25 +490,36 @@ OFFSET_INUSE_STATUS     = 1
 
 OFFSET_LINKED_STATUS    = 1 + 1
 
+OFFSET_ATTACH_STATUS    = 1 + 2
+
 export class Program extends Pointer
 
         @byteLength     : 4 * 8
 
         @typedArray     : Int32Array
 
+        LINK_STATUS     : WebGL2RenderingContext.LINK_STATUS
+
+
         link            : ->
-            return if @getLinkedStatus()
-            return unless gl = @getParentPtrO()
-            
-            gl.linkProgram @getGLProgram()
-            @setLinkedStatus @getGLLinkStatus()
+            return this if @getLinkedStatus()
+
+            @getParentPtrO().linkProgram @getGLProgram()
+            @setLinkedStatus @getGLLinkStatus @getGLValidate() ; this
 
         use             : ->
-            #TODO DODODODOODODO
+            return this if @getUint8 OFFSET_INUSE_STATUS
+            @getParentPtrO().useProgram @getLinkedNode()
+            @setAttachStatus @setInUseStatus Boolean this ; this
+            
+        load            : -> @link().use() unless @getAttachStatus() ; this
 
-        create          : -> @getParentPtrO().createProgram()
+        create          : ->
+            @getParentPtrO().createProgram()
 
-        delete          : -> @getParentPtrO().deleteProgram @getGLProgram()
+        delete          : ->
+            @getParentPtrO().deleteProgram @getGLProgram()
+            @setLinkedStatus @setInUseStatus 0 ; this
 
         getGLProgram    : -> @getLinkedNode() or @setGLProgram @create()
         
@@ -510,9 +527,9 @@ export class Program extends Pointer
 
         getGLParameter  : -> @getParentPtrO().getProgramParameter @getGLProgram(), arguments[0]
 
-        getGLLinkStatus : -> @getGLParameter WebGL2RenderingContext.LINK_STATUS 
+        getGLLinkStatus : -> @getGLParameter @LINK_STATUS 
         
-        getGLValidate   : -> @getParentPtrO().validateProgram @getGLProgram() 
+        getGLValidate   : -> @getParentPtrO().validateProgram @getGLProgram()
         
         getGLInfoLog    : -> @getParentPtrO().getProgramInfoLog @getGLProgram() 
         
@@ -522,17 +539,21 @@ export class Program extends Pointer
 
         getInUseStatus  : -> @getUint8 OFFSET_INUSE_STATUS
 
-        setInUseStatus  : -> @getUint8 OFFSET_INUSE_STATUS, arguments[0]
+        setInUseStatus  : -> @setUint8 OFFSET_INUSE_STATUS, arguments[0]
 
         getLinkedStatus : -> @getUint8 OFFSET_LINKED_STATUS
         
-        setLinkedStatus : -> @getUint8 OFFSET_LINKED_STATUS, arguments[0]
+        setLinkedStatus : -> @setUint8 OFFSET_LINKED_STATUS, arguments[0]
+
+        getAttachStatus : -> @getUint8 OFFSET_ATTACH_STATUS
+        
+        setAttachStatus : -> @setUint8 OFFSET_ATTACH_STATUS, arguments[0]
 
         getAllShaders   : -> @findAllChilds().filter (v) -> v instanceof Shader
 
-        getVertShader   : -> @getAllShaders().find (v) -> v.isVertexShader() #TODO is active??
+        getVertShader   : -> @getAllShaders().find (v) -> v.getIsAttached() and  v.isVertexShader()
 
-        getFragShader   : -> @getAllShaders().find (v) -> v.isVertexShader() is no
+        getFragShader   : -> @getAllShaders().find (v) -> v.getIsAttached() and !v.isVertexShader()
 
         getGLVertShader : -> @getVertShader().getGLShader()
 
@@ -540,26 +561,34 @@ export class Program extends Pointer
 
         setVertShader   : ->
             unless vShader = @getVertShader()
-                @add vShader = Shader.fromSource arguments[0] 
-            
-            vShader
-                .upload().compile()
-                .attach().check()
+                if  arguments[0].constructor is String
+                    vShader = Shader.fromSource arguments[0] 
+
+            if  vShader instanceof Shader
+                @add vShader
+                vShader
+                    .load()
+
+            @load() if @getFragShader()
 
             ; @
     
         setFragShader   : ->
+
             unless fShader = @getFragShader()
-                @add fShader = new Shader()
-                fShader.change Shader::FRAGMENT 
-    
-            fShader
-                .setSourceText arguments[0]
-                .upload().compile().attach()
-                .check()
-    
+                if  arguments[0].constructor is String
+                    fShader = new Shader()
+
+            if  fShader instanceof Shader
+                @add fShader
+                fShader
+                    .setSourceText arguments[0]
+                    .setShaderType Shader::FRAGMENT
+                    .reload()
+
+            @load() if @getVertShader()
+
             ; @
-    
 
     Object.defineProperties Program.registerClass()::,
 
@@ -569,8 +598,6 @@ export class Program extends Pointer
 
         glShaders       : get : Program::getGLShaders
 
-        glValidate      : get : Program::getGLValidate
-        
         glInfoLog       : get : Program::getGLInfoLog
 
         glIsProgram     : get : Program::getGLIsProgram
@@ -584,6 +611,8 @@ export class Program extends Pointer
         isLinked        : get : Program::getLinkedStatus , set : Program::setLinkedNode
         
         isIsUse         : get : Program::getInUseStatus  , set : Program::setInUseStatus
+        
+        isAttached      : get : Program::getAttachStatus , set : Program::setAttachStatus
 
         vertexShader    : get : Program::getVertShader   , set : Program::setVertShader
         
@@ -661,17 +690,36 @@ export class Shader extends Pointer
     
     HIGH_INT            : WebGLRenderingContext.HIGH_INT
 
-    create              : -> @getGL().createShader @getShaderType() or @setShaderType @VERTEX
+    create              : -> @getGL().createShader @getShaderType() or @setShaderType arguments[0]
 
-    delete              : -> @getGL().deleteShader @getLinkedNode() ; @
+    delete              : -> @unload() if this . getLinkedNode() ; this
 
-    change              : -> @create @delete().setShaderType( arguments[0] )
+    change              : -> @unload().create( arguments[0] ).reload()
 
-    attach              : -> @getGL().attachShader @getGLProgram(), @getGLShader() ; @
+    upload              : ->
+        return this if @getIsUploaded()
+        @getGL().shaderSource @getGLShader(), @getSourceText()
+        @setIsUploaded 1 ; return this
 
-    upload              : -> @getGL().shaderSource @getGLShader(), @getSourceText() ; @
+    compile             : ->
+        return this if @getIsCompiled()
+        @getGL().compileShader @getGLShader(), @getSourceText()
+        @setIsCompiled 1 ; return this
+        
+    attach              : ->
+        return this if @getIsAttached()
+        @getGL().attachShader @getGLProgram(), @getGLShader()
+        @setIsAttached 1 ; return this
 
-    compile             : -> @getGL().compileShader @getGLShader() ; @
+    load                : ->
+        @upload().compile().attach().check() ; @
+
+    reload              : ->
+        @unload().load() ; @
+
+    unload              : ->
+        @setIsCompiled @setIsAttached @setIsUploaded 0 
+        @getGL().deleteShader node if node = @getLinkedNode() ; @
 
     check               : ->
         @setIsUploaded @getSourceText() is @getGLSource()
@@ -698,9 +746,9 @@ export class Shader extends Pointer
 
     getGLProgram        : -> @getParentPtrP().getGLProgram()
 
-    getGLShader         : -> @getLinkedNode() or @setGLShader @create()
+    getGLShader         : -> @getLinkedNode() or @setGLShader @create @VERTEX
 
-    setGLShader         : -> @setLinkedNode( arguments[0] )
+    setGLShader         : -> @setLinkedNode( arguments[0] ) ; arguments[0]
 
     getGLSource         : -> @getGL().getShaderSource @getGLShader()
     
@@ -712,7 +760,7 @@ export class Shader extends Pointer
 
     getShaderType       : -> @getUint16 OFFSET_SHADER_TYPE
 
-    setShaderType       : -> @setUint16 OFFSET_SHADER_TYPE  , arguments[0]
+    setShaderType       : -> @setUint16 OFFSET_SHADER_TYPE  , arguments[0] ; this
 
     getCharLength       : -> @getUint16 OFFSET_CHAR_LENGTH
 
@@ -764,7 +812,7 @@ export class Shader extends Pointer
 
         isUploaded      : get : Shader::getIsUploaded   , set : Shader::setIsUploaded
 
-        isCompiled      : get : Shader::getIsCompiled   , set : Shader::setIsCompiledd
+        isCompiled      : get : Shader::getIsCompiled   , set : Shader::setIsCompiled
 
         isAttached      : get : Shader::getIsAttached   , set : Shader::setIsAttached
 

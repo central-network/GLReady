@@ -461,63 +461,67 @@ Object.defineProperties WorkerPointer::,
 
 Pointer.setBuffer() if window?
 
-ival = 0
-document?.body.onclick = ->
-    if ival
-        ival = clearInterval ival
-    else ival = setInterval dump, 90
-    
-hist = [] 
-fill = "".padStart 1e2, '\n'
 
-dump = ->
-    offset = POINTERS_BYTEOFFSET + OFFSET_PARENT_PTR
-    finish = Atomics.load u32, INDEX_PTR
-    childs = []
+if  window?
+    ival = 0
 
-    while offset < finish
-        childs . push new Pointer offset - OFFSET_PARENT_PTR
-        offset += BYTES_PER_POINTER
+    document?.body.setAttribute "title", "Click body to activate debugger."
+    document?.body.onclick = ->
+        if ival
+            ival = clearInterval ival
+        else ival = setInterval dump, 90
+        
+    hist = [] 
+    fill = "".padStart 1e2, '\n'
 
-    dumpArray = []
-    byteLength = 0
+    dump = ->
+        offset = POINTERS_BYTEOFFSET + OFFSET_PARENT_PTR
+        finish = Atomics.load u32, INDEX_PTR
+        childs = []
 
-    for child in childs
-        dumpArray.push {
-            ptr : child * 1  
-            object: child
-            parent : child.parent * 1 or null
-            type: child.type
-            class: child.getProtoClass()
-            gl: child.getLinkedNode()
-            offset: child.byteOffset
-            byteLength: child.byteLength,
-            typedArray: new child.constructor.typedArray child.length
-            children: child.children.length or null
+        while offset < finish
+            childs . push new Pointer offset - OFFSET_PARENT_PTR
+            offset += BYTES_PER_POINTER
+
+        dumpArray = []
+        byteLength = 0
+
+        for child in childs
+            dumpArray.push {
+                ptr : child * 1  
+                object: child
+                parent : child.parent * 1 or null
+                type: child.type
+                class: child.getProtoClass()
+                gl: child.getLinkedNode()
+                offset: child.byteOffset
+                byteLength: child.byteLength,
+                typedArray: new child.constructor.typedArray child.length
+                childrens: child.children.length or null
+            }
+
+            byteLength += child.byteLength
+        freeByteLength = u32.byteLength - byteLength
+        freePercent = freeByteLength / u32.byteLength * 1e2
+
+        capacity = (u32.byteLength / Math.pow 1024, 2).toFixed(1) * 1
+        freePercent = freePercent.toFixed(2) * 1
+        hist.push {
+            max : POINTERS_BYTELENGTH / BYTES_PER_POINTER
+            count : childs.length 
+            ptrOffset : Atomics.load u32, INDEX_PTR 
+            byteOffset : Atomics.load u32, INDEX_BUF 
+            allocated : byteLength
+            [ "capacity(mb)" ] : capacity
+            [ "free(%)" ] : freePercent
+            [ "elapsed(ms)" ] : u32.at INDEX_NOW
+            tickCount : u32.at INDEX_HIT
+            fps : u32.at INDEX_FPS
         }
 
-        byteLength += child.byteLength
-    freeByteLength = u32.byteLength - byteLength
-    freePercent = freeByteLength / u32.byteLength * 1e2
+        hist = hist.slice -5
 
-    capacity = (u32.byteLength / Math.pow 1024, 2).toFixed(1) * 1
-    freePercent = freePercent.toFixed(2) * 1
-    hist.push {
-        max : POINTERS_BYTELENGTH / BYTES_PER_POINTER
-        count : childs.length 
-        ptrOffset : Atomics.load u32, INDEX_PTR 
-        byteOffset : Atomics.load u32, INDEX_BUF 
-        allocated : byteLength
-        [ "capacity(mb)" ] : capacity
-        [ "free(%)" ] : freePercent
-        [ "elapsed(ms)" ] : u32.at INDEX_NOW
-        tickCount : u32.at INDEX_HIT
-        fps : u32.at INDEX_FPS
-    }
-
-    hist = hist.slice -5
-
-    console.warn fill
-    console.table hist
-    console.table dumpArray
+        console.warn fill
+        console.table hist
+        console.table dumpArray
 

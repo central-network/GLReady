@@ -1,4 +1,4 @@
-var OFFSET_ASPECT_RATIO, OFFSET_ATTR_OFFSET, OFFSET_ATTR_STRIDE, OFFSET_BIND_TARGET, OFFSET_BLEND_ACTIVE, OFFSET_BLEND_EQUATE, OFFSET_BLEND_FUNC, OFFSET_BLEND_INARG, OFFSET_BLEND_OUTARG, OFFSET_CHAR_LENGTH, OFFSET_CLEAR_COLOR, OFFSET_CLEAR_DEPTH, OFFSET_CLEAR_MASK, OFFSET_CULL_ENABLED, OFFSET_CULL_FACE, OFFSET_DEPTH_ACTIVE, OFFSET_DEPTH_FUNC, OFFSET_DEPTH_TEST, OFFSET_DRAGGING, OFFSET_DRAW_ACTIVE, OFFSET_DX, OFFSET_DY, OFFSET_FRONTFACE, OFFSET_HEIGHT, OFFSET_INUSE_STATUS, OFFSET_ISNORMALIZE, OFFSET_IS_ATTACHED, OFFSET_IS_COMPILED, OFFSET_IS_UPLOADED, OFFSET_JUMPING, OFFSET_KEY_ALT, OFFSET_KEY_CTRL, OFFSET_KEY_LOCATED, OFFSET_KEY_META, OFFSET_KEY_SHIFT, OFFSET_LEFT, OFFSET_LINKED_STATUS, OFFSET_LOCATION_AT, OFFSET_LOOKING, OFFSET_MOVE_BACK, OFFSET_MOVE_DOWN, OFFSET_MOVE_FWD, OFFSET_MOVE_LEFT, OFFSET_MOVE_RIGHT, OFFSET_MOVE_UP, OFFSET_NAME_LENGTH, OFFSET_NAME_TARRAY, OFFSET_PIXEL_RATIO, OFFSET_PTR_BUTTON, OFFSET_PTR_CLICK, OFFSET_PTR_DCLICK, OFFSET_ROTATING, OFFSET_RX, OFFSET_RY, OFFSET_SHADER_TYPE, OFFSET_SHIFT_RATIO, OFFSET_SOURCE_TEXT, OFFSET_SX, OFFSET_SY, OFFSET_SZ, OFFSET_TIME, OFFSET_TOP, OFFSET_TYPE_GLCODE, OFFSET_TYPE_LENGTH, OFFSET_UX_ENABLED, OFFSET_VX, OFFSET_VY, OFFSET_VZ, OFFSET_WALKING, OFFSET_WIDTH, OFFSET_X, OFFSET_Y, OFFSET_ZOOMING;
+var OFFSET_ASPECT_RATIO, OFFSET_ATTACH_STATUS, OFFSET_ATTR_OFFSET, OFFSET_ATTR_STRIDE, OFFSET_BIND_TARGET, OFFSET_BLEND_ACTIVE, OFFSET_BLEND_EQUATE, OFFSET_BLEND_FUNC, OFFSET_BLEND_INARG, OFFSET_BLEND_OUTARG, OFFSET_CHAR_LENGTH, OFFSET_CLEAR_COLOR, OFFSET_CLEAR_DEPTH, OFFSET_CLEAR_MASK, OFFSET_CULL_ENABLED, OFFSET_CULL_FACE, OFFSET_DEPTH_ACTIVE, OFFSET_DEPTH_FUNC, OFFSET_DEPTH_TEST, OFFSET_DRAGGING, OFFSET_DRAW_ACTIVE, OFFSET_DX, OFFSET_DY, OFFSET_FRONTFACE, OFFSET_HEIGHT, OFFSET_INUSE_STATUS, OFFSET_ISNORMALIZE, OFFSET_IS_ATTACHED, OFFSET_IS_COMPILED, OFFSET_IS_UPLOADED, OFFSET_JUMPING, OFFSET_KEY_ALT, OFFSET_KEY_CTRL, OFFSET_KEY_LOCATED, OFFSET_KEY_META, OFFSET_KEY_SHIFT, OFFSET_LEFT, OFFSET_LINKED_STATUS, OFFSET_LOCATION_AT, OFFSET_LOOKING, OFFSET_MOVE_BACK, OFFSET_MOVE_DOWN, OFFSET_MOVE_FWD, OFFSET_MOVE_LEFT, OFFSET_MOVE_RIGHT, OFFSET_MOVE_UP, OFFSET_NAME_LENGTH, OFFSET_NAME_TARRAY, OFFSET_PIXEL_RATIO, OFFSET_PTR_BUTTON, OFFSET_PTR_CLICK, OFFSET_PTR_DCLICK, OFFSET_ROTATING, OFFSET_RX, OFFSET_RY, OFFSET_SHADER_TYPE, OFFSET_SHIFT_RATIO, OFFSET_SOURCE_TEXT, OFFSET_SX, OFFSET_SY, OFFSET_SZ, OFFSET_TIME, OFFSET_TOP, OFFSET_TYPE_GLCODE, OFFSET_TYPE_LENGTH, OFFSET_UX_ENABLED, OFFSET_VX, OFFSET_VY, OFFSET_VZ, OFFSET_WALKING, OFFSET_WIDTH, OFFSET_X, OFFSET_Y, OFFSET_ZOOMING;
 
 import Pointer from "./ptr.js";
 
@@ -176,7 +176,15 @@ export var GL = (function() {
     }
 
     getProgram() {
-      return this.getAllPrograms().at(0); //TODO get active one
+      return this.getAllPrograms().find(function(p) {
+        return p.getInUseStatus();
+      });
+    }
+
+    getAllShaders() {
+      return this.getAllPrograms().map(function(p) {
+        return p.getAllShaders();
+      }).flat();
     }
 
     getArrayBuffer() {
@@ -725,6 +733,9 @@ export var GL = (function() {
     program: {
       get: GL.prototype.getProgram
     },
+    //allPrograms     : get : GL::getAllPrograms
+
+    //allShaders      : get : GL::getAllShaders
     nodeBuffer: {
       get: GL.prototype.getArrayBuffer
     },
@@ -960,29 +971,43 @@ OFFSET_INUSE_STATUS = 1;
 
 OFFSET_LINKED_STATUS = 1 + 1;
 
+OFFSET_ATTACH_STATUS = 1 + 2;
+
 export var Program = (function() {
   class Program extends Pointer {
     link() {
-      var gl;
       if (this.getLinkedStatus()) {
-        return;
+        return this;
       }
-      if (!(gl = this.getParentPtrO())) {
-        return;
-      }
-      gl.linkProgram(this.getGLProgram());
-      return this.setLinkedStatus(this.getGLLinkStatus());
+      this.getParentPtrO().linkProgram(this.getGLProgram());
+      this.setLinkedStatus(this.getGLLinkStatus(this.getGLValidate()));
+      return this;
     }
 
-    use() {}
+    use() {
+      if (this.getUint8(OFFSET_INUSE_STATUS)) {
+        return this;
+      }
+      this.getParentPtrO().useProgram(this.getLinkedNode());
+      this.setAttachStatus(this.setInUseStatus(Boolean(this)));
+      return this;
+    }
 
-    //TODO DODODODOODODO
+    load() {
+      if (!this.getAttachStatus()) {
+        this.link().use();
+      }
+      return this;
+    }
+
     create() {
       return this.getParentPtrO().createProgram();
     }
 
     delete() {
-      return this.getParentPtrO().deleteProgram(this.getGLProgram());
+      this.getParentPtrO().deleteProgram(this.getGLProgram());
+      this.setLinkedStatus(this.setInUseStatus(0));
+      return this;
     }
 
     getGLProgram() {
@@ -998,7 +1023,7 @@ export var Program = (function() {
     }
 
     getGLLinkStatus() {
-      return this.getGLParameter(WebGL2RenderingContext.LINK_STATUS);
+      return this.getGLParameter(this.LINK_STATUS);
     }
 
     getGLValidate() {
@@ -1022,7 +1047,7 @@ export var Program = (function() {
     }
 
     setInUseStatus() {
-      return this.getUint8(OFFSET_INUSE_STATUS, arguments[0]);
+      return this.setUint8(OFFSET_INUSE_STATUS, arguments[0]);
     }
 
     getLinkedStatus() {
@@ -1030,7 +1055,15 @@ export var Program = (function() {
     }
 
     setLinkedStatus() {
-      return this.getUint8(OFFSET_LINKED_STATUS, arguments[0]);
+      return this.setUint8(OFFSET_LINKED_STATUS, arguments[0]);
+    }
+
+    getAttachStatus() {
+      return this.getUint8(OFFSET_ATTACH_STATUS);
+    }
+
+    setAttachStatus() {
+      return this.setUint8(OFFSET_ATTACH_STATUS, arguments[0]);
     }
 
     getAllShaders() {
@@ -1041,13 +1074,13 @@ export var Program = (function() {
 
     getVertShader() {
       return this.getAllShaders().find(function(v) {
-        return v.isVertexShader(); //TODO is active??
+        return v.getIsAttached() && v.isVertexShader();
       });
     }
 
     getFragShader() {
       return this.getAllShaders().find(function(v) {
-        return v.isVertexShader() === false;
+        return v.getIsAttached() && !v.isVertexShader();
       });
     }
 
@@ -1062,19 +1095,34 @@ export var Program = (function() {
     setVertShader() {
       var vShader;
       if (!(vShader = this.getVertShader())) {
-        this.add(vShader = Shader.fromSource(arguments[0]));
+        if (arguments[0].constructor === String) {
+          vShader = Shader.fromSource(arguments[0]);
+        }
       }
-      vShader.upload().compile().attach().check();
+      if (vShader instanceof Shader) {
+        this.add(vShader);
+        vShader.load();
+      }
+      if (this.getFragShader()) {
+        this.load();
+      }
       return this;
     }
 
     setFragShader() {
       var fShader;
       if (!(fShader = this.getFragShader())) {
-        this.add(fShader = new Shader());
-        fShader.change(Shader.prototype.FRAGMENT);
+        if (arguments[0].constructor === String) {
+          fShader = new Shader();
+        }
       }
-      fShader.setSourceText(arguments[0]).upload().compile().attach().check();
+      if (fShader instanceof Shader) {
+        this.add(fShader);
+        fShader.setSourceText(arguments[0]).setShaderType(Shader.prototype.FRAGMENT).reload();
+      }
+      if (this.getVertShader()) {
+        this.load();
+      }
       return this;
     }
 
@@ -1083,6 +1131,8 @@ export var Program = (function() {
   Program.byteLength = 4 * 8;
 
   Program.typedArray = Int32Array;
+
+  Program.prototype.LINK_STATUS = WebGL2RenderingContext.LINK_STATUS;
 
   return Program;
 
@@ -1097,9 +1147,6 @@ Object.defineProperties(Program.registerClass().prototype, {
   },
   glShaders: {
     get: Program.prototype.getGLShaders
-  },
-  glValidate: {
-    get: Program.prototype.getGLValidate
   },
   glInfoLog: {
     get: Program.prototype.getGLInfoLog
@@ -1123,6 +1170,10 @@ Object.defineProperties(Program.registerClass().prototype, {
   isIsUse: {
     get: Program.prototype.getInUseStatus,
     set: Program.prototype.setInUseStatus
+  },
+  isAttached: {
+    get: Program.prototype.getAttachStatus,
+    set: Program.prototype.setAttachStatus
   },
   vertexShader: {
     get: Program.prototype.getVertShader,
@@ -1183,30 +1234,63 @@ export var Shader = (function() {
     }
 
     create() {
-      return this.getGL().createShader(this.getShaderType() || this.setShaderType(this.VERTEX));
+      return this.getGL().createShader(this.getShaderType() || this.setShaderType(arguments[0]));
     }
 
     delete() {
-      this.getGL().deleteShader(this.getLinkedNode());
+      if (this.getLinkedNode()) {
+        this.unload();
+      }
       return this;
     }
 
     change() {
-      return this.create(this.delete().setShaderType(arguments[0]));
-    }
-
-    attach() {
-      this.getGL().attachShader(this.getGLProgram(), this.getGLShader());
-      return this;
+      return this.unload().create(arguments[0]).reload();
     }
 
     upload() {
+      if (this.getIsUploaded()) {
+        return this;
+      }
       this.getGL().shaderSource(this.getGLShader(), this.getSourceText());
+      this.setIsUploaded(1);
       return this;
     }
 
     compile() {
-      this.getGL().compileShader(this.getGLShader());
+      if (this.getIsCompiled()) {
+        return this;
+      }
+      this.getGL().compileShader(this.getGLShader(), this.getSourceText());
+      this.setIsCompiled(1);
+      return this;
+    }
+
+    attach() {
+      if (this.getIsAttached()) {
+        return this;
+      }
+      this.getGL().attachShader(this.getGLProgram(), this.getGLShader());
+      this.setIsAttached(1);
+      return this;
+    }
+
+    load() {
+      this.upload().compile().attach().check();
+      return this;
+    }
+
+    reload() {
+      this.unload().load();
+      return this;
+    }
+
+    unload() {
+      var node;
+      this.setIsCompiled(this.setIsAttached(this.setIsUploaded(0)));
+      if (node = this.getLinkedNode()) {
+        this.getGL().deleteShader(node);
+      }
       return this;
     }
 
@@ -1257,11 +1341,12 @@ export var Shader = (function() {
     }
 
     getGLShader() {
-      return this.getLinkedNode() || this.setGLShader(this.create());
+      return this.getLinkedNode() || this.setGLShader(this.create(this.VERTEX));
     }
 
     setGLShader() {
-      return this.setLinkedNode(arguments[0]);
+      this.setLinkedNode(arguments[0]);
+      return arguments[0];
     }
 
     getGLSource() {
@@ -1286,7 +1371,8 @@ export var Shader = (function() {
     }
 
     setShaderType() {
-      return this.setUint16(OFFSET_SHADER_TYPE, arguments[0]);
+      this.setUint16(OFFSET_SHADER_TYPE, arguments[0]);
+      return this;
     }
 
     getCharLength() {
@@ -1417,7 +1503,7 @@ export var Shader = (function() {
     },
     isCompiled: {
       get: Shader.prototype.getIsCompiled,
-      set: Shader.prototype.setIsCompiledd
+      set: Shader.prototype.setIsCompiled
     },
     isAttached: {
       get: Shader.prototype.getIsAttached,
