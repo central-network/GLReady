@@ -209,12 +209,23 @@ export default class Pointer extends Number
                 Object.setPrototypeOf this,
                     POINTER_PROTOTYPE[ @getProtoClass() ]::
         else
-            this
-                .setByteLength @constructor.byteLength
-                .setProtoClass @constructor.protoClass
-                .setByteOffset malloc @getByteLength()
+            byteLength = @constructor.byteLength
+            
+            dvw.setUint32 this + OFFSET_BYTELENGTH, byteLength, LE
+            dvw.setUint32 this + OFFSET_PROTOCLASS, @constructor.protoClass, LE
+            dvw.setUint32 this + OFFSET_BYTEOFFSET, malloc( byteLength ), LE
                 
-            @init()
+            this.init()
+
+    @malloc     : ( byteLength ) ->
+        
+        ptr = palloc BYTES_PER_POINTER
+
+        dvw.setUint32 ptr + OFFSET_BYTELENGTH, byteLength, LE
+        dvw.setUint32 ptr + OFFSET_PROTOCLASS, @protoClass, LE ; @
+        dvw.setUint32 ptr + OFFSET_BYTEOFFSET, malloc( byteLength ), LE
+
+        new this( ptr ).init()
 
     resize      : ->
         #TODO this clones object buffer and creates new pointer for cloned onw
@@ -337,28 +348,38 @@ Object.defineProperties Pointer::,
 
     getParentPtrP   : value : -> dvw.toPointer this + OFFSET_PARENT_PTR
 
-
 Object.defineProperties Pointer::,
 
-    getUint8        : value : -> dvw.getUint8 @byteOffset + arguments[0]
-    
-    setUint8        : value : -> dvw.setUint8 @byteOffset + arguments[0], arguments[1] ; arguments[1]
+    getTArray       : value : ->
+        [ offset = 0, TypedArray = @constructor.typedArray ] = arguments
+        ( byteOffset = @byteOffset + offset )
+        ( length = @byteLength / TypedArray.BYTES_PER_ELEMENT )
 
-    keyUint16       : value : -> dvw.keyUint16 @byteOffset + arguments[0], arguments[1]
+        new TypedArray( @buffer, byteOffset, length )
 
-    getUint16       : value : -> dvw.getUint16 @byteOffset + arguments[0], LE
-    
-    setUint16       : value : -> dvw.setUint16 @byteOffset + arguments[0], arguments[1], LE ; arguments[1]
+    setTArray       : value : ->
+        [ offset, value, TypedArray ] = arguments
+        ( @getTArray offset, TypedArray ).set value ; this
 
     getFloat32      : value : -> dvw.getFloat32 @byteOffset + arguments[0], LE
-    
+        
     setFloat32      : value : -> dvw.setFloat32 @byteOffset + arguments[0], arguments[1], LE ; arguments[1]
+
+    getUint8        : value : -> dvw.getUint8   @byteOffset + arguments[0]
+    
+    setUint8        : value : -> dvw.setUint8   @byteOffset + arguments[0], arguments[1] ; arguments[1]
+
+    keyUint16       : value : -> dvw.keyUint16  @byteOffset + arguments[0], arguments[1]
+
+    getUint16       : value : -> dvw.getUint16  @byteOffset + arguments[0], LE
+    
+    setUint16       : value : -> dvw.setUint16  @byteOffset + arguments[0], arguments[1], LE ; arguments[1]
+
+    setColor4       : value : -> dvw.setUint32  @byteOffset + arguments[0], Color4.u32(arguments[1]), LE ; arguments[1]
 
     rgbColor4       : value : -> @getColor4( ...arguments ).f32
     
-    getColor4       : value : -> new Color4 dvw.getUint32 @byteOffset + arguments[0], LE
-    
-    setColor4       : value : -> dvw.setUint32 @byteOffset + arguments[0], Color4.u32(arguments[1]), LE ; arguments[1]
+    getColor4       : value : -> new Color4 @getUint32 arguments[0]    
 
     getString       : value : ->
         [ startOffset , lengthOffset ] = [ ...arguments ]

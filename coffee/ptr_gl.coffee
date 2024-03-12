@@ -360,39 +360,6 @@ export class GL extends Pointer
 
     setZVector      : -> @setFloat32 OFFSET_VZ             , arguments[0]
 
-    getVertShader   : -> @getProgram().getVertShader()
-
-    setVertShader   : ->
-
-        program = @getProgram()
-
-        unless vShader = program.getVertShader()
-            program.add vShader = new Shader() 
-
-        vShader
-            .setSourceText arguments[0]
-            .upload().compile().attach()
-            .check()
-
-        ; @
-
-    getFragShader   : -> @getProgram().getFragShader()
-
-    setFragShader   : ->
-
-        program = @getProgram()
-
-        unless fShader = program.getFragShader()
-            program.add fShader = new Shader()
-            fShader.change Shader::FRAGMENT 
-
-        fShader
-            .setSourceText arguments[0]
-            .upload().compile().attach()
-            .check()
-
-        ; @
-
     Object.defineProperties this::,
 
         gl              : get : GL::getLinkedNode
@@ -511,10 +478,6 @@ export class GL extends Pointer
 
         zVector         : get : GL::getZVector      , set : GL::setZVector
 
-        shaderVertex    : get : GL::getVertShader   , set : GL::setVertShader
-        
-        shaderFragment  : get : GL::getFragShader   , set : GL::setFragShader
-        
 export default GL.registerClass()
 
 OFFSET_INUSE_STATUS     = 1
@@ -566,15 +529,37 @@ export class Program extends Pointer
 
         getVertShader   : -> @getAllShaders().find (v) -> v.isVertexShader() #TODO is active??
 
-        setVertShader   : -> #TODO --> parse if it is a source text for type
+        getFragShader   : -> @getAllShaders().find (v) -> v.isVertexShader() is no
 
         getGLVertShader : -> @getVertShader().getGLShader()
 
-        getFragShader   : -> @getAllShaders().find (v) -> !v.isVertexShader() #TODO is active??
-
-        setFragShader   : -> #TODO --> parse if it is a source text for type
-
         getGLFragShader : -> @getFragShader().getGLShader()
+
+        setVertShader   : ->
+            unless vShader = @getVertShader()
+                @add vShader = new Shader() 
+    
+            vShader
+                .setSourceText arguments[0]
+                .upload().compile().attach()
+                .check()
+    
+            console.warn Shader.fromSource arguments[0]
+
+            ; @
+    
+        setFragShader   : ->
+            unless fShader = @getFragShader()
+                @add fShader = new Shader()
+                fShader.change Shader::FRAGMENT 
+    
+            fShader
+                .setSourceText arguments[0]
+                .upload().compile().attach()
+                .check()
+    
+            ; @
+    
 
     Object.defineProperties Program.registerClass()::,
 
@@ -625,6 +610,38 @@ export class Shader extends Pointer
     @typedArray         : Uint8Array
 
     @Fragment           : -> new this().change @FRAGMENT
+
+    @fromSource         : ->
+        textSource = arguments[0]
+        shaderType = null
+        parsedKeys = []
+
+        if  /gl_Frag/.test textSource
+            shaderType = Shader::FRAGMENT
+
+        else
+            parsedKeys.push ...Uniform.parse textSource
+            parsedKeys.push ...Attribute.parse textSource
+
+            shaderType = Shader::VERTEX
+
+        byteSource = new TextEncoder().encode textSource
+        charLength = byteSource.byteLength
+        byteLength = charLength + OFFSET_SOURCE_TEXT
+
+        ptr = Shader.malloc byteLength
+        ptr . setCharLength charLength
+        ptr . setByteSource byteSource
+        ptr . setShaderType shaderType
+
+        for key in parsedKeys
+            key.setParentPtri ptr
+
+        console.log parsedKeys
+
+        ptr
+        
+    toString            : -> @getSourceText()        
 
     SHADER_TYPE         : WebGLRenderingContext.SHADER_TYPE
     
@@ -706,10 +723,10 @@ export class Shader extends Pointer
     getSourceText       : -> @getString OFFSET_SOURCE_TEXT  , OFFSET_CHAR_LENGTH
 
     setSourceText       : -> @setString OFFSET_SOURCE_TEXT  , arguments[0], OFFSET_CHAR_LENGTH
-
-    getIsBuffered       : -> @getUint8 OFFSET_IS_BUFFERED
     
-    setIsBuffered       : -> @setUint8 OFFSET_IS_BUFFERED   , arguments[0]
+    getByteSource       : -> @getTArray OFFSET_SOURCE_TEXT  , Uint8Array
+
+    setByteSource       : -> @setTArray OFFSET_SOURCE_TEXT  , arguments[0] , Uint8Array ; this
 
     getIsUploaded       : -> @getUint8 OFFSET_IS_UPLOADED
     
@@ -745,4 +762,182 @@ export class Shader extends Pointer
 
         isAttached      : get : Shader::getIsAttached   , set : Shader::setIsAttached
 
-        isBuffered      : get : Shader::getIsBuffered   , set : Shader::setIsBuffered
+
+OFFSET_TYPE_GLCODE      = 4 * 2
+
+OFFSET_TYPE_LENGTH      = 4 * 2 + 2
+
+OFFSET_NAME_LENGTH      = 4 * 3 + 2
+
+OFFSET_NAME_TARRAY      = 4 * 4
+
+export class ShaderKey extends Pointer
+
+    @byteLength         : 4 * 8
+
+    @typedArray         : Uint8Array
+
+    getGL               : ->
+
+    getGLProgram        : ->
+
+    getNameString       : -> @getString OFFSET_NAME_TARRAY  , OFFSET_NAME_LENGTH
+
+    setNameString       : -> @setString OFFSET_NAME_TARRAY  , arguments[0] , OFFSET_NAME_LENGTH
+
+    getNameLength       : -> @getUint16 OFFSET_NAME_LENGTH
+
+    setNameLength       : -> @setUint16 OFFSET_NAME_LENGTH  , arguments[0]
+
+    keyTypeGLCode       : -> @keyUint16 OFFSET_TYPE_GLCODE
+    
+    getTypeGLCode       : -> @getUint16 OFFSET_TYPE_GLCODE
+
+    setTypeGLCode       : -> @setUint16 OFFSET_TYPE_GLCODE  , arguments[0]
+
+    getTypeLength       : -> @getUint8  OFFSET_TYPE_LENGTH
+
+    setTypeLength       : -> @setUint8  OFFSET_TYPE_LENGTH  , arguments[0]
+
+Object.defineProperties ShaderKey.registerClass()::,
+
+    gl                  : get : ShaderKey::getGL
+
+    glProgram           : get : ShaderKey::getGLProgram
+
+    name                : get : ShaderKey::getNameString    , set : ShaderKey::setNameString
+    
+    typeLength          : get : ShaderKey::getTypeLength    , set : ShaderKey::setTypeLength
+
+    type                : get : ShaderKey::keyTypeGLCode    , set : ShaderKey::setTypeGLCode
+
+OFFSET_LOCATION_AT      = 4 * 0
+
+OFFSET_ISNORMALIZE      = 4 * 0 + 1
+
+OFFSET_ATTR_STRIDE      = 4 * 0 + 2
+
+OFFSET_ATTR_OFFSET      = 4 * 0 + 3
+
+
+export class Attribute extends ShaderKey
+
+    Object.defineProperties Attribute.registerClass(),
+        
+        vec3    : value : class  vec3 extends this
+            @itemLength : 3
+            @protoClass : 0
+            @registerClass()
+
+        vec4    : value : class  vec4 extends this 
+            @itemLength : 4
+            @protoClass : 0
+            @registerClass()
+        
+        mat4    : value : class  mat4 extends this 
+            @itemLength : 16
+            @protoClass : 0
+            @registerClass()
+
+        float   : value : class float extends this 
+            @itemLength : 1
+            @protoClass : 0
+            @registerClass()
+
+    @parse              : ->
+        [ source ] = arguments
+        [ keys, offset ] = [ [], 0 ]
+
+        source.split(/attribute/g).slice( 1 ).map ( line ) =>
+            [ , type, name ] = line.split(/\;/g)[0].split /\s+/g
+            
+            keys.push key =     new Attribute[ type ]
+
+            key.setNameString   name
+            key.setTypeLength   key.constructor.itemLength
+            key.setTypeGLCode   WebGL2RenderingContext.FLOAT
+            key.setNormalize    no
+            key.setOffset       offset
+
+            offset += key.getTypeLength() * 4
+        
+        for key in keys
+            key.setStride offset 
+
+        keys
+
+    getGLLocation       : -> @getGL().getAttribLocation @getGLProgram(), @getNameString()
+    
+    getLocation         : -> @getUint8 OFFSET_LOCATION_AT
+
+    setLocation         : -> @setUint8 OFFSET_LOCATION_AT   , arguments[0]
+
+    getNormalize        : -> @getUint8 OFFSET_ISNORMALIZE
+
+    setNormalize        : -> @setUint8 OFFSET_ISNORMALIZE   , arguments[0]
+
+    getStride           : -> @getUint8 OFFSET_ATTR_STRIDE
+
+    setStride           : -> @setUint8 OFFSET_ATTR_STRIDE   , arguments[0]
+
+    getOffset           : -> @getUint8 OFFSET_ATTR_OFFSET
+
+    setOffset           : -> @setUint8 OFFSET_ATTR_OFFSET   , arguments[0]
+
+Object.defineProperties Attribute::,
+
+    glLocation          : get : Attribute::getGLLocation
+
+    location            : get : Attribute::getLocation      , set : Attribute::setLocation
+
+    stride              : get : Attribute::getStride        , set : Attribute::setStride
+
+    offset              : get : Attribute::getOffset        , set : Attribute::setOffset
+
+    normalize           : get : Attribute::getNormalize     , set : Attribute::setNormalize
+
+
+
+export class Uniform extends ShaderKey
+
+    Object.defineProperties Uniform.registerClass(),
+        
+        vec3    : value : class  vec3 extends this
+            @itemLength : 3
+            @protoClass : 0
+            @registerClass()
+
+        vec4    : value : class  vec4 extends this 
+            @itemLength : 4
+            @protoClass : 0
+            @registerClass()
+        
+        mat4    : value : class  mat4 extends this 
+            @itemLength : 16
+            @protoClass : 0
+            @registerClass()
+
+        float   : value : class float extends this 
+            @itemLength : 1
+            @protoClass : 0
+            @registerClass()
+
+    @parse              : ->
+        [ source ] = arguments
+        [ keys   ] = [ [] ]
+
+        source.split(/uniform/g).slice( 1 ).map ( line ) =>
+            [ , type, name ] = line.split(/\;/g)[0].split /\s+/g
+
+            keys.push key =     new Uniform[ type ]
+            key.setNameString   name
+            key.setTypeLength   key.constructor.itemLength
+            key.setTypeGLCode   WebGL2RenderingContext.FLOAT
+
+        keys
+
+    getGLLocation       : -> @getGL().getUniformLocation @getGLProgram(), @getNameString()
+
+Object.defineProperties Uniform::,
+
+    glLocation          : get : Uniform::getGLLocation

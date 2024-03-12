@@ -1,4 +1,4 @@
-var OFFSET_ASPECT_RATIO, OFFSET_BIND_TARGET, OFFSET_BLEND_ACTIVE, OFFSET_BLEND_EQUATE, OFFSET_BLEND_FUNC, OFFSET_BLEND_INARG, OFFSET_BLEND_OUTARG, OFFSET_CHAR_LENGTH, OFFSET_CLEAR_COLOR, OFFSET_CLEAR_DEPTH, OFFSET_CLEAR_MASK, OFFSET_CULL_ENABLED, OFFSET_CULL_FACE, OFFSET_DEPTH_ACTIVE, OFFSET_DEPTH_FUNC, OFFSET_DEPTH_TEST, OFFSET_DRAGGING, OFFSET_DRAW_ACTIVE, OFFSET_DX, OFFSET_DY, OFFSET_FRONTFACE, OFFSET_HEIGHT, OFFSET_INUSE_STATUS, OFFSET_IS_ATTACHED, OFFSET_IS_BUFFERED, OFFSET_IS_COMPILED, OFFSET_IS_UPLOADED, OFFSET_JUMPING, OFFSET_KEY_ALT, OFFSET_KEY_CTRL, OFFSET_KEY_META, OFFSET_KEY_SHIFT, OFFSET_LEFT, OFFSET_LINKED_STATUS, OFFSET_LOOKING, OFFSET_MOVE_BACK, OFFSET_MOVE_DOWN, OFFSET_MOVE_FWD, OFFSET_MOVE_LEFT, OFFSET_MOVE_RIGHT, OFFSET_MOVE_UP, OFFSET_PIXEL_RATIO, OFFSET_PTR_BUTTON, OFFSET_PTR_CLICK, OFFSET_PTR_DCLICK, OFFSET_ROTATING, OFFSET_RX, OFFSET_RY, OFFSET_SHADER_TYPE, OFFSET_SHIFT_RATIO, OFFSET_SOURCE_TEXT, OFFSET_SX, OFFSET_SY, OFFSET_SZ, OFFSET_TIME, OFFSET_TOP, OFFSET_UX_ENABLED, OFFSET_VX, OFFSET_VY, OFFSET_VZ, OFFSET_WALKING, OFFSET_WIDTH, OFFSET_X, OFFSET_Y, OFFSET_ZOOMING;
+var OFFSET_ASPECT_RATIO, OFFSET_ATTR_OFFSET, OFFSET_ATTR_STRIDE, OFFSET_BIND_TARGET, OFFSET_BLEND_ACTIVE, OFFSET_BLEND_EQUATE, OFFSET_BLEND_FUNC, OFFSET_BLEND_INARG, OFFSET_BLEND_OUTARG, OFFSET_CHAR_LENGTH, OFFSET_CLEAR_COLOR, OFFSET_CLEAR_DEPTH, OFFSET_CLEAR_MASK, OFFSET_CULL_ENABLED, OFFSET_CULL_FACE, OFFSET_DEPTH_ACTIVE, OFFSET_DEPTH_FUNC, OFFSET_DEPTH_TEST, OFFSET_DRAGGING, OFFSET_DRAW_ACTIVE, OFFSET_DX, OFFSET_DY, OFFSET_FRONTFACE, OFFSET_HEIGHT, OFFSET_INUSE_STATUS, OFFSET_ISNORMALIZE, OFFSET_IS_ATTACHED, OFFSET_IS_BUFFERED, OFFSET_IS_COMPILED, OFFSET_IS_UPLOADED, OFFSET_JUMPING, OFFSET_KEY_ALT, OFFSET_KEY_CTRL, OFFSET_KEY_META, OFFSET_KEY_SHIFT, OFFSET_LEFT, OFFSET_LINKED_STATUS, OFFSET_LOCATION_AT, OFFSET_LOOKING, OFFSET_MOVE_BACK, OFFSET_MOVE_DOWN, OFFSET_MOVE_FWD, OFFSET_MOVE_LEFT, OFFSET_MOVE_RIGHT, OFFSET_MOVE_UP, OFFSET_NAME_LENGTH, OFFSET_NAME_TARRAY, OFFSET_PIXEL_RATIO, OFFSET_PTR_BUTTON, OFFSET_PTR_CLICK, OFFSET_PTR_DCLICK, OFFSET_ROTATING, OFFSET_RX, OFFSET_RY, OFFSET_SHADER_TYPE, OFFSET_SHIFT_RATIO, OFFSET_SOURCE_TEXT, OFFSET_SX, OFFSET_SY, OFFSET_SZ, OFFSET_TIME, OFFSET_TOP, OFFSET_TYPE_GLCODE, OFFSET_TYPE_LENGTH, OFFSET_UX_ENABLED, OFFSET_VX, OFFSET_VY, OFFSET_VZ, OFFSET_WALKING, OFFSET_WIDTH, OFFSET_X, OFFSET_Y, OFFSET_ZOOMING;
 
 import Pointer from "./ptr.js";
 
@@ -712,35 +712,6 @@ export var GL = (function() {
       return this.setFloat32(OFFSET_VZ, arguments[0]);
     }
 
-    getVertShader() {
-      return this.getProgram().getVertShader();
-    }
-
-    setVertShader() {
-      var program, vShader;
-      program = this.getProgram();
-      if (!(vShader = program.getVertShader())) {
-        program.add(vShader = new Shader());
-      }
-      vShader.setSourceText(arguments[0]).upload().compile().attach().check();
-      return this;
-    }
-
-    getFragShader() {
-      return this.getProgram().getFragShader();
-    }
-
-    setFragShader() {
-      var fShader, program;
-      program = this.getProgram();
-      if (!(fShader = program.getFragShader())) {
-        program.add(fShader = new Shader());
-        fShader.change(Shader.prototype.FRAGMENT);
-      }
-      fShader.setSourceText(arguments[0]).upload().compile().attach().check();
-      return this;
-    }
-
   };
 
   GL.byteLength = 4 * 48;
@@ -976,14 +947,6 @@ export var GL = (function() {
     zVector: {
       get: GL.prototype.getZVector,
       set: GL.prototype.setZVector
-    },
-    shaderVertex: {
-      get: GL.prototype.getVertShader,
-      set: GL.prototype.setVertShader
-    },
-    shaderFragment: {
-      get: GL.prototype.getFragShader,
-      set: GL.prototype.setFragShader
     }
   });
 
@@ -1079,22 +1042,38 @@ export var Program = (function() {
       });
     }
 
-    setVertShader() {} //TODO --> parse if it is a source text for type
+    getFragShader() {
+      return this.getAllShaders().find(function(v) {
+        return v.isVertexShader() === false;
+      });
+    }
 
     getGLVertShader() {
       return this.getVertShader().getGLShader();
     }
 
-    getFragShader() {
-      return this.getAllShaders().find(function(v) {
-        return !v.isVertexShader(); //TODO is active??
-      });
-    }
-
-    setFragShader() {} //TODO --> parse if it is a source text for type
-
     getGLFragShader() {
       return this.getFragShader().getGLShader();
+    }
+
+    setVertShader() {
+      var vShader;
+      if (!(vShader = this.getVertShader())) {
+        this.add(vShader = new Shader());
+      }
+      vShader.setSourceText(arguments[0]).upload().compile().attach().check();
+      console.warn(Shader.fromSource(arguments[0]));
+      return this;
+    }
+
+    setFragShader() {
+      var fShader;
+      if (!(fShader = this.getFragShader())) {
+        this.add(fShader = new Shader());
+        fShader.change(Shader.prototype.FRAGMENT);
+      }
+      fShader.setSourceText(arguments[0]).upload().compile().attach().check();
+      return this;
     }
 
   };
@@ -1171,6 +1150,37 @@ export var Shader = (function() {
   class Shader extends Pointer {
     static Fragment() {
       return new this().change(this.FRAGMENT);
+    }
+
+    static fromSource() {
+      var byteLength, byteSource, charLength, i, key, len, parsedKeys, ptr, shaderType, textSource;
+      textSource = arguments[0];
+      shaderType = null;
+      parsedKeys = [];
+      if (/gl_Frag/.test(textSource)) {
+        shaderType = Shader.prototype.FRAGMENT;
+      } else {
+        parsedKeys.push(...Uniform.parse(textSource));
+        parsedKeys.push(...Attribute.parse(textSource));
+        shaderType = Shader.prototype.VERTEX;
+      }
+      byteSource = new TextEncoder().encode(textSource);
+      charLength = byteSource.byteLength;
+      byteLength = charLength + OFFSET_SOURCE_TEXT;
+      ptr = Shader.malloc(byteLength);
+      ptr.setCharLength(charLength);
+      ptr.setByteSource(byteSource);
+      ptr.setShaderType(shaderType);
+      for (i = 0, len = parsedKeys.length; i < len; i++) {
+        key = parsedKeys[i];
+        key.setParentPtri(ptr);
+      }
+      console.log(parsedKeys);
+      return ptr;
+    }
+
+    toString() {
+      return this.getSourceText();
     }
 
     create() {
@@ -1291,12 +1301,13 @@ export var Shader = (function() {
       return this.setString(OFFSET_SOURCE_TEXT, arguments[0], OFFSET_CHAR_LENGTH);
     }
 
-    getIsBuffered() {
-      return this.getUint8(OFFSET_IS_BUFFERED);
+    getByteSource() {
+      return this.getTArray(OFFSET_SOURCE_TEXT, Uint8Array);
     }
 
-    setIsBuffered() {
-      return this.setUint8(OFFSET_IS_BUFFERED, arguments[0]);
+    setByteSource() {
+      this.setTArray(OFFSET_SOURCE_TEXT, arguments[0], Uint8Array);
+      return this;
     }
 
     getIsUploaded() {
@@ -1388,13 +1399,341 @@ export var Shader = (function() {
     isAttached: {
       get: Shader.prototype.getIsAttached,
       set: Shader.prototype.setIsAttached
-    },
-    isBuffered: {
-      get: Shader.prototype.getIsBuffered,
-      set: Shader.prototype.setIsBuffered
     }
   });
 
   return Shader;
 
 }).call(this);
+
+OFFSET_TYPE_GLCODE = 4 * 2;
+
+OFFSET_TYPE_LENGTH = 4 * 2 + 2;
+
+OFFSET_NAME_LENGTH = 4 * 3 + 2;
+
+OFFSET_NAME_TARRAY = 4 * 4;
+
+export var ShaderKey = (function() {
+  class ShaderKey extends Pointer {
+    getGL() {}
+
+    getGLProgram() {}
+
+    getNameString() {
+      return this.getString(OFFSET_NAME_TARRAY, OFFSET_NAME_LENGTH);
+    }
+
+    setNameString() {
+      return this.setString(OFFSET_NAME_TARRAY, arguments[0], OFFSET_NAME_LENGTH);
+    }
+
+    getNameLength() {
+      return this.getUint16(OFFSET_NAME_LENGTH);
+    }
+
+    setNameLength() {
+      return this.setUint16(OFFSET_NAME_LENGTH, arguments[0]);
+    }
+
+    keyTypeGLCode() {
+      return this.keyUint16(OFFSET_TYPE_GLCODE);
+    }
+
+    getTypeGLCode() {
+      return this.getUint16(OFFSET_TYPE_GLCODE);
+    }
+
+    setTypeGLCode() {
+      return this.setUint16(OFFSET_TYPE_GLCODE, arguments[0]);
+    }
+
+    getTypeLength() {
+      return this.getUint8(OFFSET_TYPE_LENGTH);
+    }
+
+    setTypeLength() {
+      return this.setUint8(OFFSET_TYPE_LENGTH, arguments[0]);
+    }
+
+  };
+
+  ShaderKey.byteLength = 4 * 8;
+
+  ShaderKey.typedArray = Uint8Array;
+
+  return ShaderKey;
+
+}).call(this);
+
+Object.defineProperties(ShaderKey.registerClass().prototype, {
+  gl: {
+    get: ShaderKey.prototype.getGL
+  },
+  glProgram: {
+    get: ShaderKey.prototype.getGLProgram
+  },
+  name: {
+    get: ShaderKey.prototype.getNameString,
+    set: ShaderKey.prototype.setNameString
+  },
+  typeLength: {
+    get: ShaderKey.prototype.getTypeLength,
+    set: ShaderKey.prototype.setTypeLength
+  },
+  type: {
+    get: ShaderKey.prototype.keyTypeGLCode,
+    set: ShaderKey.prototype.setTypeGLCode
+  }
+});
+
+OFFSET_LOCATION_AT = 4 * 0;
+
+OFFSET_ISNORMALIZE = 4 * 0 + 1;
+
+OFFSET_ATTR_STRIDE = 4 * 0 + 2;
+
+OFFSET_ATTR_OFFSET = 4 * 0 + 3;
+
+export var Attribute = (function() {
+  var float, mat4, vec3, vec4;
+
+  class Attribute extends ShaderKey {
+    static parse() {
+      var i, key, keys, len, offset, source;
+      [source] = arguments;
+      [keys, offset] = [[], 0];
+      source.split(/attribute/g).slice(1).map((line) => {
+        var key, name, type;
+        [, type, name] = line.split(/\;/g)[0].split(/\s+/g);
+        keys.push(key = new Attribute[type]);
+        key.setNameString(name);
+        key.setTypeLength(key.constructor.itemLength);
+        key.setTypeGLCode(WebGL2RenderingContext.FLOAT);
+        key.setNormalize(false);
+        key.setOffset(offset);
+        return offset += key.getTypeLength() * 4;
+      });
+      for (i = 0, len = keys.length; i < len; i++) {
+        key = keys[i];
+        key.setStride(offset);
+      }
+      return keys;
+    }
+
+    getGLLocation() {
+      return this.getGL().getAttribLocation(this.getGLProgram(), this.getNameString());
+    }
+
+    getLocation() {
+      return this.getUint8(OFFSET_LOCATION_AT);
+    }
+
+    setLocation() {
+      return this.setUint8(OFFSET_LOCATION_AT, arguments[0]);
+    }
+
+    getNormalize() {
+      return this.getUint8(OFFSET_ISNORMALIZE);
+    }
+
+    setNormalize() {
+      return this.setUint8(OFFSET_ISNORMALIZE, arguments[0]);
+    }
+
+    getStride() {
+      return this.getUint8(OFFSET_ATTR_STRIDE);
+    }
+
+    setStride() {
+      return this.setUint8(OFFSET_ATTR_STRIDE, arguments[0]);
+    }
+
+    getOffset() {
+      return this.getUint8(OFFSET_ATTR_OFFSET);
+    }
+
+    setOffset() {
+      return this.setUint8(OFFSET_ATTR_OFFSET, arguments[0]);
+    }
+
+  };
+
+  Object.defineProperties(Attribute.registerClass(), {
+    vec3: {
+      value: vec3 = (function() {
+        class vec3 extends Attribute {};
+
+        vec3.itemLength = 3;
+
+        vec3.protoClass = 0;
+
+        vec3.registerClass();
+
+        return vec3;
+
+      }).call(this)
+    },
+    vec4: {
+      value: vec4 = (function() {
+        class vec4 extends Attribute {};
+
+        vec4.itemLength = 4;
+
+        vec4.protoClass = 0;
+
+        vec4.registerClass();
+
+        return vec4;
+
+      }).call(this)
+    },
+    mat4: {
+      value: mat4 = (function() {
+        class mat4 extends Attribute {};
+
+        mat4.itemLength = 16;
+
+        mat4.protoClass = 0;
+
+        mat4.registerClass();
+
+        return mat4;
+
+      }).call(this)
+    },
+    float: {
+      value: float = (function() {
+        class float extends Attribute {};
+
+        float.itemLength = 1;
+
+        float.protoClass = 0;
+
+        float.registerClass();
+
+        return float;
+
+      }).call(this)
+    }
+  });
+
+  return Attribute;
+
+}).call(this);
+
+Object.defineProperties(Attribute.prototype, {
+  glLocation: {
+    get: Attribute.prototype.getGLLocation
+  },
+  location: {
+    get: Attribute.prototype.getLocation,
+    set: Attribute.prototype.setLocation
+  },
+  stride: {
+    get: Attribute.prototype.getStride,
+    set: Attribute.prototype.setStride
+  },
+  offset: {
+    get: Attribute.prototype.getOffset,
+    set: Attribute.prototype.setOffset
+  },
+  normalize: {
+    get: Attribute.prototype.getNormalize,
+    set: Attribute.prototype.setNormalize
+  }
+});
+
+export var Uniform = (function() {
+  var float, mat4, vec3, vec4;
+
+  class Uniform extends ShaderKey {
+    static parse() {
+      var keys, source;
+      [source] = arguments;
+      [keys] = [[]];
+      source.split(/uniform/g).slice(1).map((line) => {
+        var key, name, type;
+        [, type, name] = line.split(/\;/g)[0].split(/\s+/g);
+        keys.push(key = new Uniform[type]);
+        key.setNameString(name);
+        key.setTypeLength(key.constructor.itemLength);
+        return key.setTypeGLCode(WebGL2RenderingContext.FLOAT);
+      });
+      return keys;
+    }
+
+    getGLLocation() {
+      return this.getGL().getUniformLocation(this.getGLProgram(), this.getNameString());
+    }
+
+  };
+
+  Object.defineProperties(Uniform.registerClass(), {
+    vec3: {
+      value: vec3 = (function() {
+        class vec3 extends Uniform {};
+
+        vec3.itemLength = 3;
+
+        vec3.protoClass = 0;
+
+        vec3.registerClass();
+
+        return vec3;
+
+      }).call(this)
+    },
+    vec4: {
+      value: vec4 = (function() {
+        class vec4 extends Uniform {};
+
+        vec4.itemLength = 4;
+
+        vec4.protoClass = 0;
+
+        vec4.registerClass();
+
+        return vec4;
+
+      }).call(this)
+    },
+    mat4: {
+      value: mat4 = (function() {
+        class mat4 extends Uniform {};
+
+        mat4.itemLength = 16;
+
+        mat4.protoClass = 0;
+
+        mat4.registerClass();
+
+        return mat4;
+
+      }).call(this)
+    },
+    float: {
+      value: float = (function() {
+        class float extends Uniform {};
+
+        float.itemLength = 1;
+
+        float.protoClass = 0;
+
+        float.registerClass();
+
+        return float;
+
+      }).call(this)
+    }
+  });
+
+  return Uniform;
+
+}).call(this);
+
+Object.defineProperties(Uniform.prototype, {
+  glLocation: {
+    get: Uniform.prototype.getGLLocation
+  }
+});
