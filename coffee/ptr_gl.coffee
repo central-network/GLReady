@@ -497,6 +497,9 @@ export class Program extends Pointer
             gl.linkProgram @getGLProgram()
             @setLinkedStatus @getGLLinkStatus()
 
+        use             : ->
+            #TODO DODODODOODODO
+
         create          : -> @getParentPtrO().createProgram()
 
         delete          : -> @getParentPtrO().deleteProgram @getGLProgram()
@@ -594,8 +597,6 @@ OFFSET_IS_COMPILED      = 4 * 0 + 3
 
 OFFSET_IS_ATTACHED      = 4 * 1
 
-OFFSET_IS_BUFFERED      = 4 * 1 + 1
-
 OFFSET_CHAR_LENGTH      = 4 * 1 + 2
 
 OFFSET_SOURCE_TEXT      = 4 * 2
@@ -633,8 +634,6 @@ export class Shader extends Pointer
 
         for key in parsedKeys
             key.setParentPtri ptr
-
-        console.log parsedKeys
 
         ptr
         
@@ -704,6 +703,8 @@ export class Shader extends Pointer
     setGLShader         : -> @setLinkedNode( arguments[0] )
 
     getGLSource         : -> @getGL().getShaderSource @getGLShader()
+    
+    setGLSource         : -> @getGL().shaderSource @getGLShader(), @getSourceText() ; @
 
     isVertexShader      : -> @getShaderType() is @VERTEX
 
@@ -737,15 +738,23 @@ export class Shader extends Pointer
     
     setIsAttached       : -> @setUint8 OFFSET_IS_ATTACHED   , arguments[0]
 
+    getAttributes       : -> @findAllChilds().filter (i) -> i instanceof Attribute
+
+    getUniforms         : -> @findAllChilds().filter (i) -> i instanceof Uniform
+
     Object.defineProperties Shader.registerClass()::,
 
         gl              : get : Shader::getGL
 
         glProgram       : get : Shader::getGLProgram
 
-        glSource        : get : Shader::getGLSource
+        glSource        : get : Shader::getGLSource     , set : Shader::setGLSource
 
         glShader        : get : Shader::getGLShader     , set : Shader::setGLShader
+
+        uniforms        : get : Shader::getUniforms
+
+        attributes      : get : Shader::getAttributes        
 
         type            : get : Shader::keyShaderType   , set : Shader::setShaderType
 
@@ -759,10 +768,11 @@ export class Shader extends Pointer
 
         isAttached      : get : Shader::getIsAttached   , set : Shader::setIsAttached
 
-
 OFFSET_TYPE_GLCODE      = 4 * 2
 
 OFFSET_TYPE_LENGTH      = 4 * 2 + 2
+
+OFFSET_KEY_LOCATED      = 4 * 2 + 3
 
 OFFSET_NAME_LENGTH      = 4 * 3 + 2
 
@@ -802,6 +812,10 @@ export class ShaderKey extends Pointer
 
     setTypeLength       : -> @setUint8  OFFSET_TYPE_LENGTH  , arguments[0]
 
+    getKeyLocated       : -> @getUint8  OFFSET_KEY_LOCATED
+
+    setKeyLocated       : -> @setUint8  OFFSET_KEY_LOCATED  , arguments[0] ; arguments[0]
+
 Object.defineProperties ShaderKey.registerClass()::,
 
     gl                  : get : ShaderKey::getGL
@@ -827,7 +841,6 @@ OFFSET_ISNORMALIZE      = 4 * 0 + 1
 OFFSET_ATTR_STRIDE      = 4 * 0 + 2
 
 OFFSET_ATTR_OFFSET      = 4 * 0 + 3
-
 
 export class Attribute extends ShaderKey
 
@@ -875,9 +888,17 @@ export class Attribute extends ShaderKey
 
         keys
 
-    getGLLocation       : -> @getGL().getAttribLocation @getGLProgram(), @getNameString()
+    getGLLocation       : ->
+        return @getLocation() if @getKeyLocated()
+        return unless gl = @getGL()
+        return unless program = @getGLProgram()
+        return unless location = gl.getAttribLocation program, @getNameString()
+        return @setKeyLocated @setLocation location
     
-    getLocation         : -> @getUint8 OFFSET_LOCATION_AT
+    getLocation         : ->
+        unless @getKeyLocated()
+            return @getGLLocation()
+        return @getUint8 OFFSET_LOCATION_AT
 
     setLocation         : -> @setUint8 OFFSET_LOCATION_AT   , arguments[0]
 
@@ -904,8 +925,6 @@ Object.defineProperties Attribute::,
     offset              : get : Attribute::getOffset        , set : Attribute::setOffset
 
     normalize           : get : Attribute::getNormalize     , set : Attribute::setNormalize
-
-
 
 export class Uniform extends ShaderKey
 
@@ -945,8 +964,15 @@ export class Uniform extends ShaderKey
 
         keys
 
-    getGLLocation       : -> @getGL().getUniformLocation @getGLProgram(), @getNameString()
+    getGLLocation       : ->
+        return @getLinkedNode() if @getKeyLocated()
+        return unless gl = @getGL()
+        return unless program = @getGLProgram()
+        return unless location = gl.getUniformLocation program, @getNameString()
+        return @setKeyLocated @setLinkedNode location
 
 Object.defineProperties Uniform::,
 
     glLocation          : get : Uniform::getGLLocation
+
+    location            : get : Uniform::getGLLocation

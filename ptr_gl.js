@@ -1,4 +1,4 @@
-var OFFSET_ASPECT_RATIO, OFFSET_ATTR_OFFSET, OFFSET_ATTR_STRIDE, OFFSET_BIND_TARGET, OFFSET_BLEND_ACTIVE, OFFSET_BLEND_EQUATE, OFFSET_BLEND_FUNC, OFFSET_BLEND_INARG, OFFSET_BLEND_OUTARG, OFFSET_CHAR_LENGTH, OFFSET_CLEAR_COLOR, OFFSET_CLEAR_DEPTH, OFFSET_CLEAR_MASK, OFFSET_CULL_ENABLED, OFFSET_CULL_FACE, OFFSET_DEPTH_ACTIVE, OFFSET_DEPTH_FUNC, OFFSET_DEPTH_TEST, OFFSET_DRAGGING, OFFSET_DRAW_ACTIVE, OFFSET_DX, OFFSET_DY, OFFSET_FRONTFACE, OFFSET_HEIGHT, OFFSET_INUSE_STATUS, OFFSET_ISNORMALIZE, OFFSET_IS_ATTACHED, OFFSET_IS_BUFFERED, OFFSET_IS_COMPILED, OFFSET_IS_UPLOADED, OFFSET_JUMPING, OFFSET_KEY_ALT, OFFSET_KEY_CTRL, OFFSET_KEY_META, OFFSET_KEY_SHIFT, OFFSET_LEFT, OFFSET_LINKED_STATUS, OFFSET_LOCATION_AT, OFFSET_LOOKING, OFFSET_MOVE_BACK, OFFSET_MOVE_DOWN, OFFSET_MOVE_FWD, OFFSET_MOVE_LEFT, OFFSET_MOVE_RIGHT, OFFSET_MOVE_UP, OFFSET_NAME_LENGTH, OFFSET_NAME_TARRAY, OFFSET_PIXEL_RATIO, OFFSET_PTR_BUTTON, OFFSET_PTR_CLICK, OFFSET_PTR_DCLICK, OFFSET_ROTATING, OFFSET_RX, OFFSET_RY, OFFSET_SHADER_TYPE, OFFSET_SHIFT_RATIO, OFFSET_SOURCE_TEXT, OFFSET_SX, OFFSET_SY, OFFSET_SZ, OFFSET_TIME, OFFSET_TOP, OFFSET_TYPE_GLCODE, OFFSET_TYPE_LENGTH, OFFSET_UX_ENABLED, OFFSET_VX, OFFSET_VY, OFFSET_VZ, OFFSET_WALKING, OFFSET_WIDTH, OFFSET_X, OFFSET_Y, OFFSET_ZOOMING;
+var OFFSET_ASPECT_RATIO, OFFSET_ATTR_OFFSET, OFFSET_ATTR_STRIDE, OFFSET_BIND_TARGET, OFFSET_BLEND_ACTIVE, OFFSET_BLEND_EQUATE, OFFSET_BLEND_FUNC, OFFSET_BLEND_INARG, OFFSET_BLEND_OUTARG, OFFSET_CHAR_LENGTH, OFFSET_CLEAR_COLOR, OFFSET_CLEAR_DEPTH, OFFSET_CLEAR_MASK, OFFSET_CULL_ENABLED, OFFSET_CULL_FACE, OFFSET_DEPTH_ACTIVE, OFFSET_DEPTH_FUNC, OFFSET_DEPTH_TEST, OFFSET_DRAGGING, OFFSET_DRAW_ACTIVE, OFFSET_DX, OFFSET_DY, OFFSET_FRONTFACE, OFFSET_HEIGHT, OFFSET_INUSE_STATUS, OFFSET_ISNORMALIZE, OFFSET_IS_ATTACHED, OFFSET_IS_COMPILED, OFFSET_IS_UPLOADED, OFFSET_JUMPING, OFFSET_KEY_ALT, OFFSET_KEY_CTRL, OFFSET_KEY_LOCATED, OFFSET_KEY_META, OFFSET_KEY_SHIFT, OFFSET_LEFT, OFFSET_LINKED_STATUS, OFFSET_LOCATION_AT, OFFSET_LOOKING, OFFSET_MOVE_BACK, OFFSET_MOVE_DOWN, OFFSET_MOVE_FWD, OFFSET_MOVE_LEFT, OFFSET_MOVE_RIGHT, OFFSET_MOVE_UP, OFFSET_NAME_LENGTH, OFFSET_NAME_TARRAY, OFFSET_PIXEL_RATIO, OFFSET_PTR_BUTTON, OFFSET_PTR_CLICK, OFFSET_PTR_DCLICK, OFFSET_ROTATING, OFFSET_RX, OFFSET_RY, OFFSET_SHADER_TYPE, OFFSET_SHIFT_RATIO, OFFSET_SOURCE_TEXT, OFFSET_SX, OFFSET_SY, OFFSET_SZ, OFFSET_TIME, OFFSET_TOP, OFFSET_TYPE_GLCODE, OFFSET_TYPE_LENGTH, OFFSET_UX_ENABLED, OFFSET_VX, OFFSET_VY, OFFSET_VZ, OFFSET_WALKING, OFFSET_WIDTH, OFFSET_X, OFFSET_Y, OFFSET_ZOOMING;
 
 import Pointer from "./ptr.js";
 
@@ -974,6 +974,9 @@ export var Program = (function() {
       return this.setLinkedStatus(this.getGLLinkStatus());
     }
 
+    use() {}
+
+    //TODO DODODODOODODO
     create() {
       return this.getParentPtrO().createProgram();
     }
@@ -1139,8 +1142,6 @@ OFFSET_IS_COMPILED = 4 * 0 + 3;
 
 OFFSET_IS_ATTACHED = 4 * 1;
 
-OFFSET_IS_BUFFERED = 4 * 1 + 1;
-
 OFFSET_CHAR_LENGTH = 4 * 1 + 2;
 
 OFFSET_SOURCE_TEXT = 4 * 2;
@@ -1152,7 +1153,7 @@ export var Shader = (function() {
     }
 
     static fromSource() {
-      var byteLength, byteSource, charLength, i, key, len, parsedKeys, ptr, shaderType, textSource;
+      var byteLength, byteSource, charLength, j, key, len, parsedKeys, ptr, shaderType, textSource;
       textSource = arguments[0];
       shaderType = null;
       parsedKeys = [];
@@ -1170,11 +1171,10 @@ export var Shader = (function() {
       ptr.setCharLength(charLength);
       ptr.setByteSource(byteSource);
       ptr.setShaderType(shaderType);
-      for (i = 0, len = parsedKeys.length; i < len; i++) {
-        key = parsedKeys[i];
+      for (j = 0, len = parsedKeys.length; j < len; j++) {
+        key = parsedKeys[j];
         key.setParentPtri(ptr);
       }
-      console.log(parsedKeys);
       return ptr;
     }
 
@@ -1268,6 +1268,11 @@ export var Shader = (function() {
       return this.getGL().getShaderSource(this.getGLShader());
     }
 
+    setGLSource() {
+      this.getGL().shaderSource(this.getGLShader(), this.getSourceText());
+      return this;
+    }
+
     isVertexShader() {
       return this.getShaderType() === this.VERTEX;
     }
@@ -1333,6 +1338,18 @@ export var Shader = (function() {
       return this.setUint8(OFFSET_IS_ATTACHED, arguments[0]);
     }
 
+    getAttributes() {
+      return this.findAllChilds().filter(function(i) {
+        return i instanceof Attribute;
+      });
+    }
+
+    getUniforms() {
+      return this.findAllChilds().filter(function(i) {
+        return i instanceof Uniform;
+      });
+    }
+
   };
 
   Shader.byteLength = 256 * 256;
@@ -1369,11 +1386,18 @@ export var Shader = (function() {
       get: Shader.prototype.getGLProgram
     },
     glSource: {
-      get: Shader.prototype.getGLSource
+      get: Shader.prototype.getGLSource,
+      set: Shader.prototype.setGLSource
     },
     glShader: {
       get: Shader.prototype.getGLShader,
       set: Shader.prototype.setGLShader
+    },
+    uniforms: {
+      get: Shader.prototype.getUniforms
+    },
+    attributes: {
+      get: Shader.prototype.getAttributes
     },
     type: {
       get: Shader.prototype.keyShaderType,
@@ -1408,6 +1432,8 @@ export var Shader = (function() {
 OFFSET_TYPE_GLCODE = 4 * 2;
 
 OFFSET_TYPE_LENGTH = 4 * 2 + 2;
+
+OFFSET_KEY_LOCATED = 4 * 2 + 3;
 
 OFFSET_NAME_LENGTH = 4 * 3 + 2;
 
@@ -1471,6 +1497,15 @@ export var ShaderKey = (function() {
       return this.setUint8(OFFSET_TYPE_LENGTH, arguments[0]);
     }
 
+    getKeyLocated() {
+      return this.getUint8(OFFSET_KEY_LOCATED);
+    }
+
+    setKeyLocated() {
+      this.setUint8(OFFSET_KEY_LOCATED, arguments[0]);
+      return arguments[0];
+    }
+
   };
 
   ShaderKey.byteLength = 4 * 8;
@@ -1524,7 +1559,7 @@ export var Attribute = (function() {
 
   class Attribute extends ShaderKey {
     static parse() {
-      var i, key, keys, len, offset, source;
+      var j, key, keys, len, offset, source;
       [source] = arguments;
       [keys, offset] = [[], 0];
       source.split(/attribute/g).slice(1).map((line) => {
@@ -1538,18 +1573,34 @@ export var Attribute = (function() {
         key.setOffset(offset);
         return offset += key.getTypeLength() * 4;
       });
-      for (i = 0, len = keys.length; i < len; i++) {
-        key = keys[i];
+      for (j = 0, len = keys.length; j < len; j++) {
+        key = keys[j];
         key.setStride(offset);
       }
       return keys;
     }
 
     getGLLocation() {
-      return this.getGL().getAttribLocation(this.getGLProgram(), this.getNameString());
+      var gl, location, program;
+      if (this.getKeyLocated()) {
+        return this.getLocation();
+      }
+      if (!(gl = this.getGL())) {
+        return;
+      }
+      if (!(program = this.getGLProgram())) {
+        return;
+      }
+      if (!(location = gl.getAttribLocation(program, this.getNameString()))) {
+        return;
+      }
+      return this.setKeyLocated(this.setLocation(location));
     }
 
     getLocation() {
+      if (!this.getKeyLocated()) {
+        return this.getGLLocation();
+      }
       return this.getUint8(OFFSET_LOCATION_AT);
     }
 
@@ -1688,7 +1739,20 @@ export var Uniform = (function() {
     }
 
     getGLLocation() {
-      return this.getGL().getUniformLocation(this.getGLProgram(), this.getNameString());
+      var gl, location, program;
+      if (this.getKeyLocated()) {
+        return this.getLinkedNode();
+      }
+      if (!(gl = this.getGL())) {
+        return;
+      }
+      if (!(program = this.getGLProgram())) {
+        return;
+      }
+      if (!(location = gl.getUniformLocation(program, this.getNameString()))) {
+        return;
+      }
+      return this.setKeyLocated(this.setLinkedNode(location));
     }
 
   };
@@ -1758,6 +1822,9 @@ export var Uniform = (function() {
 
 Object.defineProperties(Uniform.prototype, {
   glLocation: {
+    get: Uniform.prototype.getGLLocation
+  },
+  location: {
     get: Uniform.prototype.getGLLocation
   }
 });
