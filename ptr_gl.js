@@ -1,4 +1,4 @@
-var OFFSET_ASPECT_RATIO, OFFSET_ATTACH_STATUS, OFFSET_ATTR_OFFSET, OFFSET_ATTR_STRIDE, OFFSET_BIND_TARGET, OFFSET_BLEND_ACTIVE, OFFSET_BLEND_EQUATE, OFFSET_BLEND_FUNC, OFFSET_BLEND_INARG, OFFSET_BLEND_OUTARG, OFFSET_CHAR_LENGTH, OFFSET_CLEAR_COLOR, OFFSET_CLEAR_DEPTH, OFFSET_CLEAR_MASK, OFFSET_CULL_ENABLED, OFFSET_CULL_FACE, OFFSET_DEPTH_ACTIVE, OFFSET_DEPTH_FUNC, OFFSET_DEPTH_TEST, OFFSET_DRAGGING, OFFSET_DRAW_ACTIVE, OFFSET_DX, OFFSET_DY, OFFSET_FRONTFACE, OFFSET_HEIGHT, OFFSET_INUSE_STATUS, OFFSET_ISNORMALIZE, OFFSET_IS_ATTACHED, OFFSET_IS_COMPILED, OFFSET_IS_UPLOADED, OFFSET_JUMPING, OFFSET_KEY_ALT, OFFSET_KEY_CTRL, OFFSET_KEY_LOCATED, OFFSET_KEY_META, OFFSET_KEY_SHIFT, OFFSET_LEFT, OFFSET_LINKED_STATUS, OFFSET_LOCATION_AT, OFFSET_LOOKING, OFFSET_MOVE_BACK, OFFSET_MOVE_DOWN, OFFSET_MOVE_FWD, OFFSET_MOVE_LEFT, OFFSET_MOVE_RIGHT, OFFSET_MOVE_UP, OFFSET_NAME_LENGTH, OFFSET_NAME_TARRAY, OFFSET_PIXEL_RATIO, OFFSET_PTR_BUTTON, OFFSET_PTR_CLICK, OFFSET_PTR_DCLICK, OFFSET_ROTATING, OFFSET_RX, OFFSET_RY, OFFSET_SHADER_TYPE, OFFSET_SHIFT_RATIO, OFFSET_SOURCE_TEXT, OFFSET_SX, OFFSET_SY, OFFSET_SZ, OFFSET_TIME, OFFSET_TOP, OFFSET_TYPE_GLCODE, OFFSET_TYPE_LENGTH, OFFSET_UX_ENABLED, OFFSET_VX, OFFSET_VY, OFFSET_VZ, OFFSET_WALKING, OFFSET_WIDTH, OFFSET_X, OFFSET_Y, OFFSET_ZOOMING;
+var OFFSET_ASPECT_RATIO, OFFSET_ATTACH_STATUS, OFFSET_ATTR_OFFSET, OFFSET_ATTR_STRIDE, OFFSET_BINDING_STATUS, OFFSET_BINDING_TARGET, OFFSET_BIND_TARGET, OFFSET_BLEND_ACTIVE, OFFSET_BLEND_EQUATE, OFFSET_BLEND_FUNC, OFFSET_BLEND_INARG, OFFSET_BLEND_OUTARG, OFFSET_CHAR_LENGTH, OFFSET_CLEAR_COLOR, OFFSET_CLEAR_DEPTH, OFFSET_CLEAR_MASK, OFFSET_CULL_ENABLED, OFFSET_CULL_FACE, OFFSET_DEPTH_ACTIVE, OFFSET_DEPTH_FUNC, OFFSET_DEPTH_TEST, OFFSET_DRAGGING, OFFSET_DRAW_ACTIVE, OFFSET_DX, OFFSET_DY, OFFSET_FRONTFACE, OFFSET_HEIGHT, OFFSET_INUSE_STATUS, OFFSET_ISNORMALIZE, OFFSET_IS_ATTACHED, OFFSET_IS_COMPILED, OFFSET_IS_UPLOADED, OFFSET_JUMPING, OFFSET_KEY_ALT, OFFSET_KEY_CTRL, OFFSET_KEY_LOCATED, OFFSET_KEY_META, OFFSET_KEY_SHIFT, OFFSET_LEFT, OFFSET_LINKED_STATUS, OFFSET_LOCATION_AT, OFFSET_LOOKING, OFFSET_MOVE_BACK, OFFSET_MOVE_DOWN, OFFSET_MOVE_FWD, OFFSET_MOVE_LEFT, OFFSET_MOVE_RIGHT, OFFSET_MOVE_UP, OFFSET_NAME_LENGTH, OFFSET_NAME_TARRAY, OFFSET_PIXEL_RATIO, OFFSET_PTR_BUTTON, OFFSET_PTR_CLICK, OFFSET_PTR_DCLICK, OFFSET_ROTATING, OFFSET_RX, OFFSET_RY, OFFSET_SHADER_TYPE, OFFSET_SHIFT_RATIO, OFFSET_SOURCE_TEXT, OFFSET_SX, OFFSET_SY, OFFSET_SZ, OFFSET_TIME, OFFSET_TOP, OFFSET_TYPE_GLCODE, OFFSET_TYPE_LENGTH, OFFSET_UX_ENABLED, OFFSET_VX, OFFSET_VY, OFFSET_VZ, OFFSET_WALKING, OFFSET_WIDTH, OFFSET_X, OFFSET_Y, OFFSET_ZOOMING;
 
 import Pointer from "./ptr.js";
 
@@ -175,16 +175,42 @@ export var GL = (function() {
       });
     }
 
+    getAllBuffers() {
+      return this.findAllChilds().filter(function(p) {
+        return p instanceof Buffer;
+      });
+    }
+
+    getAllShaders() {
+      return this.getAllPrograms().flatMap(function(p) {
+        return p.getAllShaders();
+      });
+    }
+
     getProgram() {
       return this.getAllPrograms().find(function(p) {
         return p.getInUseStatus();
       });
     }
 
-    getAllShaders() {
-      return this.getAllPrograms().map(function(p) {
-        return p.getAllShaders();
-      }).flat();
+    getVertShader() {
+      return this.getProgram().getVertShader();
+    }
+
+    getFragShader() {
+      return this.getProgram().getFragShader();
+    }
+
+    getAttributes() {
+      return this.getProgram().getAttributes();
+    }
+
+    getUniforms() {
+      return this.getProgram().getUniforms();
+    }
+
+    getAllVariables() {
+      return this.getProgram().getAllVariables();
     }
 
     getArrayBuffer() {
@@ -733,9 +759,30 @@ export var GL = (function() {
     program: {
       get: GL.prototype.getProgram
     },
-    //allPrograms     : get : GL::getAllPrograms
-
-    //allShaders      : get : GL::getAllShaders
+    programVertex: {
+      get: GL.prototype.getVertShader
+    },
+    programFragment: {
+      get: GL.prototype.getFragShader
+    },
+    programAttribs: {
+      get: GL.prototype.getAttributes
+    },
+    programUniforms: {
+      get: GL.prototype.getUniforms
+    },
+    allBuffers: {
+      get: GL.prototype.getAllBuffers
+    },
+    allShaders: {
+      get: GL.prototype.getAllShaders
+    },
+    allPrograms: {
+      get: GL.prototype.getAllPrograms
+    },
+    allVariables: {
+      get: GL.prototype.getAllVariables
+    },
     nodeBuffer: {
       get: GL.prototype.getArrayBuffer
     },
@@ -1092,6 +1139,18 @@ export var Program = (function() {
       return this.getFragShader().getGLShader();
     }
 
+    getAttributes() {
+      return this.getVertShader().getAttributes();
+    }
+
+    getUniforms() {
+      return this.getVertShader().getUniforms();
+    }
+
+    getAllVariables() {
+      return this.getVertShader().getAllVariables();
+    }
+
     setVertShader() {
       var vShader;
       if (!(vShader = this.getVertShader())) {
@@ -1182,6 +1241,15 @@ Object.defineProperties(Program.registerClass().prototype, {
   fragmentShader: {
     get: Program.prototype.getFragShader,
     set: Program.prototype.setFragShader
+  },
+  attributes: {
+    get: Program.prototype.getAttributes
+  },
+  uniforms: {
+    get: Program.prototype.getUniforms
+  },
+  variables: {
+    get: Program.prototype.getAllVariables
   }
 });
 
@@ -1199,22 +1267,15 @@ OFFSET_SOURCE_TEXT = 4 * 2;
 
 export var Shader = (function() {
   class Shader extends Pointer {
-    static Fragment() {
-      return new this().change(this.FRAGMENT);
+    static parse() {
+      return [...Uniform.parse(arguments[0]), ...Attribute.parse(arguments[0])];
     }
 
     static fromSource() {
       var byteLength, byteSource, charLength, j, key, len, parsedKeys, ptr, shaderType, textSource;
       textSource = arguments[0];
-      shaderType = null;
-      parsedKeys = [];
-      if (/gl_Frag/.test(textSource)) {
-        shaderType = Shader.prototype.FRAGMENT;
-      } else {
-        parsedKeys.push(...Uniform.parse(textSource));
-        parsedKeys.push(...Attribute.parse(textSource));
-        shaderType = Shader.prototype.VERTEX;
-      }
+      parsedKeys = this.parse(textSource);
+      shaderType = /gl_Frag/.test(textSource) ? Shader.prototype.FRAGMENT : Shader.prototype.VERTEX;
       byteSource = new TextEncoder().encode(textSource);
       charLength = byteSource.byteLength;
       byteLength = charLength + OFFSET_SOURCE_TEXT;
@@ -1280,6 +1341,20 @@ export var Shader = (function() {
       return this;
     }
 
+    parse() {
+      var j, key, len, ref;
+      if (!this.isVertexShader()) {
+        return this;
+      }
+      this.getAllVariables().forEach(Pointer.removePointer);
+      ref = Shader.parse(this.getSourceText());
+      for (j = 0, len = ref.length; j < len; j++) {
+        key = ref[j];
+        this.add(key);
+      }
+      return this;
+    }
+
     reload() {
       this.unload().load();
       return this;
@@ -1340,6 +1415,10 @@ export var Shader = (function() {
       return this.getParentPtrP().getGLProgram();
     }
 
+    isVertexShader() {
+      return this.getShaderType() === this.VERTEX;
+    }
+
     getGLShader() {
       return this.getLinkedNode() || this.setGLShader(this.create(this.VERTEX));
     }
@@ -1349,17 +1428,13 @@ export var Shader = (function() {
       return arguments[0];
     }
 
-    getGLSource() {
-      return this.getGL().getShaderSource(this.getGLShader());
-    }
-
     setGLSource() {
       this.getGL().shaderSource(this.getGLShader(), this.getSourceText());
       return this;
     }
 
-    isVertexShader() {
-      return this.getShaderType() === this.VERTEX;
+    getGLSource() {
+      return this.getGL().getShaderSource(this.getGLShader());
     }
 
     keyShaderType() {
@@ -1424,6 +1499,12 @@ export var Shader = (function() {
       return this.setUint8(OFFSET_IS_ATTACHED, arguments[0]);
     }
 
+    getAllVariables() {
+      return this.findAllChilds().filter(function(i) {
+        return i instanceof ShaderKey;
+      });
+    }
+
     getAttributes() {
       return this.findAllChilds().filter(function(i) {
         return i instanceof Attribute;
@@ -1442,27 +1523,27 @@ export var Shader = (function() {
 
   Shader.typedArray = Uint8Array;
 
-  Shader.prototype.SHADER_TYPE = WebGLRenderingContext.SHADER_TYPE;
+  Shader.prototype.SHADER_TYPE = WebGL2RenderingContext.SHADER_TYPE;
 
-  Shader.prototype.COMPILE_STATUS = WebGLRenderingContext.COMPILE_STATUS;
+  Shader.prototype.COMPILE_STATUS = WebGL2RenderingContext.COMPILE_STATUS;
 
-  Shader.prototype.DELETE_STATUS = WebGLRenderingContext.DELETE_STATUS;
+  Shader.prototype.DELETE_STATUS = WebGL2RenderingContext.DELETE_STATUS;
 
-  Shader.prototype.VERTEX = WebGLRenderingContext.VERTEX_SHADER;
+  Shader.prototype.VERTEX = WebGL2RenderingContext.VERTEX_SHADER;
 
-  Shader.prototype.FRAGMENT = WebGLRenderingContext.FRAGMENT_SHADER;
+  Shader.prototype.FRAGMENT = WebGL2RenderingContext.FRAGMENT_SHADER;
 
-  Shader.prototype.LOW_FLOAT = WebGLRenderingContext.LOW_FLOAT;
+  Shader.prototype.LOW_FLOAT = WebGL2RenderingContext.LOW_FLOAT;
 
-  Shader.prototype.LOW_INT = WebGLRenderingContext.LOW_INT;
+  Shader.prototype.LOW_INT = WebGL2RenderingContext.LOW_INT;
 
-  Shader.prototype.MEDIUM_FLOAT = WebGLRenderingContext.MEDIUM_FLOAT;
+  Shader.prototype.MEDIUM_FLOAT = WebGL2RenderingContext.MEDIUM_FLOAT;
 
-  Shader.prototype.HIGH_FLOAT = WebGLRenderingContext.HIGH_FLOAT;
+  Shader.prototype.HIGH_FLOAT = WebGL2RenderingContext.HIGH_FLOAT;
 
-  Shader.prototype.MEDIUM_INT = WebGLRenderingContext.MEDIUM_INT;
+  Shader.prototype.MEDIUM_INT = WebGL2RenderingContext.MEDIUM_INT;
 
-  Shader.prototype.HIGH_INT = WebGLRenderingContext.HIGH_INT;
+  Shader.prototype.HIGH_INT = WebGL2RenderingContext.HIGH_INT;
 
   Object.defineProperties(Shader.registerClass().prototype, {
     gl: {
@@ -1478,12 +1559,6 @@ export var Shader = (function() {
     glShader: {
       get: Shader.prototype.getGLShader,
       set: Shader.prototype.setGLShader
-    },
-    uniforms: {
-      get: Shader.prototype.getUniforms
-    },
-    attributes: {
-      get: Shader.prototype.getAttributes
     },
     type: {
       get: Shader.prototype.keyShaderType,
@@ -1508,6 +1583,15 @@ export var Shader = (function() {
     isAttached: {
       get: Shader.prototype.getIsAttached,
       set: Shader.prototype.setIsAttached
+    },
+    variables: {
+      get: Shader.prototype.getAllVariables
+    },
+    uniforms: {
+      get: Shader.prototype.getUniforms
+    },
+    attributes: {
+      get: Shader.prototype.getAttributes
     }
   });
 
@@ -1912,5 +1996,154 @@ Object.defineProperties(Uniform.prototype, {
   },
   location: {
     get: Uniform.prototype.getGLLocation
+  }
+});
+
+OFFSET_BINDING_TARGET = 4 * 0;
+
+OFFSET_BINDING_STATUS = 4 * 0 + 2;
+
+export var Buffer = (function() {
+  class Buffer extends Pointer {
+    create() {
+      var buffer;
+      if (this.getLinkedNode()) {
+        return this;
+      }
+      if (buffer = this.getGL().createBuffer()) {
+        this.setBindTarget(arguments[0] || this.ARRAY_BUFFER);
+      }
+      return buffer;
+    }
+
+    bind() {
+      if (this.getBindStatus()) {
+        return this;
+      }
+      this.getGL().bindBuffer(this.getBindTarget(), this.getGLBuffer());
+      this.setBindStatus(1);
+      return this;
+    }
+
+    load() {
+      this.create();
+      this.bind();
+      return this;
+    }
+
+    delete() {
+      this.setBindStatus(this.getGL().deleteBuffer(this.getLinkedNode()));
+      return this;
+    }
+
+    getGL() {
+      return this.getParentPtrO();
+    }
+
+    getGLBuffer() {
+      return this.getLinkedNode() || this.setGLBuffer(this.create());
+    }
+
+    setGLBuffer() {
+      return this.setLinkedNode(arguments[0]);
+    }
+
+    getGLIsBuffer() {
+      return this.getGL().isBuffer(this.getLinkedNode());
+    }
+
+    getGLParameter() {
+      return this.getGL().getParameter(arguments[0]);
+    }
+
+    getGLBindings() {
+      return {
+        ARRAY_BUFFER: this.getGLParameter(this.getGL().ARRAY_BUFFER_BINDING),
+        ELEMENT_BUFFER: this.getGLParameter(this.getGL().ELEMENT_ARRAY_BUFFER_BINDING)
+      };
+    }
+
+    isArrayBuffer() {
+      return this.ELEMENT_BUFFER !== this.getBindTarget();
+    }
+
+    keyBindTarget() {
+      return this.keyUint16(OFFSET_BINDING_TARGET);
+    }
+
+    getBindTarget() {
+      return this.getUint16(OFFSET_BINDING_TARGET);
+    }
+
+    setBindTarget() {
+      return this.setUint16(OFFSET_BINDING_TARGET, arguments[0]);
+    }
+
+    getBindStatus() {
+      return this.getUint16(OFFSET_BINDING_STATUS);
+    }
+
+    setBindStatus() {
+      return this.setUint16(OFFSET_BINDING_STATUS, arguments[0]);
+    }
+
+  };
+
+  Buffer.byteLength = 4 * 2;
+
+  Buffer.typedArray = Float32Array;
+
+  Object.defineProperties(Buffer.prototype, {
+    ARRAY_BUFFER: {
+      value: WebGL2RenderingContext.ARRAY_BUFFER
+    },
+    ELEMENT_BUFFER: {
+      value: WebGL2RenderingContext.ELEMENT_ARRAY_BUFFER
+    },
+    COPY_READ: {
+      value: WebGL2RenderingContext.COPY_READ_BUFFER
+    },
+    COPY_WRITE: {
+      value: WebGL2RenderingContext.COPY_WRITE_BUFFER
+    },
+    FEEDBACK: {
+      value: WebGL2RenderingContext.TRANSFORM_FEEDBACK_BUFFER
+    },
+    UNIFORM_BLOCK: {
+      value: WebGL2RenderingContext.UNIFORM_BUFFER
+    },
+    PIXEL_PACK: {
+      value: WebGL2RenderingContext.PIXEL_PACK_BUFFER
+    },
+    PIXEL_UNPACK: {
+      value: WebGL2RenderingContext.PIXEL_UNPACK_BUFFER
+    }
+  });
+
+  return Buffer;
+
+}).call(this);
+
+Object.defineProperties(Buffer.registerClass().prototype, {
+  gl: {
+    get: Buffer.prototype.getGL
+  },
+  glBuffer: {
+    get: Buffer.prototype.getGLBuffer,
+    set: Buffer.prototype.setGLBuffer
+  },
+  glBindings: {
+    get: Buffer.prototype.getGLBindings
+  },
+  glValidate: {
+    get: Buffer.prototype.getGLIsBuffer
+  },
+  bindTarget: {
+    get: Buffer.prototype.keyBindTarget,
+    set: Buffer.prototype.setBindTarget
+  },
+  bindStatus: {
+    get: Buffer.prototype.getBindStatus,
+    set: Buffer.prototype.setBindStatus
   }
 });

@@ -47,11 +47,12 @@
 
 
         <script type="module">
-            import { GL, Program, Shader } from "./ptr_gl.js"
+            import { GL, Program, Shader, Buffer } from "./ptr_gl.js"
 
             self.gl = null;
             self.vshader = null;
             self.program = null;
+            self.buff = null;
 
             let canvas = document.querySelector( 'canvas' );
             let buffer = new SharedArrayBuffer( 1e8 );
@@ -61,6 +62,12 @@
 
             gl.setCanvasNode( canvas ).bindEvents();
             gl.add( program );
+
+
+            buff = new Buffer();
+            gl.add( buff );
+            buff.load();
+
             //gl.fork()
             
             gl.glCullEnabled    = true;
@@ -105,7 +112,7 @@
             
             log( gl );
             log( gl.program );
-            log( program.vertexShader );
+            log( buff );
 
 
         </script>

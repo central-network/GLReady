@@ -54,6 +54,9 @@ Object.defineProperties DataView::,
             @setUint32 offset, i, LE
         OBJECTS[ i ]
 
+    delObject : value : ( offset ) ->
+        OBJECTS.splice offset, 1 ; 0
+
     getObject : value : ( offset ) ->
         return unless i = @getUint32 offset, LE
         return OBJECTS[ i ] ?= proxy i
@@ -284,10 +287,6 @@ export default class Pointer extends Number
     add         : ->
         arguments[0].setParentPtri this
         
-export class BufferPointer extends Pointer
-export class OffsetPointer extends Pointer
-export class ObjectPointer extends Pointer
-export class AtomicPointer extends Pointer
 export class WorkerPointer extends Pointer
 
 Object.defineProperties Pointer,
@@ -296,6 +295,7 @@ Object.defineProperties Pointer,
 
     setDataBuffer   : value : -> [ @prototype.buffer ] = arguments ; @
 
+    removePointer   : value : -> ( arguments[ 0 ].delParentPtri() ); this          
 
 Object.defineProperties Pointer::,
 
@@ -341,6 +341,10 @@ Object.defineProperties Pointer::,
     getParentPtri   : value : -> dvw.getUint32 this + OFFSET_PARENT_PTR, LE
 
     setParentPtri   : value : -> dvw.setUint32 this + OFFSET_PARENT_PTR, arguments[0], LE ; arguments[0]
+    
+    delParentPtri   : value : -> dvw.setUint32 this + OFFSET_PARENT_PTR, @delParentPtrO(), LE
+
+    delParentPtrO   : value : -> dvw.delObject this . getParentPtri() + OFFSET_LINKEDNODE ; 0
 
     getParentPtrO   : value : -> dvw.getObject this . getParentPtri() + OFFSET_LINKEDNODE
 

@@ -113,10 +113,22 @@ export class GL extends Pointer
     ondoubleclick   : -> @setPtrDblClick arguments[0].button
 
     getAllPrograms  : -> @findAllChilds().filter (v) -> v instanceof Program
+    
+    getAllBuffers   : -> @findAllChilds().filter (p) -> p instanceof Buffer
+
+    getAllShaders   : -> @getAllPrograms().flatMap (p) -> p.getAllShaders()
 
     getProgram      : -> @getAllPrograms().find (p) -> p.getInUseStatus()
 
-    getAllShaders   : -> @getAllPrograms().map((p) -> p.getAllShaders()).flat()
+    getVertShader   : -> @getProgram().getVertShader()
+
+    getFragShader   : -> @getProgram().getFragShader()
+
+    getAttributes   : -> @getProgram().getAttributes()
+
+    getUniforms     : -> @getProgram().getUniforms()
+
+    getAllVariables : -> @getProgram().getAllVariables()
 
     getArrayBuffer  : -> @getTypedArray().slice().buffer
 
@@ -368,9 +380,21 @@ export class GL extends Pointer
 
         program         : get : GL::getProgram
 
-       #allPrograms     : get : GL::getAllPrograms
+        programVertex   : get : GL::getVertShader
 
-       #allShaders      : get : GL::getAllShaders
+        programFragment : get : GL::getFragShader
+
+        programAttribs  : get : GL::getAttributes
+
+        programUniforms : get : GL::getUniforms
+
+        allBuffers      : get : GL::getAllBuffers 
+
+        allShaders      : get : GL::getAllShaders
+
+        allPrograms     : get : GL::getAllPrograms
+
+        allVariables    : get : GL::getAllVariables
 
         nodeBuffer      : get : GL::getArrayBuffer
 
@@ -559,15 +583,21 @@ export class Program extends Pointer
 
         getGLFragShader : -> @getFragShader().getGLShader()
 
+        getAttributes   : -> @getVertShader().getAttributes()
+
+        getUniforms     : -> @getVertShader().getUniforms()
+        
+        getAllVariables : -> @getVertShader().getAllVariables()
+
         setVertShader   : ->
+
             unless vShader = @getVertShader()
                 if  arguments[0].constructor is String
                     vShader = Shader.fromSource arguments[0] 
 
             if  vShader instanceof Shader
                 @add vShader
-                vShader
-                    .load()
+                vShader.load()
 
             @load() if @getFragShader()
 
@@ -618,6 +648,12 @@ export class Program extends Pointer
         
         fragmentShader  : get : Program::getFragShader   , set : Program::setFragShader
 
+        attributes      : get : Program::getAttributes
+
+        uniforms        : get : Program::getUniforms
+
+        variables       : get : Program::getAllVariables
+
 OFFSET_SHADER_TYPE      = 4 * 0
 
 OFFSET_IS_UPLOADED      = 4 * 0 + 2
@@ -636,21 +672,15 @@ export class Shader extends Pointer
 
     @typedArray         : Uint8Array
 
-    @Fragment           : -> new this().change @FRAGMENT
+    @parse              : ->
+        [ ...Uniform.parse( arguments[0]), ...Attribute.parse( arguments[0] ) ]
 
     @fromSource         : ->
         textSource = arguments[0]
-        shaderType = null
-        parsedKeys = []
-
-        if  /gl_Frag/.test textSource
-            shaderType = Shader::FRAGMENT
-
-        else
-            parsedKeys.push ...Uniform.parse textSource
-            parsedKeys.push ...Attribute.parse textSource
-
-            shaderType = Shader::VERTEX
+        parsedKeys = @parse textSource
+        shaderType = if /gl_Frag/.test textSource
+            Shader::FRAGMENT
+        else Shader::VERTEX
 
         byteSource = new TextEncoder().encode textSource
         charLength = byteSource.byteLength
@@ -668,27 +698,27 @@ export class Shader extends Pointer
         
     toString            : -> @getSourceText()        
 
-    SHADER_TYPE         : WebGLRenderingContext.SHADER_TYPE
+    SHADER_TYPE         : WebGL2RenderingContext.SHADER_TYPE
     
-    COMPILE_STATUS      : WebGLRenderingContext.COMPILE_STATUS
+    COMPILE_STATUS      : WebGL2RenderingContext.COMPILE_STATUS
     
-    DELETE_STATUS       : WebGLRenderingContext.DELETE_STATUS
+    DELETE_STATUS       : WebGL2RenderingContext.DELETE_STATUS
     
-    VERTEX              : WebGLRenderingContext.VERTEX_SHADER
+    VERTEX              : WebGL2RenderingContext.VERTEX_SHADER
     
-    FRAGMENT            : WebGLRenderingContext.FRAGMENT_SHADER
+    FRAGMENT            : WebGL2RenderingContext.FRAGMENT_SHADER
     
-    LOW_FLOAT           : WebGLRenderingContext.LOW_FLOAT
+    LOW_FLOAT           : WebGL2RenderingContext.LOW_FLOAT
     
-    LOW_INT             : WebGLRenderingContext.LOW_INT
+    LOW_INT             : WebGL2RenderingContext.LOW_INT
     
-    MEDIUM_FLOAT        : WebGLRenderingContext.MEDIUM_FLOAT
+    MEDIUM_FLOAT        : WebGL2RenderingContext.MEDIUM_FLOAT
     
-    HIGH_FLOAT          : WebGLRenderingContext.HIGH_FLOAT
+    HIGH_FLOAT          : WebGL2RenderingContext.HIGH_FLOAT
     
-    MEDIUM_INT          : WebGLRenderingContext.MEDIUM_INT
+    MEDIUM_INT          : WebGL2RenderingContext.MEDIUM_INT
     
-    HIGH_INT            : WebGLRenderingContext.HIGH_INT
+    HIGH_INT            : WebGL2RenderingContext.HIGH_INT
 
     create              : -> @getGL().createShader @getShaderType() or @setShaderType arguments[0]
 
@@ -713,6 +743,11 @@ export class Shader extends Pointer
 
     load                : ->
         @upload().compile().attach().check() ; @
+
+    parse               : ->
+        return this unless @isVertexShader()
+        @getAllVariables().forEach Pointer.removePointer
+        @add key for key in Shader.parse @getSourceText() ; @
 
     reload              : ->
         @unload().load() ; @
@@ -746,45 +781,47 @@ export class Shader extends Pointer
 
     getGLProgram        : -> @getParentPtrP().getGLProgram()
 
+    isVertexShader      : -> @getShaderType() is @VERTEX
+
     getGLShader         : -> @getLinkedNode() or @setGLShader @create @VERTEX
 
     setGLShader         : -> @setLinkedNode( arguments[0] ) ; arguments[0]
 
-    getGLSource         : -> @getGL().getShaderSource @getGLShader()
-    
     setGLSource         : -> @getGL().shaderSource @getGLShader(), @getSourceText() ; @
 
-    isVertexShader      : -> @getShaderType() is @VERTEX
-
+    getGLSource         : -> @getGL().getShaderSource @getGLShader()
+    
     keyShaderType       : -> @keyUint16 OFFSET_SHADER_TYPE
 
     getShaderType       : -> @getUint16 OFFSET_SHADER_TYPE
 
-    setShaderType       : -> @setUint16 OFFSET_SHADER_TYPE  , arguments[0] ; this
+    setShaderType       : -> @setUint16 OFFSET_SHADER_TYPE , arguments[0] ; this
 
     getCharLength       : -> @getUint16 OFFSET_CHAR_LENGTH
 
-    setCharLength       : -> @setUint16 OFFSET_CHAR_LENGTH  , arguments[0]
+    setCharLength       : -> @setUint16 OFFSET_CHAR_LENGTH , arguments[0]
 
-    getSourceText       : -> @getString OFFSET_SOURCE_TEXT  , OFFSET_CHAR_LENGTH
+    getSourceText       : -> @getString OFFSET_SOURCE_TEXT , OFFSET_CHAR_LENGTH
 
-    setSourceText       : -> @setString OFFSET_SOURCE_TEXT  , arguments[0], OFFSET_CHAR_LENGTH
+    setSourceText       : -> @setString OFFSET_SOURCE_TEXT , arguments[0] , OFFSET_CHAR_LENGTH
     
-    getByteSource       : -> @getTArray OFFSET_SOURCE_TEXT  , Uint8Array
+    getByteSource       : -> @getTArray OFFSET_SOURCE_TEXT , Uint8Array
 
-    setByteSource       : -> @setTArray OFFSET_SOURCE_TEXT  , arguments[0] , Uint8Array ; this
+    setByteSource       : -> @setTArray OFFSET_SOURCE_TEXT , arguments[0] , Uint8Array ; this
 
-    getIsUploaded       : -> @getUint8 OFFSET_IS_UPLOADED
+    getIsUploaded       : -> @getUint8  OFFSET_IS_UPLOADED
     
-    setIsUploaded       : -> @setUint8 OFFSET_IS_UPLOADED   , arguments[0]
+    setIsUploaded       : -> @setUint8  OFFSET_IS_UPLOADED , arguments[0]
 
-    getIsCompiled       : -> @getUint8 OFFSET_IS_COMPILED
+    getIsCompiled       : -> @getUint8  OFFSET_IS_COMPILED
     
-    setIsCompiled       : -> @setUint8 OFFSET_IS_COMPILED   , arguments[0]
+    setIsCompiled       : -> @setUint8  OFFSET_IS_COMPILED , arguments[0]
 
-    getIsAttached       : -> @getUint8 OFFSET_IS_ATTACHED
+    getIsAttached       : -> @getUint8  OFFSET_IS_ATTACHED
     
-    setIsAttached       : -> @setUint8 OFFSET_IS_ATTACHED   , arguments[0]
+    setIsAttached       : -> @setUint8  OFFSET_IS_ATTACHED , arguments[0]
+
+    getAllVariables     : -> @findAllChilds().filter (i) -> i instanceof ShaderKey
 
     getAttributes       : -> @findAllChilds().filter (i) -> i instanceof Attribute
 
@@ -800,10 +837,6 @@ export class Shader extends Pointer
 
         glShader        : get : Shader::getGLShader     , set : Shader::setGLShader
 
-        uniforms        : get : Shader::getUniforms
-
-        attributes      : get : Shader::getAttributes        
-
         type            : get : Shader::keyShaderType   , set : Shader::setShaderType
 
         source          : get : Shader::getSourceText   , set : Shader::setSourceText
@@ -815,6 +848,12 @@ export class Shader extends Pointer
         isCompiled      : get : Shader::getIsCompiled   , set : Shader::setIsCompiled
 
         isAttached      : get : Shader::getIsAttached   , set : Shader::setIsAttached
+
+        variables       : get : Shader::getAllVariables
+
+        uniforms        : get : Shader::getUniforms
+
+        attributes      : get : Shader::getAttributes       
 
 OFFSET_TYPE_GLCODE      = 4 * 2
 
@@ -1024,3 +1063,88 @@ Object.defineProperties Uniform::,
     glLocation          : get : Uniform::getGLLocation
 
     location            : get : Uniform::getGLLocation
+
+OFFSET_BINDING_TARGET   = 4 * 0
+
+OFFSET_BINDING_STATUS   = 4 * 0 + 2
+
+export class Buffer extends Pointer
+
+    @byteLength         : 4 * 2
+
+    @typedArray         : Float32Array
+
+    Object.defineProperties this::,
+
+        ARRAY_BUFFER    : value : WebGL2RenderingContext.ARRAY_BUFFER
+
+        ELEMENT_BUFFER  : value : WebGL2RenderingContext.ELEMENT_ARRAY_BUFFER
+
+        COPY_READ       : value : WebGL2RenderingContext.COPY_READ_BUFFER
+
+        COPY_WRITE      : value : WebGL2RenderingContext.COPY_WRITE_BUFFER
+        
+        FEEDBACK        : value : WebGL2RenderingContext.TRANSFORM_FEEDBACK_BUFFER
+        
+        UNIFORM_BLOCK   : value : WebGL2RenderingContext.UNIFORM_BUFFER
+        
+        PIXEL_PACK      : value : WebGL2RenderingContext.PIXEL_PACK_BUFFER
+
+        PIXEL_UNPACK    : value : WebGL2RenderingContext.PIXEL_UNPACK_BUFFER
+
+    create              : ->
+        return this if @getLinkedNode()
+        if  buffer = @getGL().createBuffer()
+            @setBindTarget arguments[0] or @ARRAY_BUFFER
+        ; buffer
+
+    bind                : ->
+        return this if @getBindStatus()
+        @getGL().bindBuffer @getBindTarget() , @getGLBuffer()
+        @setBindStatus 1 ; this
+
+    load                : -> @create() ; @bind() ; this
+
+    delete              : -> @setBindStatus @getGL().deleteBuffer @getLinkedNode() ; @
+
+    getGL               : -> @getParentPtrO()
+
+    getGLBuffer         : -> @getLinkedNode() or @setGLBuffer @create()
+
+    setGLBuffer         : -> @setLinkedNode arguments[0]
+
+    getGLIsBuffer       : -> @getGL().isBuffer @getLinkedNode()
+
+    getGLParameter      : -> @getGL().getParameter arguments[0]
+
+    getGLBindings       : ->
+
+        ARRAY_BUFFER    : @getGLParameter @getGL().ARRAY_BUFFER_BINDING
+
+        ELEMENT_BUFFER  : @getGLParameter @getGL().ELEMENT_ARRAY_BUFFER_BINDING
+
+    isArrayBuffer       : -> @ELEMENT_BUFFER isnt @getBindTarget()
+
+    keyBindTarget       : -> @keyUint16 OFFSET_BINDING_TARGET
+
+    getBindTarget       : -> @getUint16 OFFSET_BINDING_TARGET
+
+    setBindTarget       : -> @setUint16 OFFSET_BINDING_TARGET , arguments[0]
+
+    getBindStatus       : -> @getUint16 OFFSET_BINDING_STATUS
+
+    setBindStatus       : -> @setUint16 OFFSET_BINDING_STATUS , arguments[0]
+
+Object.defineProperties Buffer.registerClass()::,
+
+    gl                  : get : Buffer::getGL
+
+    glBuffer            : get : Buffer::getGLBuffer     , set : Buffer::setGLBuffer
+
+    glBindings          : get : Buffer::getGLBindings
+
+    glValidate          : get : Buffer::getGLIsBuffer 
+
+    bindTarget          : get : Buffer::keyBindTarget   , set : Buffer::setBindTarget 
+
+    bindStatus          : get : Buffer::getBindStatus   , set : Buffer::setBindStatus

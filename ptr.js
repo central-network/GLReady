@@ -73,6 +73,12 @@ Object.defineProperties(DataView.prototype, {
       return OBJECTS[i];
     }
   },
+  delObject: {
+    value: function(offset) {
+      OBJECTS.splice(offset, 1);
+      return 0;
+    }
+  },
   getObject: {
     value: function(offset) {
       var i;
@@ -370,14 +376,6 @@ export default Pointer = class Pointer extends Number {
 
 };
 
-export var BufferPointer = class BufferPointer extends Pointer {};
-
-export var OffsetPointer = class OffsetPointer extends Pointer {};
-
-export var ObjectPointer = class ObjectPointer extends Pointer {};
-
-export var AtomicPointer = class AtomicPointer extends Pointer {};
-
 export var WorkerPointer = class WorkerPointer extends Pointer {};
 
 Object.defineProperties(Pointer, {
@@ -390,6 +388,12 @@ Object.defineProperties(Pointer, {
   setDataBuffer: {
     value: function() {
       [this.prototype.buffer] = arguments;
+      return this;
+    }
+  },
+  removePointer: {
+    value: function() {
+      arguments[0].delParentPtri();
       return this;
     }
   }
@@ -493,6 +497,17 @@ Object.defineProperties(Pointer.prototype, {
     value: function() {
       dvw.setUint32(this + OFFSET_PARENT_PTR, arguments[0], LE);
       return arguments[0];
+    }
+  },
+  delParentPtri: {
+    value: function() {
+      return dvw.setUint32(this + OFFSET_PARENT_PTR, this.delParentPtrO(), LE);
+    }
+  },
+  delParentPtrO: {
+    value: function() {
+      dvw.delObject(this.getParentPtri() + OFFSET_LINKEDNODE);
+      return 0;
     }
   },
   getParentPtrO: {
