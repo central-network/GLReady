@@ -1,4 +1,4 @@
-var BYTES_PER_POINTER, Color4, DEPTH_N_COLOR_BIT, INDEX_BUF, INDEX_FPS, INDEX_HIT, INDEX_NOW, INDEX_PTR, KEYED, LE, LENGTH_OF_POINTER, NONE, OBJECTS, OFFSET_BYTELENGTH, OFFSET_BYTEOFFSET, OFFSET_LINKEDNODE, OFFSET_PARENT_PTR, OFFSET_PROTOCLASS, OFFSET_PTRCLASS_0, OFFSET_PTRCLASS_1, OFFSET_PTRCLASS_2, OFFSET_PTRCLASS_3, OFFSET_PTRCLASS_4, POINTERS_BYTELENGTH, POINTERS_BYTEOFFSET, POINTER_PROTOTYPE, Pointer, buf, dvw, i32, k, malloc, palloc, proxy, u32, v;
+var BYTES_PER_POINTER, Color4, DEPTH_N_COLOR_BIT, INDEX_BUF, INDEX_FPS, INDEX_HIT, INDEX_NOW, INDEX_PTR, KEYED, LE, LENGTH_OF_POINTER, NONE, OBJECTS, OFFSET_BYTELENGTH, OFFSET_BYTEOFFSET, OFFSET_LINKEDNODE, OFFSET_PARENT_PTR, OFFSET_PROTOCLASS, OFFSET_PTRCLASS_0, OFFSET_PTRCLASS_1, OFFSET_PTRCLASS_2, OFFSET_PTRCLASS_3, OFFSET_PTRCLASS_4, POINTERS_BYTELENGTH, POINTERS_BYTEOFFSET, POINTER_PROTOTYPE, Pointer, buf, dump, dvw, fill, hist, i32, ival, k, malloc, palloc, proxy, u32, v;
 
 import "./ptr_self.js";
 
@@ -713,3 +713,68 @@ Object.defineProperties(WorkerPointer.prototype, {
 if (typeof window !== "undefined" && window !== null) {
   Pointer.setBuffer();
 }
+
+ival = 0;
+
+if (typeof document !== "undefined" && document !== null) {
+  document.body.onclick = function() {
+    if (ival) {
+      return ival = clearInterval(ival);
+    } else {
+      return ival = setInterval(dump, 90);
+    }
+  };
+}
+
+hist = [];
+
+fill = "".padStart(1e2, '\n');
+
+dump = function() {
+  var byteLength, capacity, child, childs, dumpArray, finish, freeByteLength, freePercent, j, len, offset;
+  offset = POINTERS_BYTEOFFSET + OFFSET_PARENT_PTR;
+  finish = Atomics.load(u32, INDEX_PTR);
+  childs = [];
+  while (offset < finish) {
+    childs.push(new Pointer(offset - OFFSET_PARENT_PTR));
+    offset += BYTES_PER_POINTER;
+  }
+  dumpArray = [];
+  byteLength = 0;
+  for (j = 0, len = childs.length; j < len; j++) {
+    child = childs[j];
+    dumpArray.push({
+      ptr: child * 1,
+      object: child,
+      parent: child.parent * 1 || null,
+      type: child.type,
+      class: child.getProtoClass(),
+      gl: child.getLinkedNode(),
+      offset: child.byteOffset,
+      byteLength: child.byteLength,
+      typedArray: new child.constructor.typedArray(child.length),
+      children: child.children.length || null
+    });
+    byteLength += child.byteLength;
+  }
+  freeByteLength = u32.byteLength - byteLength;
+  freePercent = freeByteLength / u32.byteLength * 1e2;
+  capacity = (u32.byteLength / Math.pow(1024, 2)).toFixed(1) * 1;
+  freePercent = freePercent.toFixed(2) * 1;
+  hist.push({
+    max: POINTERS_BYTELENGTH / BYTES_PER_POINTER,
+    count: childs.length,
+    ptrOffset: Atomics.load(u32, INDEX_PTR),
+    byteOffset: Atomics.load(u32, INDEX_BUF),
+    allocated: byteLength,
+    ["capacity(mb)"]: capacity,
+    ["free(%)"]: freePercent,
+    ["elapsed(ms)"]: u32.at(INDEX_NOW),
+    tickCount: u32.at(INDEX_HIT),
+    fps: u32.at(INDEX_FPS)
+  });
+  hist = hist.slice(-5);
+  console.warn(fill);
+  console.table(hist);
+  return console.table(dumpArray);
+};
