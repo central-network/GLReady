@@ -383,7 +383,7 @@ export var WorkerPointer = class WorkerPointer extends Pointer {};
 Object.defineProperties(Pointer, {
   registerClass: {
     value: function() {
-      this.protoClass || (this.protoClass = -1 + POINTER_PROTOTYPE.push(this));
+      (this.protoClass || (this.protoClass = -1 + POINTER_PROTOTYPE.push(this)));
       return this;
     }
   },

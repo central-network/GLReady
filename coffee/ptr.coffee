@@ -292,7 +292,7 @@ export class WorkerPointer extends Pointer
 
 Object.defineProperties Pointer,
 
-    registerClass   : value : -> @protoClass or= -1 + POINTER_PROTOTYPE.push this ; @
+    registerClass   : value : -> ( @protoClass or= -1 + POINTER_PROTOTYPE.push this  ); @
 
     setDataBuffer   : value : -> [ @prototype.buffer ] = arguments ; @
 

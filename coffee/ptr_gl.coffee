@@ -537,14 +537,11 @@ export class Program extends Pointer
 
         setVertShader   : ->
             unless vShader = @getVertShader()
-                @add vShader = new Shader() 
-    
+                @add vShader = Shader.fromSource arguments[0] 
+            
             vShader
-                .setSourceText arguments[0]
-                .upload().compile().attach()
-                .check()
-    
-            console.warn Shader.fromSource arguments[0]
+                .upload().compile()
+                .attach().check()
 
             ; @
     
@@ -777,9 +774,15 @@ export class ShaderKey extends Pointer
 
     @typedArray         : Uint8Array
 
-    getGL               : ->
+    getGL               : -> @getShader().getGL()
 
-    getGLProgram        : ->
+    getShader           : -> @getParentPtrP()
+
+    getGLShader         : -> @getShader().getGLShader()
+
+    getProgram          : -> @getShader().getProgram()
+
+    getGLProgram        : -> @getShader().getGLProgram()
 
     getNameString       : -> @getString OFFSET_NAME_TARRAY  , OFFSET_NAME_LENGTH
 
@@ -804,6 +807,12 @@ Object.defineProperties ShaderKey.registerClass()::,
     gl                  : get : ShaderKey::getGL
 
     glProgram           : get : ShaderKey::getGLProgram
+
+    glShader            : get : ShaderKey::getGLShader
+    
+    program             : get : ShaderKey::getProgram
+
+    shader              : get : ShaderKey::getShader
 
     name                : get : ShaderKey::getNameString    , set : ShaderKey::setNameString
     

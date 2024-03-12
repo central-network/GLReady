@@ -1059,10 +1059,9 @@ export var Program = (function() {
     setVertShader() {
       var vShader;
       if (!(vShader = this.getVertShader())) {
-        this.add(vShader = new Shader());
+        this.add(vShader = Shader.fromSource(arguments[0]));
       }
-      vShader.setSourceText(arguments[0]).upload().compile().attach().check();
-      console.warn(Shader.fromSource(arguments[0]));
+      vShader.upload().compile().attach().check();
       return this;
     }
 
@@ -1416,9 +1415,25 @@ OFFSET_NAME_TARRAY = 4 * 4;
 
 export var ShaderKey = (function() {
   class ShaderKey extends Pointer {
-    getGL() {}
+    getGL() {
+      return this.getShader().getGL();
+    }
 
-    getGLProgram() {}
+    getShader() {
+      return this.getParentPtrP();
+    }
+
+    getGLShader() {
+      return this.getShader().getGLShader();
+    }
+
+    getProgram() {
+      return this.getShader().getProgram();
+    }
+
+    getGLProgram() {
+      return this.getShader().getGLProgram();
+    }
 
     getNameString() {
       return this.getString(OFFSET_NAME_TARRAY, OFFSET_NAME_LENGTH);
@@ -1472,6 +1487,15 @@ Object.defineProperties(ShaderKey.registerClass().prototype, {
   },
   glProgram: {
     get: ShaderKey.prototype.getGLProgram
+  },
+  glShader: {
+    get: ShaderKey.prototype.getGLShader
+  },
+  program: {
+    get: ShaderKey.prototype.getProgram
+  },
+  shader: {
+    get: ShaderKey.prototype.getShader
   },
   name: {
     get: ShaderKey.prototype.getNameString,
