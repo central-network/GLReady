@@ -1,4 +1,4 @@
-var BYTES_PER_POINTER, Colour4, DEPTH_N_COLOR_BIT, INDEX_BUF, INDEX_FPS, INDEX_HIT, INDEX_NOW, INDEX_PTR, KEYED, LE, LENGTH_OF_POINTER, NONE, OBJECTS, OFFSET_BYTELENGTH, OFFSET_BYTEOFFSET, OFFSET_LINKEDNODE, OFFSET_PARENT_PTR, OFFSET_PROTOCLASS, OFFSET_PTRCLASS_0, OFFSET_PTRCLASS_1, OFFSET_PTRCLASS_2, OFFSET_PTRCLASS_3, OFFSET_PTRCLASS_4, POINTERS_BYTELENGTH, POINTERS_BYTEOFFSET, POINTER_PROTOTYPE, Pointer, buf, dump, dvw, fill, hist, i32, ival, k, malloc, palloc, proxy, u32, v;
+var BYTES_PER_POINTER, Colour4, INDEX_BUF, INDEX_FPS, INDEX_HIT, INDEX_NOW, INDEX_PTR, KEYED, KEYEX, LE, LENGTH_OF_POINTER, NONE, OBJECTS, OFFSET_BYTELENGTH, OFFSET_BYTEOFFSET, OFFSET_LINKEDNODE, OFFSET_PARENT_PTR, OFFSET_PROTOCLASS, OFFSET_PTRCLASS_0, OFFSET_PTRCLASS_1, OFFSET_PTRCLASS_2, OFFSET_PTRCLASS_3, OFFSET_PTRCLASS_4, POINTERS_BYTELENGTH, POINTERS_BYTEOFFSET, POINTER_PROTOTYPE, Pointer, buf, dump, dvw, fill, hist, i32, ival, k, malloc, palloc, proxy, u32, v;
 
 import "./ptr_self.js";
 
@@ -52,9 +52,10 @@ proxy = function() {
   });
 };
 
-KEYED = {
-  0: new (NONE = class NONE extends Number {})(0),
-  16640: new (DEPTH_N_COLOR_BIT = class DEPTH_N_COLOR_BIT extends Number {})(16640)
+KEYED = {};
+
+KEYEX = {
+  0: new (NONE = class NONE extends Number {})(0)
 };
 
 for (k in WebGL2RenderingContext) {
@@ -97,8 +98,8 @@ Object.defineProperties(DataView.prototype, {
     }
   },
   keyUint16: {
-    value: function(offset) {
-      return KEYED[this.getUint16(offset, LE)];
+    value: function(offset, extend = KEYEX) {
+      return extend[v = this.getUint16(offset, LE)] || KEYED[v];
     }
   }
 });
@@ -751,7 +752,7 @@ Object.defineProperties(Pointer.prototype, {
   },
   keyUint16: {
     value: function() {
-      return dvw.keyUint16(this.byteOffset + arguments[0], arguments[1]);
+      return dvw.keyUint16(this.byteOffset + arguments[0], arguments[1], arguments[2]);
     }
   },
   getUint16: {

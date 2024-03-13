@@ -39,9 +39,8 @@ proxy = ->
             #TODO hey beyb: that's sync on window and worker
             return result #? awesome :))) <3
 
-KEYED =
-    0       : new (class NONE extends Number) 0
-    16640   : new (class DEPTH_N_COLOR_BIT extends Number) 16640
+KEYED = {}
+KEYEX = 0 : new (class NONE extends Number) 0
 
 for k, v of WebGL2RenderingContext then KEYED[ v ] =
     eval "new (class #{k} extends Number {})(#{v})"
@@ -64,8 +63,8 @@ Object.defineProperties DataView::,
     toPointer : value : ( offset ) ->
         new Pointer i if i = @getUint32 offset, LE
 
-    keyUint16 : value : ( offset ) ->
-        KEYED[ @getUint16 offset, LE ]
+    keyUint16 : value : ( offset, extend = KEYEX ) ->
+        extend[ v = @getUint16 offset, LE ] or KEYED[ v ] 
 
 export class Vector extends Number
 
@@ -465,7 +464,7 @@ Object.defineProperties Pointer::,
     
     setUint8        : value : -> dvw.setUint8   @byteOffset + arguments[0], arguments[1] ; arguments[1]
 
-    keyUint16       : value : -> dvw.keyUint16  @byteOffset + arguments[0], arguments[1]
+    keyUint16       : value : -> dvw.keyUint16  @byteOffset + arguments[0], arguments[1] , arguments[2]
 
     getUint16       : value : -> dvw.getUint16  @byteOffset + arguments[0], LE
     

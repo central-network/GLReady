@@ -62,6 +62,8 @@ OFFSET_TOP          = 4 * 43
 OFFSET_PIXEL_RATIO  = 4 * 44
 OFFSET_ASPECT_RATIO = 4 * 45
 
+KEYEXTEND_CLEARMASK = [ 16640 ] : new (class DEPTH_N_COLOR_BIT extends Number) 16640
+
 export class GL extends Pointer
 
     @byteLength     = 4 * 48
@@ -221,7 +223,7 @@ export class GL extends Pointer
     
     setDepthFunc    : -> @setUint16 OFFSET_DEPTH_FUNC      , arguments[0] ; this
 
-    keyClearMask    : -> @keyUint16 OFFSET_CLEAR_MASK
+    keyClearMask    : -> @keyUint16 OFFSET_CLEAR_MASK      , KEYEXTEND_CLEARMASK 
     
     getClearMask    : -> @getUint16 OFFSET_CLEAR_MASK
     
@@ -1235,7 +1237,9 @@ Object.defineProperties Buffer.registerClass()::,
 
     bindStatus          : get : Buffer::getBindStatus   , set : Buffer::setBindStatus
 
+OFFSET_O3_DRAWTYPE      = 4 * 0
 
+OFFSET_O3_DRAWTYP2      = 4 * 0 + 2
 
 OFFSET_O3_COLOR_4D      = 4 * 1
 
@@ -1244,6 +1248,8 @@ OFFSET_O3_POSITION      = 4 * 6
 OFFSET_O3_ROTATION      = 4 * 10
 
 OFFSET_O3_SCALE_3D      = 4 * 14
+
+KEYEXTEND_OBJECT3D      = 0 : new (class POINTS extends Number) WebGL2RenderingContext.POINTS
 
 export class Object3D extends Pointer
 
@@ -1255,6 +1261,12 @@ Object.defineProperties Object3D.registerClass(),
 
 Object.defineProperties Object3D::,
 
+    keyDrawType         : value : -> @keyUint16 OFFSET_O3_DRAWTYPE , KEYEXTEND_OBJECT3D
+
+    getDrawType         : value : -> @getUint16 OFFSET_O3_DRAWTYPE
+
+    setDrawType         : value : -> @setUint16 OFFSET_O3_DRAWTYPE , arguments[0]
+
     getPosition         : value : -> new Vertex @byteOffset + OFFSET_O3_POSITION
 
     getRotation         : value : -> new Angle3 @byteOffset + OFFSET_O3_ROTATION
@@ -1263,13 +1275,13 @@ Object.defineProperties Object3D::,
     
     getColor            : value : -> new Color4 @byteOffset + OFFSET_O3_COLOR_4D
 
-    setPosition         : value : -> @setArray3 OFFSET_O3_POSITION  , arguments[0]
+    setPosition         : value : -> @setArray3 OFFSET_O3_POSITION , arguments[0]
     
-    setRotation         : value : -> @setArray3 OFFSET_O3_ROTATION  , arguments[0]
+    setRotation         : value : -> @setArray3 OFFSET_O3_ROTATION , arguments[0]
     
-    setScale            : value : -> @setArray3 OFFSET_O3_SCALE_3D  , arguments[0]
+    setScale            : value : -> @setArray3 OFFSET_O3_SCALE_3D , arguments[0]
     
-    setColor            : value : -> @setArray4 OFFSET_O3_COLOR_4D  , arguments[0]
+    setColor            : value : -> @setArray4 OFFSET_O3_COLOR_4D , arguments[0]
 
 Object.defineProperties Object3D::,
 
@@ -1280,5 +1292,7 @@ Object.defineProperties Object3D::,
     scale               : get : Object3D::getScale      , set : Object3D::setScale
     
     color               : get : Object3D::getColor      , set : Object3D::setColor
+    
+    type                : get : Object3D::keyDrawType   , set : Object3D::setDrawType
 
 
