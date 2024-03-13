@@ -1,4 +1,5 @@
 import Pointer from "./ptr.coffee"
+import { Vertex, Angle3, Scale3, Color4 } from "./ptr.coffee"
 
 OFFSET_DRAW_ACTIVE  = 4 * 2
 OFFSET_CULL_ENABLED = 4 * 2 + 1
@@ -226,11 +227,12 @@ export class GL extends Pointer
     
     setClearMask    : -> @setUint16 OFFSET_CLEAR_MASK      , arguments[0] ; this
     
+    #TODO new pointer
     rgbClearColor   : -> @rgbColor4 OFFSET_CLEAR_COLOR
     
-    getClearColor   : -> @getColor4 OFFSET_CLEAR_COLOR
+    getClearColor   : -> @getColour4 OFFSET_CLEAR_COLOR
     
-    setClearColor   : -> @setColor4 OFFSET_CLEAR_COLOR     , arguments[0] ; this
+    setClearColor   : -> @setColour4 OFFSET_CLEAR_COLOR     , arguments[0] ; this
 
     keyBindTarget   : -> @keyUint16 OFFSET_BIND_TARGET
     
@@ -1064,7 +1066,7 @@ export class Attribute extends ShaderKey
             pointer()
 
             log "attr enabled  <-  #{name}"
-            
+
             ; null
 
         argv
@@ -1232,3 +1234,51 @@ Object.defineProperties Buffer.registerClass()::,
     bindTarget          : get : Buffer::keyBindTarget   , set : Buffer::setBindTarget 
 
     bindStatus          : get : Buffer::getBindStatus   , set : Buffer::setBindStatus
+
+
+
+OFFSET_O3_COLOR_4D      = 4 * 1
+
+OFFSET_O3_POSITION      = 4 * 6
+
+OFFSET_O3_ROTATION      = 4 * 10
+
+OFFSET_O3_SCALE_3D      = 4 * 14
+
+export class Object3D extends Pointer
+
+Object.defineProperties Object3D.registerClass(),
+
+    byteLength          : value : 4 * 32
+
+    typedArray          : value : Float32Array
+
+Object.defineProperties Object3D::,
+
+    getPosition         : value : -> new Vertex @byteOffset + OFFSET_O3_POSITION
+
+    getRotation         : value : -> new Angle3 @byteOffset + OFFSET_O3_ROTATION
+
+    getScale            : value : -> new Scale3 @byteOffset + OFFSET_O3_SCALE_3D
+    
+    getColor            : value : -> new Color4 @byteOffset + OFFSET_O3_COLOR_4D
+
+    setPosition         : value : -> @setArray3 OFFSET_O3_POSITION  , arguments[0]
+    
+    setRotation         : value : -> @setArray3 OFFSET_O3_ROTATION  , arguments[0]
+    
+    setScale            : value : -> @setArray3 OFFSET_O3_SCALE_3D  , arguments[0]
+    
+    setColor            : value : -> @setArray4 OFFSET_O3_COLOR_4D  , arguments[0]
+
+Object.defineProperties Object3D::,
+
+    position            : get : Object3D::getPosition   , set : Object3D::setPosition
+    
+    rotation            : get : Object3D::getRotation   , set : Object3D::setRotation
+    
+    scale               : get : Object3D::getScale      , set : Object3D::setScale
+    
+    color               : get : Object3D::getColor      , set : Object3D::setColor
+
+

@@ -1,6 +1,6 @@
 import "./ptr_self.coffee"
 
-LE = no
+LE = ! new Uint8Array( Float32Array.of( 1 ).buffer )[ 0 ]
 OBJECTS = [,]
 
 buf = u32 = i32 = dvw =
@@ -67,7 +67,95 @@ Object.defineProperties DataView::,
     keyUint16 : value : ( offset ) ->
         KEYED[ @getUint16 offset, LE ]
 
-class Color4 extends Number
+export class Vector extends Number
+
+export class Angle3 extends Vector
+
+export class Vertex extends Vector
+
+export class Scale3 extends Vector
+
+export class Color4 extends Number
+
+Object.defineProperties Vector,
+
+    byteLength      : value : 4 * 3
+
+    length          : value : 3
+    
+Object.defineProperties Vector::, Symbol.iterator, value : ->
+    
+    yield dvw.getFloat32 this + i * 4, LE for i in [ 0 ... 3 ]
+
+Object.defineProperties Vector::,
+
+    array           : get   : -> new Float32Array dvw.buffer, this, 3
+
+Object.defineProperties Vector::,
+
+    getX            : value : -> dvw.getFloat32 this     , LE
+
+    getY            : value : -> dvw.getFloat32 this + 4 , LE
+    
+    getZ            : value : -> dvw.getFloat32 this + 8 , LE
+    
+    setX            : value : -> dvw.setFloat32 this     , arguments[0], LE
+
+    setY            : value : -> dvw.setFloat32 this + 4 , arguments[0], LE
+    
+    setZ            : value : -> dvw.setFloat32 this + 8 , arguments[0], LE
+
+Object.defineProperties Vector::,
+
+    x               : get   : Vector::getX , set : Vector::setX
+
+    y               : get   : Vector::getY , set : Vector::setY
+    
+    z               : get   : Vector::getZ , set : Vector::setZ
+
+Object.defineProperties Color4,
+
+    byteLength      : value : 4 * 4
+
+    length          : value : 4
+    
+Object.defineProperties Color4::, Symbol.iterator, value : ->
+    
+    yield dvw.getFloat32 this + i * 4, LE for i in [ 0 ... 4 ]
+
+Object.defineProperties Color4::,
+
+    array           : get   : -> new Float32Array dvw.buffer, this, 4
+
+Object.defineProperties Color4::,
+
+    getR            : value : -> dvw.getFloat32 this      , LE
+
+    getG            : value : -> dvw.getFloat32 this +  4 , LE
+    
+    getB            : value : -> dvw.getFloat32 this +  8 , LE
+    
+    getA            : value : -> dvw.getFloat32 this + 12 , LE
+    
+    setR            : value : -> dvw.setFloat32 this      , arguments[0], LE
+
+    setG            : value : -> dvw.setFloat32 this +  4 , arguments[0], LE
+    
+    setB            : value : -> dvw.setFloat32 this +  8 , arguments[0], LE
+
+    setA            : value : -> dvw.setFloat32 this + 12 , arguments[0], LE
+
+Object.defineProperties Color4::,
+
+    r               : get   : Color4::getR , set : Color4::setR
+
+    g               : get   : Color4::getG , set : Color4::setG
+    
+    b               : get   : Color4::getB , set : Color4::setB
+    
+    a               : get   : Color4::getA , set : Color4::setA
+
+class Colour4 extends Number
 
     Object.defineProperties this,
         u32 : value : ( any ) ->
@@ -226,7 +314,9 @@ export default class Pointer extends Number
 
         dvw.setUint32 ptr + OFFSET_BYTELENGTH, byteLength, LE
         dvw.setUint32 ptr + OFFSET_PROTOCLASS, @protoClass, LE ; @
-        dvw.setUint32 ptr + OFFSET_BYTEOFFSET, malloc( byteLength ), LE
+
+        byteOffset = malloc byteLength + ( 4 - byteLength % 4 )
+        dvw.setUint32 ptr + OFFSET_BYTEOFFSET, byteOffset, LE
 
         new this( ptr ).init()
 
@@ -381,11 +471,51 @@ Object.defineProperties Pointer::,
     
     setUint16       : value : -> dvw.setUint16  @byteOffset + arguments[0], arguments[1], LE ; arguments[1]
 
-    setColor4       : value : -> dvw.setUint32  @byteOffset + arguments[0], Color4.u32(arguments[1]), LE ; arguments[1]
 
-    rgbColor4       : value : -> @getColor4( ...arguments ).f32
+
+    setColour4       : value : -> dvw.setUint32  @byteOffset + arguments[0], Colour4.u32(arguments[1]), LE ; arguments[1]
+
+    rgbColour4       : value : -> @getColour4( ...arguments ).f32
     
-    getColor4       : value : -> new Color4 @getUint32 arguments[0]    
+    getColour4       : value : -> new Colour4 dvw.getUint32 arguments[0], LE
+    
+
+
+    
+    setArray3       : value : ->
+
+        byteOffset = @byteOffset + arguments[0]
+
+        unless isNaN value = arguments[1]
+            x = y = z = value
+        else if value[ Symbol.iterator ]
+            [ x = 0, y = 0, z = 0 ] = value
+        else x = y = z = parseFloat( value ) or 0
+
+        console.warn { x, y, z }
+
+        dvw.setFloat32 byteOffset      , x , LE
+        dvw.setFloat32 byteOffset  + 4 , y , LE
+        dvw.setFloat32 byteOffset  + 8 , z , LE
+        
+        this
+
+    setArray4       : value : ->
+
+        byteOffset = @byteOffset + arguments[0]
+
+        unless isNaN value = arguments[1]
+            x = y = z = w = value
+        else if value[ Symbol.iterator ]
+            [ x = 0, y = 0, z = 0, w = 1 ] = value
+        else x = y = z = w = parseFloat( value ) or 1
+
+        dvw.setFloat32 byteOffset      , x , LE
+        dvw.setFloat32 byteOffset +  4 , y , LE
+        dvw.setFloat32 byteOffset +  8 , z , LE
+        dvw.setFloat32 byteOffset + 12 , w , LE
+        
+        this
 
     getString       : value : ->
         [ startOffset , lengthOffset ] = [ ...arguments ]

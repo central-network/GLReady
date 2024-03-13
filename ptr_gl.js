@@ -1,6 +1,13 @@
-var OFFSET_ASPECT_RATIO, OFFSET_ATTACH_STATUS, OFFSET_ATTR_OFFSET, OFFSET_ATTR_STRIDE, OFFSET_BINDING_STATUS, OFFSET_BINDING_TARGET, OFFSET_BIND_TARGET, OFFSET_BLEND_ACTIVE, OFFSET_BLEND_EQUATE, OFFSET_BLEND_FUNC, OFFSET_BLEND_INARG, OFFSET_BLEND_OUTARG, OFFSET_CHAR_LENGTH, OFFSET_CLEAR_COLOR, OFFSET_CLEAR_DEPTH, OFFSET_CLEAR_MASK, OFFSET_CULL_ENABLED, OFFSET_CULL_FACE, OFFSET_DEPTH_ACTIVE, OFFSET_DEPTH_FUNC, OFFSET_DEPTH_TEST, OFFSET_DRAGGING, OFFSET_DRAW_ACTIVE, OFFSET_DX, OFFSET_DY, OFFSET_FRONTFACE, OFFSET_HEIGHT, OFFSET_INUSE_STATUS, OFFSET_ISNORMALIZE, OFFSET_IS_ATTACHED, OFFSET_IS_COMPILED, OFFSET_IS_UPLOADED, OFFSET_JUMPING, OFFSET_KEY_ALT, OFFSET_KEY_CTRL, OFFSET_KEY_LOCATED, OFFSET_KEY_META, OFFSET_KEY_SHIFT, OFFSET_LEFT, OFFSET_LINKED_STATUS, OFFSET_LOCATION_AT, OFFSET_LOOKING, OFFSET_MOVE_BACK, OFFSET_MOVE_DOWN, OFFSET_MOVE_FWD, OFFSET_MOVE_LEFT, OFFSET_MOVE_RIGHT, OFFSET_MOVE_UP, OFFSET_NAME_LENGTH, OFFSET_NAME_TARRAY, OFFSET_NCOMPONENTS, OFFSET_PIXEL_RATIO, OFFSET_PTR_BUTTON, OFFSET_PTR_CLICK, OFFSET_PTR_DCLICK, OFFSET_ROTATING, OFFSET_RX, OFFSET_RY, OFFSET_SHADER_TYPE, OFFSET_SHIFT_RATIO, OFFSET_SOURCE_TEXT, OFFSET_SX, OFFSET_SY, OFFSET_SZ, OFFSET_TIME, OFFSET_TOP, OFFSET_TYPE_GLCODE, OFFSET_UX_ENABLED, OFFSET_VX, OFFSET_VY, OFFSET_VZ, OFFSET_WALKING, OFFSET_WIDTH, OFFSET_X, OFFSET_Y, OFFSET_ZOOMING;
+var OFFSET_ASPECT_RATIO, OFFSET_ATTACH_STATUS, OFFSET_ATTR_OFFSET, OFFSET_ATTR_STRIDE, OFFSET_BINDING_STATUS, OFFSET_BINDING_TARGET, OFFSET_BIND_TARGET, OFFSET_BLEND_ACTIVE, OFFSET_BLEND_EQUATE, OFFSET_BLEND_FUNC, OFFSET_BLEND_INARG, OFFSET_BLEND_OUTARG, OFFSET_CHAR_LENGTH, OFFSET_CLEAR_COLOR, OFFSET_CLEAR_DEPTH, OFFSET_CLEAR_MASK, OFFSET_CULL_ENABLED, OFFSET_CULL_FACE, OFFSET_DEPTH_ACTIVE, OFFSET_DEPTH_FUNC, OFFSET_DEPTH_TEST, OFFSET_DRAGGING, OFFSET_DRAW_ACTIVE, OFFSET_DX, OFFSET_DY, OFFSET_FRONTFACE, OFFSET_HEIGHT, OFFSET_INUSE_STATUS, OFFSET_ISNORMALIZE, OFFSET_IS_ATTACHED, OFFSET_IS_COMPILED, OFFSET_IS_UPLOADED, OFFSET_JUMPING, OFFSET_KEY_ALT, OFFSET_KEY_CTRL, OFFSET_KEY_LOCATED, OFFSET_KEY_META, OFFSET_KEY_SHIFT, OFFSET_LEFT, OFFSET_LINKED_STATUS, OFFSET_LOCATION_AT, OFFSET_LOOKING, OFFSET_MOVE_BACK, OFFSET_MOVE_DOWN, OFFSET_MOVE_FWD, OFFSET_MOVE_LEFT, OFFSET_MOVE_RIGHT, OFFSET_MOVE_UP, OFFSET_NAME_LENGTH, OFFSET_NAME_TARRAY, OFFSET_NCOMPONENTS, OFFSET_O3_COLOR_4D, OFFSET_O3_POSITION, OFFSET_O3_ROTATION, OFFSET_O3_SCALE_3D, OFFSET_PIXEL_RATIO, OFFSET_PTR_BUTTON, OFFSET_PTR_CLICK, OFFSET_PTR_DCLICK, OFFSET_ROTATING, OFFSET_RX, OFFSET_RY, OFFSET_SHADER_TYPE, OFFSET_SHIFT_RATIO, OFFSET_SOURCE_TEXT, OFFSET_SX, OFFSET_SY, OFFSET_SZ, OFFSET_TIME, OFFSET_TOP, OFFSET_TYPE_GLCODE, OFFSET_UX_ENABLED, OFFSET_VX, OFFSET_VY, OFFSET_VZ, OFFSET_WALKING, OFFSET_WIDTH, OFFSET_X, OFFSET_Y, OFFSET_ZOOMING;
 
 import Pointer from "./ptr.js";
+
+import {
+  Vertex,
+  Angle3,
+  Scale3,
+  Color4
+} from "./ptr.js";
 
 OFFSET_DRAW_ACTIVE = 4 * 2;
 
@@ -379,16 +386,18 @@ export var GL = (function() {
       return this;
     }
 
+    
+    //TODO new pointer
     rgbClearColor() {
       return this.rgbColor4(OFFSET_CLEAR_COLOR);
     }
 
     getClearColor() {
-      return this.getColor4(OFFSET_CLEAR_COLOR);
+      return this.getColour4(OFFSET_CLEAR_COLOR);
     }
 
     setClearColor() {
-      this.setColor4(OFFSET_CLEAR_COLOR, arguments[0]);
+      this.setColour4(OFFSET_CLEAR_COLOR, arguments[0]);
       return this;
     }
 
@@ -2224,5 +2233,86 @@ Object.defineProperties(Buffer.registerClass().prototype, {
   bindStatus: {
     get: Buffer.prototype.getBindStatus,
     set: Buffer.prototype.setBindStatus
+  }
+});
+
+OFFSET_O3_COLOR_4D = 4 * 1;
+
+OFFSET_O3_POSITION = 4 * 6;
+
+OFFSET_O3_ROTATION = 4 * 10;
+
+OFFSET_O3_SCALE_3D = 4 * 14;
+
+export var Object3D = class Object3D extends Pointer {};
+
+Object.defineProperties(Object3D.registerClass(), {
+  byteLength: {
+    value: 4 * 32
+  },
+  typedArray: {
+    value: Float32Array
+  }
+});
+
+Object.defineProperties(Object3D.prototype, {
+  getPosition: {
+    value: function() {
+      return new Vertex(this.byteOffset + OFFSET_O3_POSITION);
+    }
+  },
+  getRotation: {
+    value: function() {
+      return new Angle3(this.byteOffset + OFFSET_O3_ROTATION);
+    }
+  },
+  getScale: {
+    value: function() {
+      return new Scale3(this.byteOffset + OFFSET_O3_SCALE_3D);
+    }
+  },
+  getColor: {
+    value: function() {
+      return new Color4(this.byteOffset + OFFSET_O3_COLOR_4D);
+    }
+  },
+  setPosition: {
+    value: function() {
+      return this.setArray3(OFFSET_O3_POSITION, arguments[0]);
+    }
+  },
+  setRotation: {
+    value: function() {
+      return this.setArray3(OFFSET_O3_ROTATION, arguments[0]);
+    }
+  },
+  setScale: {
+    value: function() {
+      return this.setArray3(OFFSET_O3_SCALE_3D, arguments[0]);
+    }
+  },
+  setColor: {
+    value: function() {
+      return this.setArray4(OFFSET_O3_COLOR_4D, arguments[0]);
+    }
+  }
+});
+
+Object.defineProperties(Object3D.prototype, {
+  position: {
+    get: Object3D.prototype.getPosition,
+    set: Object3D.prototype.setPosition
+  },
+  rotation: {
+    get: Object3D.prototype.getRotation,
+    set: Object3D.prototype.setRotation
+  },
+  scale: {
+    get: Object3D.prototype.getScale,
+    set: Object3D.prototype.setScale
+  },
+  color: {
+    get: Object3D.prototype.getColor,
+    set: Object3D.prototype.setColor
   }
 });

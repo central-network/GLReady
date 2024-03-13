@@ -47,7 +47,7 @@
 
 
         <script type="module">
-            import { GL, Program, Shader, Buffer } from "./ptr_gl.js"
+            import { GL, Program, Shader, Buffer, Object3D } from "./ptr_gl.js"
 
             self.gl = null;
             self.vshader = null;
@@ -115,13 +115,17 @@
             log( buff );
             
 
-            console.warn(gl.draw([
+            gl.draw([
                 3123213, 10, 0, 1, 1, 1, 1,
                 2120, 0, 0, 1, 0, 1, 1,
                 0.01110, 10, 10, 0, 1, 1, 1
-            ]));
+            ]);
 
 
+            let o3 = new Object3D();
+
+            console.warn(o3);
+ 
 
         </script>
         

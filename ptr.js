@@ -1,8 +1,8 @@
-var BYTES_PER_POINTER, Color4, DEPTH_N_COLOR_BIT, INDEX_BUF, INDEX_FPS, INDEX_HIT, INDEX_NOW, INDEX_PTR, KEYED, LE, LENGTH_OF_POINTER, NONE, OBJECTS, OFFSET_BYTELENGTH, OFFSET_BYTEOFFSET, OFFSET_LINKEDNODE, OFFSET_PARENT_PTR, OFFSET_PROTOCLASS, OFFSET_PTRCLASS_0, OFFSET_PTRCLASS_1, OFFSET_PTRCLASS_2, OFFSET_PTRCLASS_3, OFFSET_PTRCLASS_4, POINTERS_BYTELENGTH, POINTERS_BYTEOFFSET, POINTER_PROTOTYPE, Pointer, buf, dump, dvw, fill, hist, i32, ival, k, malloc, palloc, proxy, u32, v;
+var BYTES_PER_POINTER, Colour4, DEPTH_N_COLOR_BIT, INDEX_BUF, INDEX_FPS, INDEX_HIT, INDEX_NOW, INDEX_PTR, KEYED, LE, LENGTH_OF_POINTER, NONE, OBJECTS, OFFSET_BYTELENGTH, OFFSET_BYTEOFFSET, OFFSET_LINKEDNODE, OFFSET_PARENT_PTR, OFFSET_PROTOCLASS, OFFSET_PTRCLASS_0, OFFSET_PTRCLASS_1, OFFSET_PTRCLASS_2, OFFSET_PTRCLASS_3, OFFSET_PTRCLASS_4, POINTERS_BYTELENGTH, POINTERS_BYTEOFFSET, POINTER_PROTOTYPE, Pointer, buf, dump, dvw, fill, hist, i32, ival, k, malloc, palloc, proxy, u32, v;
 
 import "./ptr_self.js";
 
-LE = false;
+LE = !new Uint8Array(Float32Array.of(1).buffer)[0];
 
 OBJECTS = [, ];
 
@@ -103,10 +103,186 @@ Object.defineProperties(DataView.prototype, {
   }
 });
 
-Color4 = (function() {
-  class Color4 extends Number {};
+export var Vector = class Vector extends Number {};
 
-  Object.defineProperties(Color4, {
+export var Angle3 = class Angle3 extends Vector {};
+
+export var Vertex = class Vertex extends Vector {};
+
+export var Scale3 = class Scale3 extends Vector {};
+
+export var Color4 = class Color4 extends Number {};
+
+Object.defineProperties(Vector, {
+  byteLength: {
+    value: 4 * 3
+  },
+  length: {
+    value: 3
+  }
+});
+
+Object.defineProperties(Vector.prototype, Symbol.iterator, {
+  value: function*() {
+    var i, j, results;
+    results = [];
+    for (i = j = 0; j < 3; i = ++j) {
+      results.push((yield dvw.getFloat32(this + i * 4, LE)));
+    }
+    return results;
+  }
+});
+
+Object.defineProperties(Vector.prototype, {
+  array: {
+    get: function() {
+      return new Float32Array(dvw.buffer, this, 3);
+    }
+  }
+});
+
+Object.defineProperties(Vector.prototype, {
+  getX: {
+    value: function() {
+      return dvw.getFloat32(this, LE);
+    }
+  },
+  getY: {
+    value: function() {
+      return dvw.getFloat32(this + 4, LE);
+    }
+  },
+  getZ: {
+    value: function() {
+      return dvw.getFloat32(this + 8, LE);
+    }
+  },
+  setX: {
+    value: function() {
+      return dvw.setFloat32(this, arguments[0], LE);
+    }
+  },
+  setY: {
+    value: function() {
+      return dvw.setFloat32(this + 4, arguments[0], LE);
+    }
+  },
+  setZ: {
+    value: function() {
+      return dvw.setFloat32(this + 8, arguments[0], LE);
+    }
+  }
+});
+
+Object.defineProperties(Vector.prototype, {
+  x: {
+    get: Vector.prototype.getX,
+    set: Vector.prototype.setX
+  },
+  y: {
+    get: Vector.prototype.getY,
+    set: Vector.prototype.setY
+  },
+  z: {
+    get: Vector.prototype.getZ,
+    set: Vector.prototype.setZ
+  }
+});
+
+Object.defineProperties(Color4, {
+  byteLength: {
+    value: 4 * 4
+  },
+  length: {
+    value: 4
+  }
+});
+
+Object.defineProperties(Color4.prototype, Symbol.iterator, {
+  value: function*() {
+    var i, j, results;
+    results = [];
+    for (i = j = 0; j < 4; i = ++j) {
+      results.push((yield dvw.getFloat32(this + i * 4, LE)));
+    }
+    return results;
+  }
+});
+
+Object.defineProperties(Color4.prototype, {
+  array: {
+    get: function() {
+      return new Float32Array(dvw.buffer, this, 4);
+    }
+  }
+});
+
+Object.defineProperties(Color4.prototype, {
+  getR: {
+    value: function() {
+      return dvw.getFloat32(this, LE);
+    }
+  },
+  getG: {
+    value: function() {
+      return dvw.getFloat32(this + 4, LE);
+    }
+  },
+  getB: {
+    value: function() {
+      return dvw.getFloat32(this + 8, LE);
+    }
+  },
+  getA: {
+    value: function() {
+      return dvw.getFloat32(this + 12, LE);
+    }
+  },
+  setR: {
+    value: function() {
+      return dvw.setFloat32(this, arguments[0], LE);
+    }
+  },
+  setG: {
+    value: function() {
+      return dvw.setFloat32(this + 4, arguments[0], LE);
+    }
+  },
+  setB: {
+    value: function() {
+      return dvw.setFloat32(this + 8, arguments[0], LE);
+    }
+  },
+  setA: {
+    value: function() {
+      return dvw.setFloat32(this + 12, arguments[0], LE);
+    }
+  }
+});
+
+Object.defineProperties(Color4.prototype, {
+  r: {
+    get: Color4.prototype.getR,
+    set: Color4.prototype.setR
+  },
+  g: {
+    get: Color4.prototype.getG,
+    set: Color4.prototype.setG
+  },
+  b: {
+    get: Color4.prototype.getB,
+    set: Color4.prototype.setB
+  },
+  a: {
+    get: Color4.prototype.getA,
+    set: Color4.prototype.setA
+  }
+});
+
+Colour4 = (function() {
+  class Colour4 extends Number {};
+
+  Object.defineProperties(Colour4, {
     u32: {
       value: function(any) {
         var a, b, g, r;
@@ -130,7 +306,7 @@ Color4 = (function() {
     }
   });
 
-  Object.defineProperties(Color4.prototype, {
+  Object.defineProperties(Colour4.prototype, {
     f32: {
       get: function() {
         var di, dv, i8;
@@ -215,7 +391,7 @@ Color4 = (function() {
     }
   });
 
-  return Color4;
+  return Colour4;
 
 }).call(this);
 
@@ -304,12 +480,13 @@ export default Pointer = class Pointer extends Number {
   }
 
   static malloc(byteLength) {
-    var ptr;
+    var byteOffset, ptr;
     ptr = palloc(BYTES_PER_POINTER);
     dvw.setUint32(ptr + OFFSET_BYTELENGTH, byteLength, LE);
     dvw.setUint32(ptr + OFFSET_PROTOCLASS, this.protoClass, LE);
     this;
-    dvw.setUint32(ptr + OFFSET_BYTEOFFSET, malloc(byteLength), LE);
+    byteOffset = malloc(byteLength + (4 - byteLength % 4));
+    dvw.setUint32(ptr + OFFSET_BYTEOFFSET, byteOffset, LE);
     return new this(ptr).init();
   }
 
@@ -588,20 +765,56 @@ Object.defineProperties(Pointer.prototype, {
       return arguments[1];
     }
   },
-  setColor4: {
+  setColour4: {
     value: function() {
-      dvw.setUint32(this.byteOffset + arguments[0], Color4.u32(arguments[1]), LE);
+      dvw.setUint32(this.byteOffset + arguments[0], Colour4.u32(arguments[1]), LE);
       return arguments[1];
     }
   },
-  rgbColor4: {
+  rgbColour4: {
     value: function() {
-      return this.getColor4(...arguments).f32;
+      return this.getColour4(...arguments).f32;
     }
   },
-  getColor4: {
+  getColour4: {
     value: function() {
-      return new Color4(this.getUint32(arguments[0]));
+      return new Colour4(dvw.getUint32(arguments[0], LE));
+    }
+  },
+  setArray3: {
+    value: function() {
+      var byteOffset, value, x, y, z;
+      byteOffset = this.byteOffset + arguments[0];
+      if (!isNaN(value = arguments[1])) {
+        x = y = z = value;
+      } else if (value[Symbol.iterator]) {
+        [x = 0, y = 0, z = 0] = value;
+      } else {
+        x = y = z = parseFloat(value) || 0;
+      }
+      console.warn({x, y, z});
+      dvw.setFloat32(byteOffset, x, LE);
+      dvw.setFloat32(byteOffset + 4, y, LE);
+      dvw.setFloat32(byteOffset + 8, z, LE);
+      return this;
+    }
+  },
+  setArray4: {
+    value: function() {
+      var byteOffset, value, w, x, y, z;
+      byteOffset = this.byteOffset + arguments[0];
+      if (!isNaN(value = arguments[1])) {
+        x = y = z = w = value;
+      } else if (value[Symbol.iterator]) {
+        [x = 0, y = 0, z = 0, w = 1] = value;
+      } else {
+        x = y = z = w = parseFloat(value) || 1;
+      }
+      dvw.setFloat32(byteOffset, x, LE);
+      dvw.setFloat32(byteOffset + 4, y, LE);
+      dvw.setFloat32(byteOffset + 8, z, LE);
+      dvw.setFloat32(byteOffset + 12, w, LE);
+      return this;
     }
   },
   getString: {
