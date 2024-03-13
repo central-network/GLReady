@@ -1044,8 +1044,11 @@ export class Attribute extends ShaderKey
         return argv unless @getKeyLocated() 
 
         [ gl , at ] = [ @getGL() , @getLocation() ]
+        [ attr , name ] = [ this , @name ]
 
-        @delLinkedNode() if @getLinkedNode()
+        if  @getLinkedNode()
+            @delLinkedNode()
+            console.error "caller deleted from attribute key", this
 
         enable  = gl.enableVertexAttribArray.bind gl, at
         pointer = gl.vertexAttribPointer.bind(
@@ -1053,12 +1056,16 @@ export class Attribute extends ShaderKey
             @getNormalize(), @getStride(), @getOffset()
         )
 
+        log "call defined  <-  #{name}"
+
         @setLinkedNode ->
+            
             enable()
-            log "enabled"
             pointer()
-            log "pointed"
-            null
+
+            log "attr enabled  <-  #{name}"
+            
+            ; null
 
         argv
 

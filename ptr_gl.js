@@ -1828,22 +1828,24 @@ export var Attribute = (function() {
     }
 
     bindFunctions() {
-      var argv, at, enable, gl, pointer, ref;
+      var argv, at, attr, enable, gl, name, pointer, ref;
       (argv = (ref = arguments[0]) != null ? ref : this);
       if (!this.getKeyLocated()) {
         return argv;
       }
       [gl, at] = [this.getGL(), this.getLocation()];
+      [attr, name] = [this, this.name];
       if (this.getLinkedNode()) {
         this.delLinkedNode();
+        console.error("caller deleted from attribute key", this);
       }
       enable = gl.enableVertexAttribArray.bind(gl, at);
       pointer = gl.vertexAttribPointer.bind(gl, at, this.getComponents(), this.getTypeGLCode(), this.getNormalize(), this.getStride(), this.getOffset());
+      log(`call defined  <-  ${name}`);
       this.setLinkedNode(function() {
         enable();
-        log("enabled");
         pointer();
-        log("pointed");
+        log(`attr enabled  <-  ${name}`);
         return null;
       });
       return argv;
