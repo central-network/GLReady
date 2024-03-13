@@ -96,7 +96,7 @@
 
                 void main() {
                     gl_Position  =  u_Camera * vec4(a_Vertex, 1.0);
-                    gl_PointSize =  u_PointSize;
+                    gl_PointSize =  10.0;
                     v_Color      =  a_Color;
                 }
             `;
@@ -113,6 +113,14 @@
             log( gl );
             log( gl.program );
             log( buff );
+            
+
+            console.warn(gl.draw([
+                3123213, 10, 0, 1, 1, 1, 1,
+                2120, 0, 0, 1, 0, 1, 1,
+                0.01110, 10, 10, 0, 1, 1, 1
+            ]));
+
 
 
         </script>

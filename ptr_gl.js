@@ -1,4 +1,4 @@
-var OFFSET_ASPECT_RATIO, OFFSET_ATTACH_STATUS, OFFSET_ATTR_OFFSET, OFFSET_ATTR_STRIDE, OFFSET_BINDING_STATUS, OFFSET_BINDING_TARGET, OFFSET_BIND_TARGET, OFFSET_BLEND_ACTIVE, OFFSET_BLEND_EQUATE, OFFSET_BLEND_FUNC, OFFSET_BLEND_INARG, OFFSET_BLEND_OUTARG, OFFSET_CHAR_LENGTH, OFFSET_CLEAR_COLOR, OFFSET_CLEAR_DEPTH, OFFSET_CLEAR_MASK, OFFSET_CULL_ENABLED, OFFSET_CULL_FACE, OFFSET_DEPTH_ACTIVE, OFFSET_DEPTH_FUNC, OFFSET_DEPTH_TEST, OFFSET_DRAGGING, OFFSET_DRAW_ACTIVE, OFFSET_DX, OFFSET_DY, OFFSET_FRONTFACE, OFFSET_HEIGHT, OFFSET_INUSE_STATUS, OFFSET_ISNORMALIZE, OFFSET_IS_ATTACHED, OFFSET_IS_COMPILED, OFFSET_IS_UPLOADED, OFFSET_JUMPING, OFFSET_KEY_ALT, OFFSET_KEY_CTRL, OFFSET_KEY_LOCATED, OFFSET_KEY_META, OFFSET_KEY_SHIFT, OFFSET_LEFT, OFFSET_LINKED_STATUS, OFFSET_LOCATION_AT, OFFSET_LOOKING, OFFSET_MOVE_BACK, OFFSET_MOVE_DOWN, OFFSET_MOVE_FWD, OFFSET_MOVE_LEFT, OFFSET_MOVE_RIGHT, OFFSET_MOVE_UP, OFFSET_NAME_LENGTH, OFFSET_NAME_TARRAY, OFFSET_PIXEL_RATIO, OFFSET_PTR_BUTTON, OFFSET_PTR_CLICK, OFFSET_PTR_DCLICK, OFFSET_ROTATING, OFFSET_RX, OFFSET_RY, OFFSET_SHADER_TYPE, OFFSET_SHIFT_RATIO, OFFSET_SOURCE_TEXT, OFFSET_SX, OFFSET_SY, OFFSET_SZ, OFFSET_TIME, OFFSET_TOP, OFFSET_TYPE_GLCODE, OFFSET_TYPE_LENGTH, OFFSET_UX_ENABLED, OFFSET_VX, OFFSET_VY, OFFSET_VZ, OFFSET_WALKING, OFFSET_WIDTH, OFFSET_X, OFFSET_Y, OFFSET_ZOOMING;
+var OFFSET_ASPECT_RATIO, OFFSET_ATTACH_STATUS, OFFSET_ATTR_OFFSET, OFFSET_ATTR_STRIDE, OFFSET_BINDING_STATUS, OFFSET_BINDING_TARGET, OFFSET_BIND_TARGET, OFFSET_BLEND_ACTIVE, OFFSET_BLEND_EQUATE, OFFSET_BLEND_FUNC, OFFSET_BLEND_INARG, OFFSET_BLEND_OUTARG, OFFSET_CHAR_LENGTH, OFFSET_CLEAR_COLOR, OFFSET_CLEAR_DEPTH, OFFSET_CLEAR_MASK, OFFSET_CULL_ENABLED, OFFSET_CULL_FACE, OFFSET_DEPTH_ACTIVE, OFFSET_DEPTH_FUNC, OFFSET_DEPTH_TEST, OFFSET_DRAGGING, OFFSET_DRAW_ACTIVE, OFFSET_DX, OFFSET_DY, OFFSET_FRONTFACE, OFFSET_HEIGHT, OFFSET_INUSE_STATUS, OFFSET_ISNORMALIZE, OFFSET_IS_ATTACHED, OFFSET_IS_COMPILED, OFFSET_IS_UPLOADED, OFFSET_JUMPING, OFFSET_KEY_ALT, OFFSET_KEY_CTRL, OFFSET_KEY_LOCATED, OFFSET_KEY_META, OFFSET_KEY_SHIFT, OFFSET_LEFT, OFFSET_LINKED_STATUS, OFFSET_LOCATION_AT, OFFSET_LOOKING, OFFSET_MOVE_BACK, OFFSET_MOVE_DOWN, OFFSET_MOVE_FWD, OFFSET_MOVE_LEFT, OFFSET_MOVE_RIGHT, OFFSET_MOVE_UP, OFFSET_NAME_LENGTH, OFFSET_NAME_TARRAY, OFFSET_NCOMPONENTS, OFFSET_PIXEL_RATIO, OFFSET_PTR_BUTTON, OFFSET_PTR_CLICK, OFFSET_PTR_DCLICK, OFFSET_ROTATING, OFFSET_RX, OFFSET_RY, OFFSET_SHADER_TYPE, OFFSET_SHIFT_RATIO, OFFSET_SOURCE_TEXT, OFFSET_SX, OFFSET_SY, OFFSET_SZ, OFFSET_TIME, OFFSET_TOP, OFFSET_TYPE_GLCODE, OFFSET_UX_ENABLED, OFFSET_VX, OFFSET_VY, OFFSET_VZ, OFFSET_WALKING, OFFSET_WIDTH, OFFSET_X, OFFSET_Y, OFFSET_ZOOMING;
 
 import Pointer from "./ptr.js";
 
@@ -116,6 +116,49 @@ OFFSET_ASPECT_RATIO = 4 * 45;
 
 export var GL = (function() {
   class GL extends Pointer {
+    draw() {
+      var a, arr, j, len, ref, size;
+      arr = Float32Array.of(...arguments[0]);
+      size = arr.length * arr.BYTES_PER_ELEMENT;
+      this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.glBuffer);
+      this.gl.bufferData(this.gl.ARRAY_BUFFER, size, this.gl.STATIC_DRAW);
+      this.gl.bufferSubData(this.gl.ARRAY_BUFFER, 0, arr);
+      ref = this.programAttribs;
+      for (j = 0, len = ref.length; j < len; j++) {
+        a = ref[j];
+        a.enable();
+      }
+      this.gl.drawArrays(this.gl.POINTS, 0, 3);
+      this.gl.drawArrays(this.gl.LINES, 0, 3);
+      this.gl.drawArrays(this.gl.TRIANGLES, 0, 3);
+      return arr;
+    }
+
+    load() {
+      var context, height, left, ratioAspect, ratioPixel, top, width;
+      ({width, height, left, top} = arguments[0].getBoundingClientRect());
+      [ratioAspect, ratioPixel] = [width / height, self.devicePixelRatio || 1];
+      this.setTop(top);
+      this.setHeight(height);
+      this.setWidth(width);
+      this.setLeft(left);
+      this.setAspectRatio(ratioAspect);
+      this.setPixelRatio(ratioPixel);
+      arguments[0].width = ratioPixel * width;
+      arguments[0].height = ratioPixel * height;
+      context = arguments[0].getContext("webgl2");
+      context.viewport(left, top, width, height);
+      return context;
+    }
+
+    getGLBuffer() {
+      return this.getAllBuffers().at(0).getGLBuffer();
+    }
+
+    getGLError() {
+      return this.getLinkedNode().getError();
+    }
+
     bindEvents() {
       var canvas;
       canvas = this.getCanvasNode();
@@ -222,7 +265,7 @@ export var GL = (function() {
     }
 
     setCanvasNode() {
-      this.setLinkedNode(arguments[0].getContext("webgl2"));
+      this.setLinkedNode(this.load(arguments[0]));
       return this;
     }
 
@@ -756,6 +799,9 @@ export var GL = (function() {
     gl: {
       get: GL.prototype.getLinkedNode
     },
+    glError: {
+      get: GL.prototype.getGLError
+    },
     program: {
       get: GL.prototype.getProgram
     },
@@ -770,6 +816,9 @@ export var GL = (function() {
     },
     programUniforms: {
       get: GL.prototype.getUniforms
+    },
+    glBuffer: {
+      get: GL.prototype.getGLBuffer
     },
     allBuffers: {
       get: GL.prototype.getAllBuffers
@@ -1023,11 +1072,20 @@ OFFSET_ATTACH_STATUS = 1 + 2;
 export var Program = (function() {
   class Program extends Pointer {
     link() {
+      var attr, j, len, ref;
       if (this.getLinkedStatus()) {
         return this;
       }
       this.getParentPtrO().linkProgram(this.getGLProgram());
-      this.setLinkedStatus(this.getGLLinkStatus(this.getGLValidate()));
+      if (!this.setLinkedStatus(this.getGLLinkStatus(this.getGLValidate()))) {
+        return this;
+      }
+      ref = this.getAttributes();
+      for (j = 0, len = ref.length; j < len; j++) {
+        attr = ref[j];
+        attr.getGLLocation();
+        attr.bindFunctions();
+      }
       return this;
     }
 
@@ -1601,7 +1659,7 @@ export var Shader = (function() {
 
 OFFSET_TYPE_GLCODE = 4 * 2;
 
-OFFSET_TYPE_LENGTH = 4 * 2 + 2;
+OFFSET_NCOMPONENTS = 4 * 2 + 2;
 
 OFFSET_KEY_LOCATED = 4 * 2 + 3;
 
@@ -1611,6 +1669,10 @@ OFFSET_NAME_TARRAY = 4 * 4;
 
 export var ShaderKey = (function() {
   class ShaderKey extends Pointer {
+    enable() {
+      return this.getLinkedNode()();
+    }
+
     getGL() {
       return this.getShader().getGL();
     }
@@ -1623,16 +1685,20 @@ export var ShaderKey = (function() {
       return this.getShader().getGLShader();
     }
 
-    getProgram() {
-      return this.getShader().getProgram();
-    }
-
     getGLProgram() {
       return this.getShader().getGLProgram();
     }
 
+    getProgram() {
+      return this.getShader().getProgram();
+    }
+
     getNameString() {
       return this.getString(OFFSET_NAME_TARRAY, OFFSET_NAME_LENGTH);
+    }
+
+    keyTypeGLCode() {
+      return this.keyUint16(OFFSET_TYPE_GLCODE);
     }
 
     setNameString() {
@@ -1647,10 +1713,6 @@ export var ShaderKey = (function() {
       return this.setUint16(OFFSET_NAME_LENGTH, arguments[0]);
     }
 
-    keyTypeGLCode() {
-      return this.keyUint16(OFFSET_TYPE_GLCODE);
-    }
-
     getTypeGLCode() {
       return this.getUint16(OFFSET_TYPE_GLCODE);
     }
@@ -1659,12 +1721,12 @@ export var ShaderKey = (function() {
       return this.setUint16(OFFSET_TYPE_GLCODE, arguments[0]);
     }
 
-    getTypeLength() {
-      return this.getUint8(OFFSET_TYPE_LENGTH);
+    getComponents() {
+      return this.getUint8(OFFSET_NCOMPONENTS);
     }
 
-    setTypeLength() {
-      return this.setUint8(OFFSET_TYPE_LENGTH, arguments[0]);
+    setComponents() {
+      return this.setUint8(OFFSET_NCOMPONENTS, arguments[0]);
     }
 
     getKeyLocated() {
@@ -1706,9 +1768,9 @@ Object.defineProperties(ShaderKey.registerClass().prototype, {
     get: ShaderKey.prototype.getNameString,
     set: ShaderKey.prototype.setNameString
   },
-  typeLength: {
-    get: ShaderKey.prototype.getTypeLength,
-    set: ShaderKey.prototype.setTypeLength
+  components: {
+    get: ShaderKey.prototype.getComponents,
+    set: ShaderKey.prototype.setComponents
   },
   type: {
     get: ShaderKey.prototype.keyTypeGLCode,
@@ -1737,11 +1799,11 @@ export var Attribute = (function() {
         [, type, name] = line.split(/\;/g)[0].split(/\s+/g);
         keys.push(key = new Attribute[type]);
         key.setNameString(name);
-        key.setTypeLength(key.constructor.itemLength);
+        key.setComponents(key.constructor.components);
         key.setTypeGLCode(WebGL2RenderingContext.FLOAT);
         key.setNormalize(false);
         key.setOffset(offset);
-        return offset += key.getTypeLength() * 4;
+        return offset += key.getComponents() * 4;
       });
       for (j = 0, len = keys.length; j < len; j++) {
         key = keys[j];
@@ -1751,27 +1813,40 @@ export var Attribute = (function() {
     }
 
     getGLLocation() {
-      var gl, location, program;
-      if (this.getKeyLocated()) {
-        return this.getLocation();
-      }
-      if (!(gl = this.getGL())) {
-        return;
-      }
-      if (!(program = this.getGLProgram())) {
-        return;
-      }
-      if (!(location = gl.getAttribLocation(program, this.getNameString()))) {
-        return;
-      }
-      return this.setKeyLocated(this.setLocation(location));
+      var l;
+      l = this.getGL().getAttribLocation(this.getGLProgram(), this.getNameString());
+      this.setKeyLocated(1);
+      this.setLocation(l);
+      return l;
     }
 
     getLocation() {
       if (!this.getKeyLocated()) {
-        return this.getGLLocation();
+        this.getGLLocation();
       }
       return this.getUint8(OFFSET_LOCATION_AT);
+    }
+
+    bindFunctions() {
+      var argv, at, enable, gl, pointer, ref;
+      (argv = (ref = arguments[0]) != null ? ref : this);
+      if (!this.getKeyLocated()) {
+        return argv;
+      }
+      [gl, at] = [this.getGL(), this.getLocation()];
+      if (this.getLinkedNode()) {
+        this.delLinkedNode();
+      }
+      enable = gl.enableVertexAttribArray.bind(gl, at);
+      pointer = gl.vertexAttribPointer.bind(gl, at, this.getComponents(), this.getTypeGLCode(), this.getNormalize(), this.getStride(), this.getOffset());
+      this.setLinkedNode(function() {
+        enable();
+        log("enabled");
+        pointer();
+        log("pointed");
+        return null;
+      });
+      return argv;
     }
 
     setLocation() {
@@ -1809,7 +1884,7 @@ export var Attribute = (function() {
       value: vec3 = (function() {
         class vec3 extends Attribute {};
 
-        vec3.itemLength = 3;
+        vec3.components = 3;
 
         vec3.protoClass = 0;
 
@@ -1823,7 +1898,7 @@ export var Attribute = (function() {
       value: vec4 = (function() {
         class vec4 extends Attribute {};
 
-        vec4.itemLength = 4;
+        vec4.components = 4;
 
         vec4.protoClass = 0;
 
@@ -1837,7 +1912,7 @@ export var Attribute = (function() {
       value: mat4 = (function() {
         class mat4 extends Attribute {};
 
-        mat4.itemLength = 16;
+        mat4.components = 16;
 
         mat4.protoClass = 0;
 
@@ -1851,7 +1926,7 @@ export var Attribute = (function() {
       value: float = (function() {
         class float extends Attribute {};
 
-        float.itemLength = 1;
+        float.components = 1;
 
         float.protoClass = 0;
 
@@ -1902,7 +1977,7 @@ export var Uniform = (function() {
         [, type, name] = line.split(/\;/g)[0].split(/\s+/g);
         keys.push(key = new Uniform[type]);
         key.setNameString(name);
-        key.setTypeLength(key.constructor.itemLength);
+        key.setComponents(key.constructor.components);
         return key.setTypeGLCode(WebGL2RenderingContext.FLOAT);
       });
       return keys;
@@ -1922,7 +1997,9 @@ export var Uniform = (function() {
       if (!(location = gl.getUniformLocation(program, this.getNameString()))) {
         return;
       }
-      return this.setKeyLocated(this.setLinkedNode(location));
+      this.setKeyLocated(1);
+      this.setLinkedNode(location);
+      return locatio;
     }
 
   };
@@ -1932,7 +2009,7 @@ export var Uniform = (function() {
       value: vec3 = (function() {
         class vec3 extends Uniform {};
 
-        vec3.itemLength = 3;
+        vec3.components = 3;
 
         vec3.protoClass = 0;
 
@@ -1946,7 +2023,7 @@ export var Uniform = (function() {
       value: vec4 = (function() {
         class vec4 extends Uniform {};
 
-        vec4.itemLength = 4;
+        vec4.components = 4;
 
         vec4.protoClass = 0;
 
@@ -1960,7 +2037,7 @@ export var Uniform = (function() {
       value: mat4 = (function() {
         class mat4 extends Uniform {};
 
-        mat4.itemLength = 16;
+        mat4.components = 16;
 
         mat4.protoClass = 0;
 
@@ -1974,7 +2051,7 @@ export var Uniform = (function() {
       value: float = (function() {
         class float extends Uniform {};
 
-        float.itemLength = 1;
+        float.components = 1;
 
         float.protoClass = 0;
 

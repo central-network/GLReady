@@ -488,6 +488,11 @@ Object.defineProperties(Pointer.prototype, {
       return dvw.setObject(this + OFFSET_LINKEDNODE, arguments[0]);
     }
   },
+  delLinkedNode: {
+    value: function() {
+      return dvw.delObject(this + OFFSET_LINKEDNODE);
+    }
+  },
   getParentPtri: {
     value: function() {
       return dvw.getUint32(this + OFFSET_PARENT_PTR, LE);
@@ -652,10 +657,14 @@ Object.defineProperties(Pointer.prototype, {
     get: Pointer.prototype.getByteLength,
     set: Pointer.prototype.setByteLength
   },
-  
-  //protoClass     : get : Pointer::getProtoClass , set : Pointer::setProtoClass
-
-  //linkedNode     : get : Pointer::getLinkedNode , set : Pointer::setLinkedNode
+  protoClass: {
+    get: Pointer.prototype.getProtoClass,
+    set: Pointer.prototype.setProtoClass
+  },
+  linkedNode: {
+    get: Pointer.prototype.getLinkedNode,
+    set: Pointer.prototype.setLinkedNode
+  },
   parent: {
     get: Pointer.prototype.getParentPtrP,
     set: Pointer.prototype.setParentPtri

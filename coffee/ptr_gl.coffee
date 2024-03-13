@@ -67,6 +67,46 @@ export class GL extends Pointer
 
     @typedArray     = Uint32Array
 
+    draw            : ->
+
+        arr = Float32Array.of(...arguments[0])
+        size = arr.length * arr.BYTES_PER_ELEMENT
+
+        @gl.bindBuffer @gl.ARRAY_BUFFER, @glBuffer
+        @gl.bufferData @gl.ARRAY_BUFFER, size, @gl.STATIC_DRAW
+
+
+        @gl.bufferSubData @gl.ARRAY_BUFFER, 0, arr
+        a.enable() for a in @programAttribs
+
+        @gl.drawArrays @gl.POINTS, 0, 3
+        @gl.drawArrays @gl.LINES, 0, 3
+        @gl.drawArrays @gl.TRIANGLES, 0, 3
+
+        arr
+
+    load            : ->
+        { width, height, left, top } = arguments[ 0 ].getBoundingClientRect()
+        [ ratioAspect , ratioPixel ] = [ width / height, self.devicePixelRatio || 1 ]
+
+        this.setTop         top
+        this.setHeight      height
+        this.setWidth       width
+        this.setLeft        left
+        this.setAspectRatio ratioAspect
+        this.setPixelRatio  ratioPixel
+
+        arguments[0].width  = ratioPixel * width
+        arguments[0].height = ratioPixel * height
+
+        context = arguments[0].getContext "webgl2"
+        context . viewport left, top, width, height
+        context
+
+    getGLBuffer     : -> @getAllBuffers().at(0).getGLBuffer()
+        
+    getGLError      : -> @getLinkedNode().getError()
+
     bindEvents      : ->
         canvas = @getCanvasNode()
 
@@ -134,7 +174,7 @@ export class GL extends Pointer
 
     getCanvasNode   : -> @getLinkedNode().canvas
 
-    setCanvasNode   : -> @setLinkedNode arguments[0].getContext "webgl2" ; @
+    setCanvasNode   : -> @setLinkedNode @load arguments[0] ; @
 
     getDrawActive   : -> @getUint8 OFFSET_DRAW_ACTIVE
     
@@ -378,6 +418,8 @@ export class GL extends Pointer
 
         gl              : get : GL::getLinkedNode
 
+        glError         : get : GL::getGLError
+
         program         : get : GL::getProgram
 
         programVertex   : get : GL::getVertShader
@@ -387,6 +429,8 @@ export class GL extends Pointer
         programAttribs  : get : GL::getAttributes
 
         programUniforms : get : GL::getUniforms
+
+        glBuffer        : get : GL::getGLBuffer
 
         allBuffers      : get : GL::getAllBuffers 
 
@@ -524,12 +568,16 @@ export class Program extends Pointer
 
         LINK_STATUS     : WebGL2RenderingContext.LINK_STATUS
 
-
         link            : ->
             return this if @getLinkedStatus()
-
             @getParentPtrO().linkProgram @getGLProgram()
-            @setLinkedStatus @getGLLinkStatus @getGLValidate() ; this
+
+            return this unless @setLinkedStatus @getGLLinkStatus @getGLValidate()
+            for attr in @getAttributes()
+                attr    .getGLLocation()
+                attr    .bindFunctions()
+
+            return this
 
         use             : ->
             return this if @getUint8 OFFSET_INUSE_STATUS
@@ -737,17 +785,21 @@ export class Shader extends Pointer
         @setIsCompiled 1 ; return this
         
     attach              : ->
+
+
         return this if @getIsAttached()
         @getGL().attachShader @getGLProgram(), @getGLShader()
         @setIsAttached 1 ; return this
 
     load                : ->
+
         @upload().compile().attach().check() ; @
 
     parse               : ->
         return this unless @isVertexShader()
         @getAllVariables().forEach Pointer.removePointer
-        @add key for key in Shader.parse @getSourceText() ; @
+        @add key for key in Shader.parse @getSourceText()
+        ; @
 
     reload              : ->
         @unload().load() ; @
@@ -857,7 +909,7 @@ export class Shader extends Pointer
 
 OFFSET_TYPE_GLCODE      = 4 * 2
 
-OFFSET_TYPE_LENGTH      = 4 * 2 + 2
+OFFSET_NCOMPONENTS      = 4 * 2 + 2
 
 OFFSET_KEY_LOCATED      = 4 * 2 + 3
 
@@ -871,37 +923,39 @@ export class ShaderKey extends Pointer
 
     @typedArray         : Uint8Array
 
+    enable              : -> @getLinkedNode()()
+
     getGL               : -> @getShader().getGL()
 
     getShader           : -> @getParentPtrP()
 
     getGLShader         : -> @getShader().getGLShader()
 
-    getProgram          : -> @getShader().getProgram()
-
     getGLProgram        : -> @getShader().getGLProgram()
 
-    getNameString       : -> @getString OFFSET_NAME_TARRAY  , OFFSET_NAME_LENGTH
+    getProgram          : -> @getShader().getProgram()
 
-    setNameString       : -> @setString OFFSET_NAME_TARRAY  , arguments[0] , OFFSET_NAME_LENGTH
+    getNameString       : -> @getString OFFSET_NAME_TARRAY , OFFSET_NAME_LENGTH
+
+    keyTypeGLCode       : -> @keyUint16 OFFSET_TYPE_GLCODE
+
+    setNameString       : -> @setString OFFSET_NAME_TARRAY , arguments[0] , OFFSET_NAME_LENGTH
 
     getNameLength       : -> @getUint16 OFFSET_NAME_LENGTH
 
-    setNameLength       : -> @setUint16 OFFSET_NAME_LENGTH  , arguments[0]
-
-    keyTypeGLCode       : -> @keyUint16 OFFSET_TYPE_GLCODE
+    setNameLength       : -> @setUint16 OFFSET_NAME_LENGTH , arguments[0]
     
     getTypeGLCode       : -> @getUint16 OFFSET_TYPE_GLCODE
 
-    setTypeGLCode       : -> @setUint16 OFFSET_TYPE_GLCODE  , arguments[0]
+    setTypeGLCode       : -> @setUint16 OFFSET_TYPE_GLCODE , arguments[0]
 
-    getTypeLength       : -> @getUint8  OFFSET_TYPE_LENGTH
+    getComponents       : -> @getUint8  OFFSET_NCOMPONENTS
 
-    setTypeLength       : -> @setUint8  OFFSET_TYPE_LENGTH  , arguments[0]
+    setComponents       : -> @setUint8  OFFSET_NCOMPONENTS , arguments[0]
 
     getKeyLocated       : -> @getUint8  OFFSET_KEY_LOCATED
 
-    setKeyLocated       : -> @setUint8  OFFSET_KEY_LOCATED  , arguments[0] ; arguments[0]
+    setKeyLocated       : -> @setUint8  OFFSET_KEY_LOCATED , arguments[0] ; arguments[0]
 
 Object.defineProperties ShaderKey.registerClass()::,
 
@@ -917,7 +971,7 @@ Object.defineProperties ShaderKey.registerClass()::,
 
     name                : get : ShaderKey::getNameString    , set : ShaderKey::setNameString
     
-    typeLength          : get : ShaderKey::getTypeLength    , set : ShaderKey::setTypeLength
+    components          : get : ShaderKey::getComponents    , set : ShaderKey::setComponents
 
     type                : get : ShaderKey::keyTypeGLCode    , set : ShaderKey::setTypeGLCode
 
@@ -934,22 +988,22 @@ export class Attribute extends ShaderKey
     Object.defineProperties Attribute.registerClass(),
         
         vec3    : value : class  vec3 extends this
-            @itemLength : 3
+            @components : 3
             @protoClass : 0
             @registerClass()
 
         vec4    : value : class  vec4 extends this 
-            @itemLength : 4
+            @components : 4
             @protoClass : 0
             @registerClass()
         
         mat4    : value : class  mat4 extends this 
-            @itemLength : 16
+            @components : 16
             @protoClass : 0
             @registerClass()
 
         float   : value : class float extends this 
-            @itemLength : 1
+            @components : 1
             @protoClass : 0
             @registerClass()
 
@@ -963,12 +1017,12 @@ export class Attribute extends ShaderKey
             keys.push key =     new Attribute[ type ]
 
             key.setNameString   name
-            key.setTypeLength   key.constructor.itemLength
+            key.setComponents   key.constructor.components
             key.setTypeGLCode   WebGL2RenderingContext.FLOAT
             key.setNormalize    no
             key.setOffset       offset
 
-            offset += key.getTypeLength() * 4
+            offset += key.getComponents() * 4
         
         for key in keys
             key.setStride offset 
@@ -976,30 +1030,51 @@ export class Attribute extends ShaderKey
         keys
 
     getGLLocation       : ->
-        return @getLocation() if @getKeyLocated()
-        return unless gl = @getGL()
-        return unless program = @getGLProgram()
-        return unless location = gl.getAttribLocation program, @getNameString()
-        return @setKeyLocated @setLocation location
+        l = @getGL().getAttribLocation @getGLProgram(), @getNameString()
+        @setKeyLocated 1 ; @setLocation l ; l
     
     getLocation         : ->
-        unless @getKeyLocated()
-            return @getGLLocation()
-        return @getUint8 OFFSET_LOCATION_AT
+        @getGLLocation() unless @getKeyLocated()
+        @getUint8 OFFSET_LOCATION_AT
 
-    setLocation         : -> @setUint8 OFFSET_LOCATION_AT   , arguments[0]
+    bindFunctions       : ->
+
+        ( argv = arguments[0] ? this )
+
+        return argv unless @getKeyLocated() 
+
+        [ gl , at ] = [ @getGL() , @getLocation() ]
+
+        @delLinkedNode() if @getLinkedNode()
+
+        enable  = gl.enableVertexAttribArray.bind gl, at
+        pointer = gl.vertexAttribPointer.bind(
+            gl, at, @getComponents(), @getTypeGLCode(),
+            @getNormalize(), @getStride(), @getOffset()
+        )
+
+        @setLinkedNode ->
+            enable()
+            log "enabled"
+            pointer()
+            log "pointed"
+            null
+
+        argv
+
+    setLocation         : -> @setUint8 OFFSET_LOCATION_AT , arguments[0]
 
     getNormalize        : -> @getUint8 OFFSET_ISNORMALIZE
 
-    setNormalize        : -> @setUint8 OFFSET_ISNORMALIZE   , arguments[0]
+    setNormalize        : -> @setUint8 OFFSET_ISNORMALIZE , arguments[0]
 
     getStride           : -> @getUint8 OFFSET_ATTR_STRIDE
 
-    setStride           : -> @setUint8 OFFSET_ATTR_STRIDE   , arguments[0]
+    setStride           : -> @setUint8 OFFSET_ATTR_STRIDE , arguments[0]
 
     getOffset           : -> @getUint8 OFFSET_ATTR_OFFSET
 
-    setOffset           : -> @setUint8 OFFSET_ATTR_OFFSET   , arguments[0]
+    setOffset           : -> @setUint8 OFFSET_ATTR_OFFSET , arguments[0]
 
 Object.defineProperties Attribute::,
 
@@ -1018,35 +1093,37 @@ export class Uniform extends ShaderKey
     Object.defineProperties Uniform.registerClass(),
         
         vec3    : value : class  vec3 extends this
-            @itemLength : 3
+            @components : 3
             @protoClass : 0
             @registerClass()
 
         vec4    : value : class  vec4 extends this 
-            @itemLength : 4
+            @components : 4
             @protoClass : 0
             @registerClass()
         
         mat4    : value : class  mat4 extends this 
-            @itemLength : 16
+            @components : 16
             @protoClass : 0
             @registerClass()
 
         float   : value : class float extends this 
-            @itemLength : 1
+            @components : 1
             @protoClass : 0
             @registerClass()
 
     @parse              : ->
-        [ source ] = arguments
-        [ keys   ] = [ [] ]
+        
+        [ source ]      = arguments
+
+        [ keys   ]      = [ [] ]
 
         source.split(/uniform/g).slice( 1 ).map ( line ) =>
             [ , type, name ] = line.split(/\;/g)[0].split /\s+/g
 
             keys.push key =     new Uniform[ type ]
             key.setNameString   name
-            key.setTypeLength   key.constructor.itemLength
+            key.setComponents   key.constructor.components
             key.setTypeGLCode   WebGL2RenderingContext.FLOAT
 
         keys
@@ -1056,7 +1133,7 @@ export class Uniform extends ShaderKey
         return unless gl = @getGL()
         return unless program = @getGLProgram()
         return unless location = gl.getUniformLocation program, @getNameString()
-        return @setKeyLocated @setLinkedNode location
+        @setKeyLocated 1 ; @setLinkedNode location ; locatio
 
 Object.defineProperties Uniform::,
 

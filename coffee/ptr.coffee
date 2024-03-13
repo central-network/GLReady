@@ -337,6 +337,8 @@ Object.defineProperties Pointer::,
     getLinkedNode   : value : -> dvw.getObject this + OFFSET_LINKEDNODE
 
     setLinkedNode   : value : -> dvw.setObject this + OFFSET_LINKEDNODE, arguments[0]
+    
+    delLinkedNode   : value : -> dvw.delObject this + OFFSET_LINKEDNODE
 
     getParentPtri   : value : -> dvw.getUint32 this + OFFSET_PARENT_PTR, LE
 
@@ -422,9 +424,9 @@ Object.defineProperties Pointer::,
     
     byteLength      : get : Pointer::getByteLength , set : Pointer::setByteLength
     
-    #protoClass     : get : Pointer::getProtoClass , set : Pointer::setProtoClass
+    protoClass      : get : Pointer::getProtoClass , set : Pointer::setProtoClass
 
-    #linkedNode     : get : Pointer::getLinkedNode , set : Pointer::setLinkedNode
+    linkedNode      : get : Pointer::getLinkedNode , set : Pointer::setLinkedNode
     
     parent          : get : Pointer::getParentPtrP , set : Pointer::setParentPtri
 
