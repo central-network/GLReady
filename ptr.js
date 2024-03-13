@@ -958,12 +958,17 @@ if (typeof window !== "undefined" && window !== null) {
     document.body.setAttribute("title", "Click body to activate debugger.");
   }
   if (typeof document !== "undefined" && document !== null) {
-    document.body.onclick = function() {
+    document.body.ondblclick = function() {
       if (ival) {
         return ival = clearInterval(ival);
       } else {
         return ival = setInterval(dump, 90);
       }
+    };
+  }
+  if (typeof document !== "undefined" && document !== null) {
+    document.body.onclick = function() {
+      return dump(clearInterval(ival));
     };
   }
   hist = [];
@@ -986,12 +991,12 @@ if (typeof window !== "undefined" && window !== null) {
         object: child,
         parent: child.parent * 1 || null,
         type: child.type,
-        class: child.getProtoClass(),
-        gl: child.getLinkedNode(),
+        classId: child.getProtoClass(),
+        link: child.getLinkedNode(),
         offset: child.byteOffset,
-        byteLength: child.byteLength,
-        typedArray: new child.constructor.typedArray(child.length),
-        childrens: child.children.length || null
+        allocated: child.byteLength,
+        array: child.array,
+        childs: child.children.length || null
       });
       byteLength += child.byteLength;
     }
@@ -1012,7 +1017,9 @@ if (typeof window !== "undefined" && window !== null) {
       fps: u32.at(INDEX_FPS)
     });
     hist = hist.slice(-5);
-    console.warn(fill);
+    if (ival) {
+      console.warn(fill);
+    }
     console.table(hist);
     return console.table(dumpArray);
   };

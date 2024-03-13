@@ -1227,15 +1227,15 @@ Object.defineProperties Buffer.registerClass()::,
 
     gl                  : get : Buffer::getGL
 
-    glBuffer            : get : Buffer::getGLBuffer     , set : Buffer::setGLBuffer
-
     glBindings          : get : Buffer::getGLBindings
 
     glValidate          : get : Buffer::getGLIsBuffer 
 
-    bindTarget          : get : Buffer::keyBindTarget   , set : Buffer::setBindTarget 
+    glBuffer            : get : Buffer::getGLBuffer     , set : Buffer::setGLBuffer
 
-    bindStatus          : get : Buffer::getBindStatus   , set : Buffer::setBindStatus
+    type                : get : Buffer::keyBindTarget   , set : Buffer::setBindTarget 
+
+    status              : get : Buffer::getBindStatus   , set : Buffer::setBindStatus
 
 OFFSET_O3_DRAWTYPE      = 4 * 0
 

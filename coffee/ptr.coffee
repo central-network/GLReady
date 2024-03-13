@@ -598,13 +598,21 @@ Pointer.setBuffer() if window?
 
 
 if  window?
+
     ival = 0
 
-    document?.body.setAttribute "title", "Click body to activate debugger."
-    document?.body.onclick = ->
+    document?.body.setAttribute(
+        "title",
+        "Click body to activate debugger."
+    )
+    
+    document?.body.ondblclick = ->
+
         if ival
             ival = clearInterval ival
         else ival = setInterval dump, 90
+
+    document?.body.onclick = -> dump clearInterval ival
         
     hist = [] 
     fill = "".padStart 1e2, '\n'
@@ -623,16 +631,16 @@ if  window?
 
         for child in childs
             dumpArray.push {
-                ptr : child * 1  
-                object: child
-                parent : child.parent * 1 or null
-                type: child.type
-                class: child.getProtoClass()
-                gl: child.getLinkedNode()
-                offset: child.byteOffset
-                byteLength: child.byteLength,
-                typedArray: new child.constructor.typedArray child.length
-                childrens: child.children.length or null
+                ptr         : child * 1  
+                object      : child
+                parent      : child.parent * 1 or null
+                type        : child.type
+                classId     : child.getProtoClass()
+                link        : child.getLinkedNode()
+                offset      : child.byteOffset
+                allocated   : child.byteLength,
+                array       : child.array
+                childs      : child.children.length or null
             }
 
             byteLength += child.byteLength
@@ -656,7 +664,7 @@ if  window?
 
         hist = hist.slice -5
 
-        console.warn fill
+        console.warn fill if ival
         console.table hist
         console.table dumpArray
 

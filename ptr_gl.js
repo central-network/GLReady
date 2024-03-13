@@ -2220,21 +2220,21 @@ Object.defineProperties(Buffer.registerClass().prototype, {
   gl: {
     get: Buffer.prototype.getGL
   },
-  glBuffer: {
-    get: Buffer.prototype.getGLBuffer,
-    set: Buffer.prototype.setGLBuffer
-  },
   glBindings: {
     get: Buffer.prototype.getGLBindings
   },
   glValidate: {
     get: Buffer.prototype.getGLIsBuffer
   },
-  bindTarget: {
+  glBuffer: {
+    get: Buffer.prototype.getGLBuffer,
+    set: Buffer.prototype.setGLBuffer
+  },
+  type: {
     get: Buffer.prototype.keyBindTarget,
     set: Buffer.prototype.setBindTarget
   },
-  bindStatus: {
+  status: {
     get: Buffer.prototype.getBindStatus,
     set: Buffer.prototype.setBindStatus
   }
