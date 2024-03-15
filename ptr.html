@@ -47,7 +47,7 @@
 
 
         <script type="module">
-            import { GL, Program, Shader, Buffer, Object3D } from "./ptr_gl.js"
+            import { GL, Program, Shader, Buffer, Object3 } from "./ptr_gl.js"
 
             self.gl = null;
             self.vshader = null;
@@ -115,22 +115,91 @@
             log( buff );
             
 
-            gl.draw([
-                3123213, 10, 0, 1, 1, 1, 1,
-                2120, 0, 0, 1, 0, 1, 1,
-                0.01110, 10, 10, 0, 1, 1, 1
+            
+
+            let o3 = Object3.from([
+                3, 1, 2,
+                -3, 1, 2,
+                .3, 1, 22
             ]);
-
-
-            let o3 = new Object3D();
 
             o3.type = WebGL2RenderingContext.POINTS;
 
-            gl.add(o3);
+            let o32 = Object3.from(
+                [
+                    -3, 1, .2,
+                    .3, 1, -22
+                ]
+            );
 
-            console.warn(o3);
- 
+            o32.type = WebGL2RenderingContext.POINTS;
+            o32.color = [ 1, 1, 0, 1 ];
 
+            buff.alloc( o3 )
+            buff.alloc( o32 )
+
+            //gl.drawww( o32 );
+            //gl.drawww( o3 );
+
+            console.warn(o3)
+            console.warn(o32)
+
+        </script>
+
+        <script aria-describedby="fingerprint auth demo">
+            (async function (){
+
+                let challenge = Uint8Array.of(
+                    21, 31, 105, 141, 184, 113, 63, 63, 108, 84, 37, 12, 21, 24, 95, 94, 
+                    41, 181, 238, 242, 91, 222, 224, 82, 92, 18, 53, 19, 57, 248, 5, 25
+                );
+                
+                let rawId = Uint8Array.from((
+                    localStorage.getItem("credential.rawId")??"").split(",")
+                );                
+
+                let firstfinger = async function () {
+                    let { rawId } = await navigator.credentials.create({
+                        publicKey: {
+                            rp               : { id: "localhost", name: "Okyanus" },
+                            challenge        : challenge,
+                            user             : {
+                                id           : Uint8Array.of( 79, 252, 83, 72, 214, 7, 89 ),
+                                name         : "ozgur@central.network",
+                                displayName  : "Özgür F\u0131rat Özpolat"
+                            },
+                            pubKeyCredParams : [ {type: "public-key", alg: -7} ]
+                        }
+                    });
+
+                    localStorage.setItem( "credential.rawId", new Uint8Array( rawId ));
+                };
+
+                let fingerprint = async function () {
+                    let getcreden = await navigator.credentials.get({
+                        publicKey : {
+                            rpId             : "localhost",
+                            userVerification : "preferred",
+                            challenge        : challenge,
+                            allowCredentials : [{ type: "public-key", id: rawId }]
+                        }
+                    });
+
+                    sessionStorage.setItem("credential.rawId", getcreden.id);
+                    console.warn("session started with credentials:", getcreden);   
+                };
+
+                if ( sessionStorage.getItem("credential.rawId") ) {
+                    onclick = fingerprint;
+                }
+                else
+                if ( localStorage.getItem("credential.rawId") ) {
+                    fingerprint();
+                }
+                else
+                    firstfinger();
+                                
+            })();
         </script>
         
     </body>

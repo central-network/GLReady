@@ -1,5 +1,5 @@
 import Pointer from "./ptr.coffee"
-import { Vertex, Angle3, Scale3, Color4 } from "./ptr.coffee"
+import { Vertex, Angle3, Scale3, Color4, OffsetPointer } from "./ptr.coffee"
 
 OFFSET_DRAW_ACTIVE  = 4 * 2
 OFFSET_CULL_ENABLED = 4 * 2 + 1
@@ -87,6 +87,23 @@ export class GL extends Pointer
         @gl.drawArrays @gl.TRIANGLES, 0, 3
 
         arr
+
+
+    redraw          : ( ptr ) ->
+        @gl.bufferSubData @gl.ARRAY_BUFFER, 0, ptr.array
+        a.enable() for a in @programAttribs
+
+        @gl.drawArrays @gl.POINTS, 0, 3
+        @gl.drawArrays @gl.LINES, 0, 3
+        @gl.drawArrays @gl.TRIANGLES, 0, 3
+
+    drawww          : ( o3 ) ->
+        buffer = @allBuffers.at 0
+
+        console.warn buffer
+        console.warn o3
+        console.warn buffer.alloc o3 
+
 
     load            : ->
         { width, height, left, top } = arguments[ 0 ].getBoundingClientRect()
@@ -659,14 +676,11 @@ export class Program extends Pointer
 
             unless fShader = @getFragShader()
                 if  arguments[0].constructor is String
-                    fShader = new Shader()
+                    fShader = Shader.fromSource arguments[0]
 
             if  fShader instanceof Shader
                 @add fShader
-                fShader
-                    .setSourceText arguments[0]
-                    .setShaderType Shader::FRAGMENT
-                    .reload()
+                fShader.load()
 
             @load() if @getVertShader()
 
@@ -909,7 +923,11 @@ export class Shader extends Pointer
 
         uniforms        : get : Shader::getUniforms
 
-        attributes      : get : Shader::getAttributes       
+        attributes      : get : Shader::getAttributes  
+        
+        sumComponents   : get : -> @attributes.sumAttrib "components"
+        
+        stride          : get : -> @attributes[ 0 ].stride
 
 OFFSET_TYPE_GLCODE      = 4 * 2
 
@@ -1156,9 +1174,17 @@ OFFSET_BINDING_TARGET   = 4 * 0
 
 OFFSET_BINDING_STATUS   = 4 * 0 + 2
 
+OFFSET_BUF_BYTELENGTH   = 4 * 1 # total usabe reserved on gpu
+
+OFFSET_BUF_BYTEOFFSET   = 4 * 2 # allocated bytes of vertices 
+
+OFFSET_BUF_DRAWOFFSET   = 4 * 3 # offset on SharedArrayBuffer
+
+OFFSET_BUFFER_OFFSET    = 4 * 12
+
 export class Buffer extends Pointer
 
-    @byteLength         : 4 * 2
+    @byteLength         : 4 * 256 * 256
 
     @typedArray         : Float32Array
 
@@ -1192,6 +1218,34 @@ export class Buffer extends Pointer
         @setBindStatus 1 ; this
 
     load                : -> @create() ; @bind() ; this
+
+    alloc               : ->
+        object3d = arguments[ 0 ]
+        object3d . setAttibStride 7
+        object3d . setAttibLength 7 * object3d.getVertexCount() 
+
+        pointCount = object3d.getVertexCount()
+        components = 7
+
+        pointCount = arguments[ 0 ]
+        attrLength = pointCount * components
+        byteLength = attrLength * @BYTES_PER_ELEMENT
+        byteLength = 4 * attrLength
+
+        drawOffset = @addUint32 OFFSET_BUF_BYTEOFFSET , byteLength 
+
+        #? bufferSubData( target, dstByteOffset, srcData, srcOffset, length )
+
+        object3d.setBufferOffset drawOffset
+        object3d.setCopyOffset object3d.begin
+        object3d.setCopyLength attrLength
+
+        byteOffset = drawOffset + @byteOffset + OFFSET_BUFFER_OFFSET
+        typedArray = new Float32Array @buffer, byteOffset, attrLength
+
+        object3d.setParentPtri new OffsetPointer object3d
+        object3d
+
 
     delete              : -> @setBindStatus @getGL().deleteBuffer @getLinkedNode() ; @
 
@@ -1249,17 +1303,109 @@ OFFSET_O3_ROTATION      = 4 * 10
 
 OFFSET_O3_SCALE_3D      = 4 * 14
 
+OFFSET_BUFFER_OFFSET    = 4 * 18
+
+OFFSET_COPY_OFFSET      = 4 * 19
+
+OFFSET_COPY_LENGTH      = 4 * 20
+
+OFFSET_ATTRIB_LENGTH    = 4 * 21
+
+OFFSET_ATTRIB_STRIDE    = 4 * 21 + 2
+
 KEYEXTEND_OBJECT3D      = 0 : new (class POINTS extends Number) WebGL2RenderingContext.POINTS
 
-export class Object3D extends Pointer
+export class Vertices   extends Pointer
 
-Object.defineProperties Object3D.registerClass(),
+Object.defineProperties Vertices.registerClass(),
+
+    typedArray          : value : Float32Array
+    
+    fromArray           : value : ->
+        len = arguments[ 0 ] . length
+        ptr = this . malloc len * this . BYTES_PER_ELEMENT
+        ptr . array.set ptr . setLinkedNode arguments[ 0 ]
+        ptr
+
+Object.defineProperties Vertices::,
+
+    type                : get   : -> @keyStatic WebGL2RenderingContext.FLOAT
+
+export class Attributes extends Pointer
+
+    @typedArray         : Float32Array
+
+export class Object3    extends Pointer
+
+
+    bind                : ->
+        shader = arguments[0]
+        shader.add this
+
+        [ vertex, color4 ] = shader.getAttributes()
+        
+        pointCount = @bufferArray.length / vertex.components
+        allocLength = pointCount * shader.sumComponents
+        ptrByteLength = allocLength * Attributes.BYTES_PER_ELEMENT
+
+        ptr = Attributes.malloc ptrByteLength
+
+        stride = shader.sumComponents
+        tarray = ptr.array
+        offset = -stride
+        sarray = @bufferArray
+        carray = @color.array
+
+        for i in [ 0 ... pointCount ]
+            tarray
+                .subarray offset += stride, offset + stride
+                .set [
+                    ...sarray.subarray( i * 3, i * 3 + 3 )
+                    ...carray
+                ]
+
+        ptr
+
+Object.defineProperties Object3.registerClass(),
 
     byteLength          : value : 4 * 32
 
     typedArray          : value : Float32Array
 
-Object.defineProperties Object3D::,
+Object.defineProperties Object3::,
+
+    getBufferOffset     : value : -> @getUint32 OFFSET_BUFFER_OFFSET
+
+    getBufferObject     : value : -> new OffsetPointer this
+
+    setBufferOffset     : value : -> @setUint32 OFFSET_BUFFER_OFFSET , arguments[0]
+
+
+    getAttibLength      : value : -> @getUint16 OFFSET_ATTRIB_LENGTH
+
+    setAttibLength      : value : -> @setUint16 OFFSET_ATTRIB_LENGTH , arguments[0]
+
+    
+    getAttibStride      : value : -> @getUint8  OFFSET_ATTRIB_STRIDE
+
+    setAttibStride      : value : -> @setUint8  OFFSET_ATTRIB_STRIDE , arguments[0]
+
+    
+    getVertexCount      : value : -> (@length - @constructor.LENGTH_OF_POINTER) / 3
+
+    getVertexArray      : value : -> @subarray( @constructor.LENGTH_OF_POINTER)
+
+    setVertexArray      : value : -> @set(      @constructor.LENGTH_OF_POINTER, arguments[ 0 ])
+
+
+
+    getCopyOffset       : value : -> @getUint32 OFFSET_COPY_OFFSET
+
+    setCopyOffset       : value : -> @setUint32 OFFSET_COPY_OFFSET , arguments[0]
+
+    getCopyLength       : value : -> @getUint32 OFFSET_COPY_LENGTH
+
+    setCopyLength       : value : -> @setUint32 OFFSET_COPY_LENGTH , arguments[0]
 
     keyDrawType         : value : -> @keyUint16 OFFSET_O3_DRAWTYPE , KEYEXTEND_OBJECT3D
 
@@ -1283,16 +1429,31 @@ Object.defineProperties Object3D::,
     
     setColor            : value : -> @setArray4 OFFSET_O3_COLOR_4D , arguments[0]
 
-Object.defineProperties Object3D::,
 
-    position            : get : Object3D::getPosition   , set : Object3D::setPosition
-    
-    rotation            : get : Object3D::getRotation   , set : Object3D::setRotation
-    
-    scale               : get : Object3D::getScale      , set : Object3D::setScale
-    
-    color               : get : Object3D::getColor      , set : Object3D::setColor
-    
-    type                : get : Object3D::keyDrawType   , set : Object3D::setDrawType
+Object.defineProperties Object3::,
 
+    vertexCount         : get : Object3::getVertexCount  
+   
+    vertexArray         : get : Object3::getVertexArray   , set : Object3::setVertexArray
 
+    attribStride        : get : Object3::getAttibStride   , set : Object3::setAttibStride
+    
+    attribLength        : get : Object3::getAttibLength   , set : Object3::setAttibLength
+
+    bufferOffset        : get : Object3::getBufferOffset  , set : Object3::setBufferOffset
+    
+    bufferObject        : get : Object3::getBufferObject
+    
+    copyOffset          : get : Object3::getCopyOffset , set : Object3::setCopyOffset
+
+    copyLength          : get : Object3::getCopyLength , set : Object3::setCopyLength
+
+    position            : get : Object3::getPosition   , set : Object3::setPosition
+    
+    rotation            : get : Object3::getRotation   , set : Object3::setRotation
+    
+    scale               : get : Object3::getScale      , set : Object3::setScale
+    
+    color               : get : Object3::getColor      , set : Object3::setColor
+    
+    type                : get : Object3::keyDrawType   , set : Object3::setDrawType

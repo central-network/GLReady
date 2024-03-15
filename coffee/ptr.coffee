@@ -45,6 +45,12 @@ KEYEX = 0 : new (class NONE extends Number) 0
 for k, v of WebGL2RenderingContext then KEYED[ v ] =
     eval "new (class #{k} extends Number {})(#{v})"
 
+Object.defineProperties Array::,
+
+    sumAttrib : value : ->
+        n = arguments[ s = 0 ]
+        s += v for { [n]: v } in @ ; s
+
 Object.defineProperties DataView::,
     
     setObject : value : ( offset, object ) ->
@@ -60,8 +66,8 @@ Object.defineProperties DataView::,
         return unless i = @getUint32 offset, LE
         return OBJECTS[ i ] ?= proxy i
 
-    toPointer : value : ( offset ) ->
-        new Pointer i if i = @getUint32 offset, LE
+    toPointer : value : ( offset, Prototype = Pointer ) ->
+        new Prototype i if i = @getUint32 offset, LE
 
     keyUint16 : value : ( offset, extend = KEYEX ) ->
         extend[ v = @getUint16 offset, LE ] or KEYED[ v ] 
@@ -75,6 +81,43 @@ export class Vertex extends Vector
 export class Scale3 extends Vector
 
 export class Color4 extends Number
+
+export class OffsetPointer extends Number
+
+Object.defineProperties OffsetPointer,
+
+    typedArray      : value : Float32Array
+
+Object.defineProperties OffsetPointer::,
+
+    getVertexAttrib : value : ->
+
+    getArrayLength  : value : ->
+        @getLinkedNode().length -
+        @getLinkedNode().constructor.LENGTH_OF_POINTER
+
+    getArray        : value : ->
+        @getLinkedNode().subarray -@getArrayLength()
+
+    getByteOffset   : value : ->
+        @getLinkedNode().byteOffset
+
+    getLinkedNode   : value : ->
+        ptr = new Pointer this * 1
+
+    getBufferOffset : value : ->
+        @getLinkedNode().bufferOffset
+
+Object.defineProperties OffsetPointer::,
+
+    array           : get   : OffsetPointer::getArray
+
+    linkedNode      : get   : OffsetPointer::getLinkedNode          
+
+    byteOffset      : get   : OffsetPointer::getByteOffset
+    
+    bufferOffset    : get   : OffsetPointer::getBufferOffset
+
 
 Object.defineProperties Vector,
 
@@ -307,8 +350,12 @@ export default class Pointer extends Number
                 
             this.init()
 
+    @from       : ( arrayLike ) ->
+        ptr = @malloc( @byteLength + @BYTES_PER_ELEMENT * arrayLike.length )
+        ptr .subarray( @byteLength / @BYTES_PER_ELEMENT ) . set( arrayLike )
+        ptr
+
     @malloc     : ( byteLength ) ->
-        
         ptr = palloc BYTES_PER_POINTER
 
         dvw.setUint32 ptr + OFFSET_BYTELENGTH, byteLength, LE
@@ -376,6 +423,11 @@ export default class Pointer extends Number
     add         : ->
         arguments[0].setParentPtri this
         
+    set         : -> @getTypedArray().set( ...arguments ) ; this
+
+    subarray    : -> @getTypedArray().subarray( ...arguments )
+
+
 export class WorkerPointer extends Pointer
 
 Object.defineProperties Pointer,
@@ -384,7 +436,11 @@ Object.defineProperties Pointer,
 
     setDataBuffer   : value : -> [ @prototype.buffer ] = arguments ; @
 
-    removePointer   : value : -> ( arguments[ 0 ].delParentPtri() ); this          
+    removePointer   : value : -> ( arguments[ 0 ].delParentPtri() ); this    
+    
+    BYTES_PER_ELEMENT : get : -> ( this.typedArray.BYTES_PER_ELEMENT )
+
+    LENGTH_OF_POINTER : get : -> ( this.byteLength / this.BYTES_PER_ELEMENT )
 
 Object.defineProperties Pointer::,
 
@@ -441,7 +497,7 @@ Object.defineProperties Pointer::,
 
     setParentPtrO   : value : -> dvw.setObject this + OFFSET_PARENT_PTR, arguments[0]
 
-    getParentPtrP   : value : -> dvw.toPointer this + OFFSET_PARENT_PTR
+    getParentPtrP   : value : -> dvw.toPointer this + OFFSET_PARENT_PTR, arguments[0] or Pointer
 
 Object.defineProperties Pointer::,
 
@@ -464,13 +520,19 @@ Object.defineProperties Pointer::,
     
     setUint8        : value : -> dvw.setUint8   @byteOffset + arguments[0], arguments[1] ; arguments[1]
 
+    keyStatic       : value : -> KEYED[ this ]
+
     keyUint16       : value : -> dvw.keyUint16  @byteOffset + arguments[0], arguments[1] , arguments[2]
 
     getUint16       : value : -> dvw.getUint16  @byteOffset + arguments[0], LE
     
     setUint16       : value : -> dvw.setUint16  @byteOffset + arguments[0], arguments[1], LE ; arguments[1]
 
-
+    getUint32       : value : -> dvw.getUint32  @byteOffset + arguments[0], LE
+    
+    setUint32       : value : -> dvw.setUint32  @byteOffset + arguments[0], arguments[1], LE ; arguments[1]
+    
+    addUint32       : value : -> dvw.setUint32  @byteOffset + arguments[0], arguments[1] + ( v = @getUint32 arguments[0] ), LE ; v
 
     setColour4       : value : -> dvw.setUint32  @byteOffset + arguments[0], Colour4.u32(arguments[1]), LE ; arguments[1]
 
