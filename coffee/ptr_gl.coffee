@@ -1170,13 +1170,131 @@ Object.defineProperties Uniform::,
 
     location            : get : Uniform::getGLLocation
 
+OFFSET_MODE_TYPEGLCODE  = 4 * 0
+
+OFFSET_MODE_DRAWOFFSET  = 4 * 1
+
+OFFSET_MODE_DRAWLENGTH  = 4 * 2
+
+OFFSET_MODE_BYTE_ALLOC  = 4 * 3
+
+OFFSET_MODE_BYTELENGTH  = 4 * 4
+
+OFFSET_MODE_ATTR_START  = 4 * 5
+
+OFFSET_MODE_ATTR_COUNT  = 4 * 6
+
+OFFSET_MODE_DST_OFFSET  = 4 * 7
+
+OFFSET_MODE_COMPONENTS  = 4 * 8
+
+OFFSET_MODE_FIRSTINDEX  = 4 * 9
+
+KEYEXTEND_OBJECT3D      = 0 : new (class POINTS extends Number) WebGL2RenderingContext.POINTS
+
+
+export class BufferMode extends Pointer
+
+Object.defineProperties BufferMode.registerClass(),
+
+    byteLength          : value : 4 * 9
+
+    typedArray          : value : Uint32Array
+
+Object.defineProperties BufferMode::,
+
+    malloc              : value : ->
+
+        object3d = arguments[ 0 ]
+        vertices = object3d.getVertexArray()
+        components = @getComponents()
+
+        count = vertices.length / 3
+        length = count * components
+        byteLength = length * vertices.BYTES_PER_ELEMENT
+        mallocOffset = @addMallocByte byteLength
+        destOffset = @getModeOffset() + mallocOffset
+
+        object3d . setBufferOffset destOffset 
+        object3d . setCopyBegin destOffset / 4
+        object3d . setCopyLength length
+
+        @addModeLength length 
+        @addDrawLength count
+
+        this
+
+Object.defineProperties BufferMode::,
+
+    getAttrCount        : value : -> @getUint32 OFFSET_MODE_ATTR_COUNT
+
+    setAttrCount        : value : -> @setUint32 OFFSET_MODE_ATTR_COUNT, arguments[0]
+
+    getAttrStart        : value : -> @getUint32 OFFSET_MODE_ATTR_START
+
+    setAttrStart        : value : -> @setUint32 OFFSET_MODE_ATTR_START, arguments[0]
+
+    getMallocByte       : value : -> @getUint32 OFFSET_MODE_BYTE_ALLOC
+    
+    addMallocByte       : value : -> @addUint32 OFFSET_MODE_BYTE_ALLOC, arguments[0]
+
+    setMallocByte       : value : -> @setUint32 OFFSET_MODE_BYTE_ALLOC, arguments[0]
+
+    keyTypeGLCode       : value : -> @keyUint16 OFFSET_MODE_TYPEGLCODE, KEYEXTEND_OBJECT3D
+
+    getTypeGLCode       : value : -> @getUint16 OFFSET_MODE_TYPEGLCODE
+
+    setTypeGLCode       : value : -> @setUint16 OFFSET_MODE_TYPEGLCODE, arguments[0]
+
+    getModeOffset       : value : -> @getUint32 OFFSET_MODE_DRAWOFFSET
+
+    setModeOffset       : value : -> @setUint32 OFFSET_MODE_DRAWOFFSET, arguments[0]
+
+    getFirstIndex       : value : -> @getUint32 OFFSET_MODE_FIRSTINDEX
+
+    setFirstIndex       : value : -> @setUint32 OFFSET_MODE_FIRSTINDEX, arguments[0]
+
+    getModeLength       : value : -> @getUint32 OFFSET_MODE_BYTELENGTH
+    
+    addModeLength       : value : -> @addUint32 OFFSET_MODE_BYTELENGTH, arguments[0]
+
+    setModeLength       : value : -> @setUint32 OFFSET_MODE_BYTELENGTH, arguments[0]
+
+    getDrawLength       : value : -> @getUint32 OFFSET_MODE_DRAWLENGTH
+
+    addDrawLength       : value : -> @addUint32 OFFSET_MODE_DRAWLENGTH, arguments[0]
+    
+    setDrawLength       : value : -> @setUint32 OFFSET_MODE_DRAWLENGTH, arguments[0]
+
+    getDestOffset       : value : -> @getUint32 OFFSET_MODE_DST_OFFSET
+
+    setDestOffset       : value : -> @setUint32 OFFSET_MODE_DST_OFFSET, arguments[0]
+
+    getComponents       : value : -> @getUint8  OFFSET_MODE_COMPONENTS
+
+    setComponents       : value : -> @setUint8  OFFSET_MODE_COMPONENTS, arguments[0]
+
+Object.defineProperties BufferMode::,
+
+    type                : get   : BufferMode::keyTypeGLCode , set   : BufferMode::setTypeGLCode
+
+    alloc               : get   : BufferMode::getMallocByte , set   : BufferMode::setMallocByte
+
+    first               : get   : BufferMode::getFirstIndex , set   : BufferMode::setFirstIndex
+    
+    count               : get   : BufferMode::getDrawLength , set   : BufferMode::setDrawLength
+    
+    offset              : get   : BufferMode::getModeOffset , set   : BufferMode::setModeOffset 
+    
+    components          : get   : BufferMode::getComponents , set   : BufferMode::setComponents
+
 OFFSET_BINDING_TARGET   = 4 * 0
 
 OFFSET_BINDING_STATUS   = 4 * 0 + 2
 
 OFFSET_BUF_BYTELENGTH   = 4 * 1 # total usabe reserved on gpu
 
-OFFSET_BUF_BYTEOFFSET   = 4 * 2 # allocated bytes of vertices 
+OFFSET_BUF_MODEOFFSET   = 4 * 2 # allocated bytes of vertices 
 
 OFFSET_BUF_DRAWOFFSET   = 4 * 3 # offset on SharedArrayBuffer
 
@@ -1219,32 +1337,57 @@ export class Buffer extends Pointer
 
     load                : -> @create() ; @bind() ; this
 
+    #* allocation for mode
+    malloc              : ->
+        @addModeOffset arguments[0]
+
+    #* allocation for object
     alloc               : ->
         object3d = arguments[ 0 ]
-        object3d . setAttibStride 7
-        object3d . setAttibLength 7 * object3d.getVertexCount() 
+        typeCode = object3d . getTypeGLCode()
 
-        pointCount = object3d.getVertexCount()
-        components = 7
+        vertexCount = object3d.getVertexCount()
+        numComponents = 7
+        bytesPerElement = 4
+        bytesPerAttribute = numComponents * bytesPerElement  
+        attrByteLength = vertexCount * numComponents * bytesPerElement
 
-        pointCount = arguments[ 0 ]
-        attrLength = pointCount * components
-        byteLength = attrLength * @BYTES_PER_ELEMENT
-        byteLength = 4 * attrLength
+        MODETYPE = object3d.type.constructor.name
 
-        drawOffset = @addUint32 OFFSET_BUF_BYTEOFFSET , byteLength 
+        mode = null
+        for mode in @findAllChilds()
+            1
 
-        #? bufferSubData( target, dstByteOffset, srcData, srcOffset, length )
 
-        object3d.setBufferOffset drawOffset
-        object3d.setCopyOffset object3d.begin
-        object3d.setCopyLength attrLength
+        unless mode 
+            #? no mode matched need to allocate in buffer
+            log "NO_MODE_MATCHED_FOR_#{MODETYPE}_ALLOCATING"
 
-        byteOffset = drawOffset + @byteOffset + OFFSET_BUFFER_OFFSET
-        typedArray = new Float32Array @buffer, byteOffset, attrLength
+            modeByteOffset = this . malloc attrByteLength
+            firstAttrIndex = modeByteOffset / bytesPerAttribute
 
-        object3d.setParentPtri new OffsetPointer object3d
-        object3d
+            mode = new BufferMode()
+
+            mode . setTypeGLCode typeCode
+            mode . setComponents numComponents
+            mode . setModeOffset modeByteOffset
+            mode . setFirstIndex firstAttrIndex
+
+            console.log first: mode.getFirstIndex()
+            console.log offset: mode.getModeOffset()
+
+            mode . malloc object3d
+
+            console.log first: mode.getFirstIndex()
+            console.log offset: mode.getModeOffset()
+
+        else #TODO move to right
+            2 
+
+        console.warn mode
+        
+        mode
+
 
 
     delete              : -> @setBindStatus @getGL().deleteBuffer @getLinkedNode() ; @
@@ -1277,6 +1420,12 @@ export class Buffer extends Pointer
 
     setBindStatus       : -> @setUint16 OFFSET_BINDING_STATUS , arguments[0]
 
+    getModeOffset       : -> @getUint32 OFFSET_BUF_MODEOFFSET
+
+    addModeOffset       : -> @addUint32 OFFSET_BUF_MODEOFFSET , arguments[0] 
+    
+    setModeOffset       : -> @setUint32 OFFSET_BUF_MODEOFFSET , arguments[0] 
+
 Object.defineProperties Buffer.registerClass()::,
 
     gl                  : get : Buffer::getGL
@@ -1305,15 +1454,13 @@ OFFSET_O3_SCALE_3D      = 4 * 14
 
 OFFSET_BUFFER_OFFSET    = 4 * 18
 
-OFFSET_COPY_OFFSET      = 4 * 19
+OFFSET_O3_COPY_BEGIN    = 4 * 19
 
-OFFSET_COPY_LENGTH      = 4 * 20
+OFFSET_O3_COPYLENGTH    = 4 * 20
 
 OFFSET_ATTRIB_LENGTH    = 4 * 21
 
 OFFSET_ATTRIB_STRIDE    = 4 * 21 + 2
-
-KEYEXTEND_OBJECT3D      = 0 : new (class POINTS extends Number) WebGL2RenderingContext.POINTS
 
 export class Vertices   extends Pointer
 
@@ -1374,9 +1521,9 @@ Object.defineProperties Object3.registerClass(),
 
 Object.defineProperties Object3::,
 
-    getBufferOffset     : value : -> @getUint32 OFFSET_BUFFER_OFFSET
-
     getBufferObject     : value : -> new OffsetPointer this
+
+    getBufferOffset     : value : -> @getUint32 OFFSET_BUFFER_OFFSET
 
     setBufferOffset     : value : -> @setUint32 OFFSET_BUFFER_OFFSET , arguments[0]
 
@@ -1399,19 +1546,22 @@ Object.defineProperties Object3::,
 
 
 
-    getCopyOffset       : value : -> @getUint32 OFFSET_COPY_OFFSET
+    getCopyBegin        : value : -> @getUint32 OFFSET_O3_COPY_BEGIN
 
-    setCopyOffset       : value : -> @setUint32 OFFSET_COPY_OFFSET , arguments[0]
+    setCopyBegin        : value : -> @setUint32 OFFSET_O3_COPY_BEGIN , arguments[0]
 
-    getCopyLength       : value : -> @getUint32 OFFSET_COPY_LENGTH
 
-    setCopyLength       : value : -> @setUint32 OFFSET_COPY_LENGTH , arguments[0]
+    getCopyLength       : value : -> @getUint32 OFFSET_O3_COPYLENGTH
 
-    keyDrawType         : value : -> @keyUint16 OFFSET_O3_DRAWTYPE , KEYEXTEND_OBJECT3D
+    setCopyLength       : value : -> @setUint32 OFFSET_O3_COPYLENGTH , arguments[0]
 
-    getDrawType         : value : -> @getUint16 OFFSET_O3_DRAWTYPE
 
-    setDrawType         : value : -> @setUint16 OFFSET_O3_DRAWTYPE , arguments[0]
+    keyTypeGLCode       : value : -> @keyUint16 OFFSET_O3_DRAWTYPE , KEYEXTEND_OBJECT3D
+
+    getTypeGLCode       : value : -> @getUint16 OFFSET_O3_DRAWTYPE
+
+    setTypeGLCode       : value : -> @setUint16 OFFSET_O3_DRAWTYPE , arguments[0]
+    
 
     getPosition         : value : -> new Vertex @byteOffset + OFFSET_O3_POSITION
 
@@ -1429,11 +1579,10 @@ Object.defineProperties Object3::,
     
     setColor            : value : -> @setArray4 OFFSET_O3_COLOR_4D , arguments[0]
 
-
 Object.defineProperties Object3::,
 
-    vertexCount         : get : Object3::getVertexCount  
-   
+    vertexCount         : get : Object3::getVertexCount
+    
     vertexArray         : get : Object3::getVertexArray   , set : Object3::setVertexArray
 
     attribStride        : get : Object3::getAttibStride   , set : Object3::setAttibStride
@@ -1444,7 +1593,7 @@ Object.defineProperties Object3::,
     
     bufferObject        : get : Object3::getBufferObject
     
-    copyOffset          : get : Object3::getCopyOffset , set : Object3::setCopyOffset
+    copyBegin           : get : Object3::getCopyBegin  , set : Object3::setCopyBegin
 
     copyLength          : get : Object3::getCopyLength , set : Object3::setCopyLength
 
@@ -1456,4 +1605,4 @@ Object.defineProperties Object3::,
     
     color               : get : Object3::getColor      , set : Object3::setColor
     
-    type                : get : Object3::keyDrawType   , set : Object3::setDrawType
+    type                : get : Object3::keyTypeGLCode , set : Object3::setTypeGLCode

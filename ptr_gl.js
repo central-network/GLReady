@@ -1,4 +1,4 @@
-var DEPTH_N_COLOR_BIT, KEYEXTEND_CLEARMASK, KEYEXTEND_OBJECT3D, OFFSET_ASPECT_RATIO, OFFSET_ATTACH_STATUS, OFFSET_ATTRIB_LENGTH, OFFSET_ATTRIB_STRIDE, OFFSET_ATTR_OFFSET, OFFSET_ATTR_STRIDE, OFFSET_BINDING_STATUS, OFFSET_BINDING_TARGET, OFFSET_BIND_TARGET, OFFSET_BLEND_ACTIVE, OFFSET_BLEND_EQUATE, OFFSET_BLEND_FUNC, OFFSET_BLEND_INARG, OFFSET_BLEND_OUTARG, OFFSET_BUFFER_OFFSET, OFFSET_BUF_BYTELENGTH, OFFSET_BUF_BYTEOFFSET, OFFSET_BUF_DRAWOFFSET, OFFSET_CHAR_LENGTH, OFFSET_CLEAR_COLOR, OFFSET_CLEAR_DEPTH, OFFSET_CLEAR_MASK, OFFSET_COPY_LENGTH, OFFSET_COPY_OFFSET, OFFSET_CULL_ENABLED, OFFSET_CULL_FACE, OFFSET_DEPTH_ACTIVE, OFFSET_DEPTH_FUNC, OFFSET_DEPTH_TEST, OFFSET_DRAGGING, OFFSET_DRAW_ACTIVE, OFFSET_DX, OFFSET_DY, OFFSET_FRONTFACE, OFFSET_HEIGHT, OFFSET_INUSE_STATUS, OFFSET_ISNORMALIZE, OFFSET_IS_ATTACHED, OFFSET_IS_COMPILED, OFFSET_IS_UPLOADED, OFFSET_JUMPING, OFFSET_KEY_ALT, OFFSET_KEY_CTRL, OFFSET_KEY_LOCATED, OFFSET_KEY_META, OFFSET_KEY_SHIFT, OFFSET_LEFT, OFFSET_LINKED_STATUS, OFFSET_LOCATION_AT, OFFSET_LOOKING, OFFSET_MOVE_BACK, OFFSET_MOVE_DOWN, OFFSET_MOVE_FWD, OFFSET_MOVE_LEFT, OFFSET_MOVE_RIGHT, OFFSET_MOVE_UP, OFFSET_NAME_LENGTH, OFFSET_NAME_TARRAY, OFFSET_NCOMPONENTS, OFFSET_O3_COLOR_4D, OFFSET_O3_DRAWTYP2, OFFSET_O3_DRAWTYPE, OFFSET_O3_POSITION, OFFSET_O3_ROTATION, OFFSET_O3_SCALE_3D, OFFSET_PIXEL_RATIO, OFFSET_PTR_BUTTON, OFFSET_PTR_CLICK, OFFSET_PTR_DCLICK, OFFSET_ROTATING, OFFSET_RX, OFFSET_RY, OFFSET_SHADER_TYPE, OFFSET_SHIFT_RATIO, OFFSET_SOURCE_TEXT, OFFSET_SX, OFFSET_SY, OFFSET_SZ, OFFSET_TIME, OFFSET_TOP, OFFSET_TYPE_GLCODE, OFFSET_UX_ENABLED, OFFSET_VX, OFFSET_VY, OFFSET_VZ, OFFSET_WALKING, OFFSET_WIDTH, OFFSET_X, OFFSET_Y, OFFSET_ZOOMING, POINTS;
+var DEPTH_N_COLOR_BIT, KEYEXTEND_CLEARMASK, KEYEXTEND_OBJECT3D, OFFSET_ASPECT_RATIO, OFFSET_ATTACH_STATUS, OFFSET_ATTRIB_LENGTH, OFFSET_ATTRIB_STRIDE, OFFSET_ATTR_OFFSET, OFFSET_ATTR_STRIDE, OFFSET_BINDING_STATUS, OFFSET_BINDING_TARGET, OFFSET_BIND_TARGET, OFFSET_BLEND_ACTIVE, OFFSET_BLEND_EQUATE, OFFSET_BLEND_FUNC, OFFSET_BLEND_INARG, OFFSET_BLEND_OUTARG, OFFSET_BUFFER_OFFSET, OFFSET_BUF_BYTELENGTH, OFFSET_BUF_DRAWOFFSET, OFFSET_BUF_MODEOFFSET, OFFSET_CHAR_LENGTH, OFFSET_CLEAR_COLOR, OFFSET_CLEAR_DEPTH, OFFSET_CLEAR_MASK, OFFSET_CULL_ENABLED, OFFSET_CULL_FACE, OFFSET_DEPTH_ACTIVE, OFFSET_DEPTH_FUNC, OFFSET_DEPTH_TEST, OFFSET_DRAGGING, OFFSET_DRAW_ACTIVE, OFFSET_DX, OFFSET_DY, OFFSET_FRONTFACE, OFFSET_HEIGHT, OFFSET_INUSE_STATUS, OFFSET_ISNORMALIZE, OFFSET_IS_ATTACHED, OFFSET_IS_COMPILED, OFFSET_IS_UPLOADED, OFFSET_JUMPING, OFFSET_KEY_ALT, OFFSET_KEY_CTRL, OFFSET_KEY_LOCATED, OFFSET_KEY_META, OFFSET_KEY_SHIFT, OFFSET_LEFT, OFFSET_LINKED_STATUS, OFFSET_LOCATION_AT, OFFSET_LOOKING, OFFSET_MODE_ATTR_COUNT, OFFSET_MODE_ATTR_START, OFFSET_MODE_BYTELENGTH, OFFSET_MODE_BYTE_ALLOC, OFFSET_MODE_COMPONENTS, OFFSET_MODE_DRAWLENGTH, OFFSET_MODE_DRAWOFFSET, OFFSET_MODE_DST_OFFSET, OFFSET_MODE_FIRSTINDEX, OFFSET_MODE_TYPEGLCODE, OFFSET_MOVE_BACK, OFFSET_MOVE_DOWN, OFFSET_MOVE_FWD, OFFSET_MOVE_LEFT, OFFSET_MOVE_RIGHT, OFFSET_MOVE_UP, OFFSET_NAME_LENGTH, OFFSET_NAME_TARRAY, OFFSET_NCOMPONENTS, OFFSET_O3_COLOR_4D, OFFSET_O3_COPYLENGTH, OFFSET_O3_COPY_BEGIN, OFFSET_O3_DRAWTYP2, OFFSET_O3_DRAWTYPE, OFFSET_O3_POSITION, OFFSET_O3_ROTATION, OFFSET_O3_SCALE_3D, OFFSET_PIXEL_RATIO, OFFSET_PTR_BUTTON, OFFSET_PTR_CLICK, OFFSET_PTR_DCLICK, OFFSET_ROTATING, OFFSET_RX, OFFSET_RY, OFFSET_SHADER_TYPE, OFFSET_SHIFT_RATIO, OFFSET_SOURCE_TEXT, OFFSET_SX, OFFSET_SY, OFFSET_SZ, OFFSET_TIME, OFFSET_TOP, OFFSET_TYPE_GLCODE, OFFSET_UX_ENABLED, OFFSET_VX, OFFSET_VY, OFFSET_VZ, OFFSET_WALKING, OFFSET_WIDTH, OFFSET_X, OFFSET_Y, OFFSET_ZOOMING, POINTS;
 
 import Pointer from "./ptr.js";
 
@@ -2123,13 +2123,220 @@ Object.defineProperties(Uniform.prototype, {
   }
 });
 
+OFFSET_MODE_TYPEGLCODE = 4 * 0;
+
+OFFSET_MODE_DRAWOFFSET = 4 * 1;
+
+OFFSET_MODE_DRAWLENGTH = 4 * 2;
+
+OFFSET_MODE_BYTE_ALLOC = 4 * 3;
+
+OFFSET_MODE_BYTELENGTH = 4 * 4;
+
+OFFSET_MODE_ATTR_START = 4 * 5;
+
+OFFSET_MODE_ATTR_COUNT = 4 * 6;
+
+OFFSET_MODE_DST_OFFSET = 4 * 7;
+
+OFFSET_MODE_COMPONENTS = 4 * 8;
+
+OFFSET_MODE_FIRSTINDEX = 4 * 9;
+
+KEYEXTEND_OBJECT3D = {
+  0: new (POINTS = class POINTS extends Number {})(WebGL2RenderingContext.POINTS)
+};
+
+export var BufferMode = class BufferMode extends Pointer {};
+
+Object.defineProperties(BufferMode.registerClass(), {
+  byteLength: {
+    value: 4 * 9
+  },
+  typedArray: {
+    value: Uint32Array
+  }
+});
+
+Object.defineProperties(BufferMode.prototype, {
+  malloc: {
+    value: function() {
+      var byteLength, components, count, destOffset, length, mallocOffset, object3d, vertices;
+      object3d = arguments[0];
+      vertices = object3d.getVertexArray();
+      components = this.getComponents();
+      count = vertices.length / 3;
+      length = count * components;
+      byteLength = length * vertices.BYTES_PER_ELEMENT;
+      mallocOffset = this.addMallocByte(byteLength);
+      destOffset = this.getModeOffset() + mallocOffset;
+      object3d.setBufferOffset(destOffset);
+      object3d.setCopyBegin(destOffset / 4);
+      object3d.setCopyLength(length);
+      this.addModeLength(length);
+      this.addDrawLength(count);
+      return this;
+    }
+  }
+});
+
+Object.defineProperties(BufferMode.prototype, {
+  getAttrCount: {
+    value: function() {
+      return this.getUint32(OFFSET_MODE_ATTR_COUNT);
+    }
+  },
+  setAttrCount: {
+    value: function() {
+      return this.setUint32(OFFSET_MODE_ATTR_COUNT, arguments[0]);
+    }
+  },
+  getAttrStart: {
+    value: function() {
+      return this.getUint32(OFFSET_MODE_ATTR_START);
+    }
+  },
+  setAttrStart: {
+    value: function() {
+      return this.setUint32(OFFSET_MODE_ATTR_START, arguments[0]);
+    }
+  },
+  getMallocByte: {
+    value: function() {
+      return this.getUint32(OFFSET_MODE_BYTE_ALLOC);
+    }
+  },
+  addMallocByte: {
+    value: function() {
+      return this.addUint32(OFFSET_MODE_BYTE_ALLOC, arguments[0]);
+    }
+  },
+  setMallocByte: {
+    value: function() {
+      return this.setUint32(OFFSET_MODE_BYTE_ALLOC, arguments[0]);
+    }
+  },
+  keyTypeGLCode: {
+    value: function() {
+      return this.keyUint16(OFFSET_MODE_TYPEGLCODE, KEYEXTEND_OBJECT3D);
+    }
+  },
+  getTypeGLCode: {
+    value: function() {
+      return this.getUint16(OFFSET_MODE_TYPEGLCODE);
+    }
+  },
+  setTypeGLCode: {
+    value: function() {
+      return this.setUint16(OFFSET_MODE_TYPEGLCODE, arguments[0]);
+    }
+  },
+  getModeOffset: {
+    value: function() {
+      return this.getUint32(OFFSET_MODE_DRAWOFFSET);
+    }
+  },
+  setModeOffset: {
+    value: function() {
+      return this.setUint32(OFFSET_MODE_DRAWOFFSET, arguments[0]);
+    }
+  },
+  getFirstIndex: {
+    value: function() {
+      return this.getUint32(OFFSET_MODE_FIRSTINDEX);
+    }
+  },
+  setFirstIndex: {
+    value: function() {
+      return this.setUint32(OFFSET_MODE_FIRSTINDEX, arguments[0]);
+    }
+  },
+  getModeLength: {
+    value: function() {
+      return this.getUint32(OFFSET_MODE_BYTELENGTH);
+    }
+  },
+  addModeLength: {
+    value: function() {
+      return this.addUint32(OFFSET_MODE_BYTELENGTH, arguments[0]);
+    }
+  },
+  setModeLength: {
+    value: function() {
+      return this.setUint32(OFFSET_MODE_BYTELENGTH, arguments[0]);
+    }
+  },
+  getDrawLength: {
+    value: function() {
+      return this.getUint32(OFFSET_MODE_DRAWLENGTH);
+    }
+  },
+  addDrawLength: {
+    value: function() {
+      return this.addUint32(OFFSET_MODE_DRAWLENGTH, arguments[0]);
+    }
+  },
+  setDrawLength: {
+    value: function() {
+      return this.setUint32(OFFSET_MODE_DRAWLENGTH, arguments[0]);
+    }
+  },
+  getDestOffset: {
+    value: function() {
+      return this.getUint32(OFFSET_MODE_DST_OFFSET);
+    }
+  },
+  setDestOffset: {
+    value: function() {
+      return this.setUint32(OFFSET_MODE_DST_OFFSET, arguments[0]);
+    }
+  },
+  getComponents: {
+    value: function() {
+      return this.getUint8(OFFSET_MODE_COMPONENTS);
+    }
+  },
+  setComponents: {
+    value: function() {
+      return this.setUint8(OFFSET_MODE_COMPONENTS, arguments[0]);
+    }
+  }
+});
+
+Object.defineProperties(BufferMode.prototype, {
+  type: {
+    get: BufferMode.prototype.keyTypeGLCode,
+    set: BufferMode.prototype.setTypeGLCode
+  },
+  alloc: {
+    get: BufferMode.prototype.getMallocByte,
+    set: BufferMode.prototype.setMallocByte
+  },
+  first: {
+    get: BufferMode.prototype.getFirstIndex,
+    set: BufferMode.prototype.setFirstIndex
+  },
+  count: {
+    get: BufferMode.prototype.getDrawLength,
+    set: BufferMode.prototype.setDrawLength
+  },
+  offset: {
+    get: BufferMode.prototype.getModeOffset,
+    set: BufferMode.prototype.setModeOffset
+  },
+  components: {
+    get: BufferMode.prototype.getComponents,
+    set: BufferMode.prototype.setComponents
+  }
+});
+
 OFFSET_BINDING_TARGET = 4 * 0;
 
 OFFSET_BINDING_STATUS = 4 * 0 + 2;
 
 OFFSET_BUF_BYTELENGTH = 4 * 1; // total usabe reserved on gpu
 
-OFFSET_BUF_BYTEOFFSET = 4 * 2; // allocated bytes of vertices 
+OFFSET_BUF_MODEOFFSET = 4 * 2; // allocated bytes of vertices 
 
 OFFSET_BUF_DRAWOFFSET = 4 * 3; // offset on SharedArrayBuffer
 
@@ -2163,27 +2370,57 @@ export var Buffer = (function() {
       return this;
     }
 
+    //* allocation for mode
+    malloc() {
+      return this.addModeOffset(arguments[0]);
+    }
+
+    //* allocation for object
     alloc() {
-      var attrLength, byteLength, byteOffset, components, drawOffset, object3d, pointCount, typedArray;
+      var MODETYPE, attrByteLength, bytesPerAttribute, bytesPerElement, firstAttrIndex, j, len1, mode, modeByteOffset, numComponents, object3d, ref, typeCode, vertexCount;
       object3d = arguments[0];
-      object3d.setAttibStride(7);
-      object3d.setAttibLength(7 * object3d.getVertexCount());
-      pointCount = object3d.getVertexCount();
-      components = 7;
-      pointCount = arguments[0];
-      attrLength = pointCount * components;
-      byteLength = attrLength * this.BYTES_PER_ELEMENT;
-      byteLength = 4 * attrLength;
-      drawOffset = this.addUint32(OFFSET_BUF_BYTEOFFSET, byteLength);
-      
-      //? bufferSubData( target, dstByteOffset, srcData, srcOffset, length )
-      object3d.setBufferOffset(drawOffset);
-      object3d.setCopyOffset(object3d.begin);
-      object3d.setCopyLength(attrLength);
-      byteOffset = drawOffset + this.byteOffset + OFFSET_BUFFER_OFFSET;
-      typedArray = new Float32Array(this.buffer, byteOffset, attrLength);
-      object3d.setParentPtri(new OffsetPointer(object3d));
-      return object3d;
+      typeCode = object3d.getTypeGLCode();
+      vertexCount = object3d.getVertexCount();
+      numComponents = 7;
+      bytesPerElement = 4;
+      bytesPerAttribute = numComponents * bytesPerElement;
+      attrByteLength = vertexCount * numComponents * bytesPerElement;
+      MODETYPE = object3d.type.constructor.name;
+      mode = null;
+      ref = this.findAllChilds();
+      for (j = 0, len1 = ref.length; j < len1; j++) {
+        mode = ref[j];
+        1;
+      }
+      if (!mode) {
+        
+        //? no mode matched need to allocate in buffer
+        log(`NO_MODE_MATCHED_FOR_${MODETYPE}_ALLOCATING`);
+        modeByteOffset = this.malloc(attrByteLength);
+        firstAttrIndex = modeByteOffset / bytesPerAttribute;
+        mode = new BufferMode();
+        mode.setTypeGLCode(typeCode);
+        mode.setComponents(numComponents);
+        mode.setModeOffset(modeByteOffset);
+        mode.setFirstIndex(firstAttrIndex);
+        console.log({
+          first: mode.getFirstIndex()
+        });
+        console.log({
+          offset: mode.getModeOffset()
+        });
+        mode.malloc(object3d);
+        console.log({
+          first: mode.getFirstIndex()
+        });
+        console.log({
+          offset: mode.getModeOffset() //TODO move to right
+        });
+      } else {
+        2;
+      }
+      console.warn(mode);
+      return mode;
     }
 
     delete() {
@@ -2240,6 +2477,18 @@ export var Buffer = (function() {
 
     setBindStatus() {
       return this.setUint16(OFFSET_BINDING_STATUS, arguments[0]);
+    }
+
+    getModeOffset() {
+      return this.getUint32(OFFSET_BUF_MODEOFFSET);
+    }
+
+    addModeOffset() {
+      return this.addUint32(OFFSET_BUF_MODEOFFSET, arguments[0]);
+    }
+
+    setModeOffset() {
+      return this.setUint32(OFFSET_BUF_MODEOFFSET, arguments[0]);
     }
 
   };
@@ -2317,17 +2566,13 @@ OFFSET_O3_SCALE_3D = 4 * 14;
 
 OFFSET_BUFFER_OFFSET = 4 * 18;
 
-OFFSET_COPY_OFFSET = 4 * 19;
+OFFSET_O3_COPY_BEGIN = 4 * 19;
 
-OFFSET_COPY_LENGTH = 4 * 20;
+OFFSET_O3_COPYLENGTH = 4 * 20;
 
 OFFSET_ATTRIB_LENGTH = 4 * 21;
 
 OFFSET_ATTRIB_STRIDE = 4 * 21 + 2;
-
-KEYEXTEND_OBJECT3D = {
-  0: new (POINTS = class POINTS extends Number {})(WebGL2RenderingContext.POINTS)
-};
 
 export var Vertices = class Vertices extends Pointer {};
 
@@ -2396,14 +2641,14 @@ Object.defineProperties(Object3.registerClass(), {
 });
 
 Object.defineProperties(Object3.prototype, {
-  getBufferOffset: {
-    value: function() {
-      return this.getUint32(OFFSET_BUFFER_OFFSET);
-    }
-  },
   getBufferObject: {
     value: function() {
       return new OffsetPointer(this);
+    }
+  },
+  getBufferOffset: {
+    value: function() {
+      return this.getUint32(OFFSET_BUFFER_OFFSET);
     }
   },
   setBufferOffset: {
@@ -2446,37 +2691,37 @@ Object.defineProperties(Object3.prototype, {
       return this.set(this.constructor.LENGTH_OF_POINTER, arguments[0]);
     }
   },
-  getCopyOffset: {
+  getCopyBegin: {
     value: function() {
-      return this.getUint32(OFFSET_COPY_OFFSET);
+      return this.getUint32(OFFSET_O3_COPY_BEGIN);
     }
   },
-  setCopyOffset: {
+  setCopyBegin: {
     value: function() {
-      return this.setUint32(OFFSET_COPY_OFFSET, arguments[0]);
+      return this.setUint32(OFFSET_O3_COPY_BEGIN, arguments[0]);
     }
   },
   getCopyLength: {
     value: function() {
-      return this.getUint32(OFFSET_COPY_LENGTH);
+      return this.getUint32(OFFSET_O3_COPYLENGTH);
     }
   },
   setCopyLength: {
     value: function() {
-      return this.setUint32(OFFSET_COPY_LENGTH, arguments[0]);
+      return this.setUint32(OFFSET_O3_COPYLENGTH, arguments[0]);
     }
   },
-  keyDrawType: {
+  keyTypeGLCode: {
     value: function() {
       return this.keyUint16(OFFSET_O3_DRAWTYPE, KEYEXTEND_OBJECT3D);
     }
   },
-  getDrawType: {
+  getTypeGLCode: {
     value: function() {
       return this.getUint16(OFFSET_O3_DRAWTYPE);
     }
   },
-  setDrawType: {
+  setTypeGLCode: {
     value: function() {
       return this.setUint16(OFFSET_O3_DRAWTYPE, arguments[0]);
     }
@@ -2546,9 +2791,9 @@ Object.defineProperties(Object3.prototype, {
   bufferObject: {
     get: Object3.prototype.getBufferObject
   },
-  copyOffset: {
-    get: Object3.prototype.getCopyOffset,
-    set: Object3.prototype.setCopyOffset
+  copyBegin: {
+    get: Object3.prototype.getCopyBegin,
+    set: Object3.prototype.setCopyBegin
   },
   copyLength: {
     get: Object3.prototype.getCopyLength,
@@ -2571,7 +2816,7 @@ Object.defineProperties(Object3.prototype, {
     set: Object3.prototype.setColor
   },
   type: {
-    get: Object3.prototype.keyDrawType,
-    set: Object3.prototype.setDrawType
+    get: Object3.prototype.keyTypeGLCode,
+    set: Object3.prototype.setTypeGLCode
   }
 });
