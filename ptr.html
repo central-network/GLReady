@@ -115,15 +115,14 @@
             log( buff );
             
 
-            
-
             let o3 = Object3.from([
                 3, 1, 2,
                 -3, 1, 2,
                 .3, 1, 22
             ]);
 
-            o3.type = WebGL2RenderingContext.POINTS;
+            o3.color = [ 1, 0, 0, 1 ];
+
 
             let o32 = Object3.from(
                 [
@@ -132,16 +131,18 @@
                 ]
             );
 
-            o32.type = WebGL2RenderingContext.TRIANGLES;
             o32.color = [ 1, 1, 0, 1 ];
 
-            console.warn(o3)
-            console.warn(o32)
+            log(o3)
+            log(o32)
 
-            console.warn(buff.drawPoints( o3 ))
-            console.warn(buff.drawTriangles( o3 ))
-            console.warn(buff.drawTriangles( o32 ))
-            console.warn(buff.drawLines( o32 ))
+            buff.drawPoints( o3 )
+            buff.drawTriangles( o3 )
+            buff.drawTriangles( o32 )
+            buff.drawLines( o32 )
+
+            gl.add( o3 )
+            gl.add( o32 )
 
         </script>
 

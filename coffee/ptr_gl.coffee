@@ -70,41 +70,6 @@ export class GL extends Pointer
 
     @typedArray     = Uint32Array
 
-    draw            : ->
-
-        arr = Float32Array.of(...arguments[0])
-        size = arr.length * arr.BYTES_PER_ELEMENT
-
-        @gl.bindBuffer @gl.ARRAY_BUFFER, @glBuffer
-        @gl.bufferData @gl.ARRAY_BUFFER, size, @gl.STATIC_DRAW
-
-
-        @gl.bufferSubData @gl.ARRAY_BUFFER, 0, arr
-        a.enable() for a in @programAttribs
-
-        @gl.drawArrays @gl.POINTS, 0, 3
-        @gl.drawArrays @gl.LINES, 0, 3
-        @gl.drawArrays @gl.TRIANGLES, 0, 3
-
-        arr
-
-
-    redraw          : ( ptr ) ->
-        @gl.bufferSubData @gl.ARRAY_BUFFER, 0, ptr.array
-        a.enable() for a in @programAttribs
-
-        @gl.drawArrays @gl.POINTS, 0, 3
-        @gl.drawArrays @gl.LINES, 0, 3
-        @gl.drawArrays @gl.TRIANGLES, 0, 3
-
-    drawww          : ( o3 ) ->
-        buffer = @allBuffers.at 0
-
-        console.warn buffer
-        console.warn o3
-        console.warn buffer.alloc o3 
-
-
     load            : ->
         { width, height, left, top } = arguments[ 0 ].getBoundingClientRect()
         [ ratioAspect , ratioPixel ] = [ width / height, self.devicePixelRatio || 1 ]
@@ -246,12 +211,11 @@ export class GL extends Pointer
     
     setClearMask    : -> @setUint16 OFFSET_CLEAR_MASK      , arguments[0] ; this
     
-    #TODO new pointer
-    rgbClearColor   : -> @rgbColor4 OFFSET_CLEAR_COLOR
+    rgbClearColor   : -> 1; #@rgbColor4 OFFSET_CLEAR_COLOR
     
-    getClearColor   : -> @getColour4 OFFSET_CLEAR_COLOR
+    getClearColor   : -> 1; #@getColour4 OFFSET_CLEAR_COLOR
     
-    setClearColor   : -> @setColour4 OFFSET_CLEAR_COLOR     , arguments[0] ; this
+    setClearColor   : -> 1; #@setColour4 OFFSET_CLEAR_COLOR     , arguments[0] ; this
 
     keyBindTarget   : -> @keyUint16 OFFSET_BIND_TARGET
     
@@ -435,143 +399,143 @@ export class GL extends Pointer
 
     setZVector      : -> @setFloat32 OFFSET_VZ             , arguments[0]
 
-    Object.defineProperties this::,
+Object.defineProperties GL::,
 
-        gl              : get : GL::getLinkedNode
+    gl              : get : GL::getLinkedNode
 
-        glError         : get : GL::getGLError
+    glError         : get : GL::getGLError
 
-        program         : get : GL::getProgram
+    program         : get : GL::getProgram
 
-        programVertex   : get : GL::getVertShader
+    programVertex   : get : GL::getVertShader
 
-        programFragment : get : GL::getFragShader
+    programFragment : get : GL::getFragShader
 
-        programAttribs  : get : GL::getAttributes
+    programAttribs  : get : GL::getAttributes
 
-        programUniforms : get : GL::getUniforms
+    programUniforms : get : GL::getUniforms
 
-        glBuffer        : get : GL::getGLBuffer
+    glBuffer        : get : GL::getGLBuffer
 
-        allBuffers      : get : GL::getAllBuffers 
+    allBuffers      : get : GL::getAllBuffers 
 
-        allShaders      : get : GL::getAllShaders
+    allShaders      : get : GL::getAllShaders
 
-        allPrograms     : get : GL::getAllPrograms
+    allPrograms     : get : GL::getAllPrograms
 
-        allVariables    : get : GL::getAllVariables
+    allVariables    : get : GL::getAllVariables
 
-        nodeBuffer      : get : GL::getArrayBuffer
+    nodeBuffer      : get : GL::getArrayBuffer
 
-        nodeCanvas      : get : GL::getCanvasNode   , set : GL::setCanvasNode
+    nodeCanvas      : get : GL::getCanvasNode   , set : GL::setCanvasNode
 
-        glActive        : get : GL::getDrawActive   , set : GL::setDrawActive
-                
-        glCullEnabled   : get : GL::getCullEnabled  , set : GL::setCullEnabled
+    glActive        : get : GL::getDrawActive   , set : GL::setDrawActive
+            
+    glCullEnabled   : get : GL::getCullEnabled  , set : GL::setCullEnabled
 
-        glCullFace      : get : GL::keyCullFace     , set : GL::setCullFace
-        
-        glFrontFace     : get : GL::keyFrontFace    , set : GL::setFrontFace
-        
-        glBlendEnabled  : get : GL::getBlendActive  , set : GL::setBlendActive
-        
-        glBlendEquation : get : GL::keyBlendEquate  , set : GL::setBlendEquate
-        
-        glBlendFunc     : get : GL::keyBlendFunc    , set : GL::setBlendFunc
-        
-        glBlendInArg    : get : GL::keyBlendInArg   , set : GL::setBlendInArg
+    glCullFace      : get : GL::keyCullFace     , set : GL::setCullFace
+    
+    glFrontFace     : get : GL::keyFrontFace    , set : GL::setFrontFace
+    
+    glBlendEnabled  : get : GL::getBlendActive  , set : GL::setBlendActive
+    
+    glBlendEquation : get : GL::keyBlendEquate  , set : GL::setBlendEquate
+    
+    glBlendFunc     : get : GL::keyBlendFunc    , set : GL::setBlendFunc
+    
+    glBlendInArg    : get : GL::keyBlendInArg   , set : GL::setBlendInArg
 
-        glBlendOutArg   : get : GL::keyBlendOutArg  , set : GL::setBlendOutArg
-        
-        glDepthEnabled  : get : GL::getDepthActive  , set : GL::setDepthActive
-        
-        glDepthTest     : get : GL::keyDepthTest    , set : GL::setDepthTest
+    glBlendOutArg   : get : GL::keyBlendOutArg  , set : GL::setBlendOutArg
+    
+    glDepthEnabled  : get : GL::getDepthActive  , set : GL::setDepthActive
+    
+    glDepthTest     : get : GL::keyDepthTest    , set : GL::setDepthTest
 
-        glDepthFunc     : get : GL::keyDepthFunc    , set : GL::setDepthFunc
-        
-        glClearMask     : get : GL::keyClearMask    , set : GL::setClearMask
-        
-        glBindTarget    : get : GL::keyBindTarget   , set : GL::setBindTarget
-        
-        glClearDepth    : get : GL::getClearDepth   , set : GL::setClearDepth
-        
-        glClearColor    : get : GL::getClearColor   , set : GL::setClearColor
-        
-        pxWidth         : get : GL::getWidth        , set : GL::setWidth
-        
-        pxHeight        : get : GL::getHeight       , set : GL::setHeight
-        
-        pxLeft          : get : GL::getLeft         , set : GL::setLeft
-        
-        pxTop           : get : GL::getTop          , set : GL::setTop
+    glDepthFunc     : get : GL::keyDepthFunc    , set : GL::setDepthFunc
+    
+    glClearMask     : get : GL::keyClearMask    , set : GL::setClearMask
+    
+    glBindTarget    : get : GL::keyBindTarget   , set : GL::setBindTarget
+    
+    glClearDepth    : get : GL::getClearDepth   , set : GL::setClearDepth
+    
+    glClearColor    : get : GL::getClearColor   , set : GL::setClearColor
+    
+    pxWidth         : get : GL::getWidth        , set : GL::setWidth
+    
+    pxHeight        : get : GL::getHeight       , set : GL::setHeight
+    
+    pxLeft          : get : GL::getLeft         , set : GL::setLeft
+    
+    pxTop           : get : GL::getTop          , set : GL::setTop
 
-        ratioPixel      : get : GL::getPixelRatio   , set : GL::setPixelRatio
-        
-        ratioAspect     : get : GL::getAspectRatio  , set : GL::setAspectRatio
-        
-        ratioShift      : get : GL::getShiftRatio   , set : GL::setShiftRatio
-        
-        uxActive        : get : GL::getUXEnabled    , set : GL::setUXEnabled
+    ratioPixel      : get : GL::getPixelRatio   , set : GL::setPixelRatio
+    
+    ratioAspect     : get : GL::getAspectRatio  , set : GL::setAspectRatio
+    
+    ratioShift      : get : GL::getShiftRatio   , set : GL::setShiftRatio
+    
+    uxActive        : get : GL::getUXEnabled    , set : GL::setUXEnabled
 
-        uxMoveWalking   : get : GL::getWalking      , set : GL::setWalking
-        
-        uxMoveJumping   : get : GL::getJumping      , set : GL::setJumping
+    uxMoveWalking   : get : GL::getWalking      , set : GL::setWalking
+    
+    uxMoveJumping   : get : GL::getJumping      , set : GL::setJumping
 
-        uxKeyShift      : get : GL::getKeyShift     , set : GL::setKeyShift
-        
-        uxKeyAlt        : get : GL::getKeyAlt       , set : GL::setKeyAlt
+    uxKeyShift      : get : GL::getKeyShift     , set : GL::setKeyShift
+    
+    uxKeyAlt        : get : GL::getKeyAlt       , set : GL::setKeyAlt
 
-        uxKeyMeta       : get : GL::getKeyMeta      , set : GL::setKeyMeta
+    uxKeyMeta       : get : GL::getKeyMeta      , set : GL::setKeyMeta
 
-        uxKeyCtrl       : get : GL::getKeyCtrl      , set : GL::setKeyCtrl
-        
-        uxPtrClick      : get : GL::getPtrClick     , set : GL::setPtrClick
-        
-        uxPtrDblClick   : get : GL::getPtrDblClick  , set : GL::setPtrDblClick
+    uxKeyCtrl       : get : GL::getKeyCtrl      , set : GL::setKeyCtrl
+    
+    uxPtrClick      : get : GL::getPtrClick     , set : GL::setPtrClick
+    
+    uxPtrDblClick   : get : GL::getPtrDblClick  , set : GL::setPtrDblClick
 
-        uxPtrLooking    : get : GL::getLooking      , set : GL::setLooking
+    uxPtrLooking    : get : GL::getLooking      , set : GL::setLooking
 
-        uxPtrZooming    : get : GL::getZooming      , set : GL::setZooming
+    uxPtrZooming    : get : GL::getZooming      , set : GL::setZooming
 
-        uxPtrDragging   : get : GL::getDragging     , set : GL::setDragging
+    uxPtrDragging   : get : GL::getDragging     , set : GL::setDragging
 
-        uxPtrRotating   : get : GL::getRotating     , set : GL::setRotating
+    uxPtrRotating   : get : GL::getRotating     , set : GL::setRotating
 
-        uxMoveFwd       : get : GL::getMoveFwd      , set : GL::setMoveFwd
-        
-        uxMoveBack      : get : GL::getMoveBack     , set : GL::setMoveBack
-        
-        uxMoveLeft      : get : GL::getMoveLeft     , set : GL::setMoveLeft
-        
-        uxMoveRight     : get : GL::getMoveRight    , set : GL::setMoveRight
-        
-        uxMoveUp        : get : GL::getMoveUp       , set : GL::setMoveUp
-        
-        uxMoveDown      : get : GL::getMoveDown     , set : GL::setMoveDown
+    uxMoveFwd       : get : GL::getMoveFwd      , set : GL::setMoveFwd
+    
+    uxMoveBack      : get : GL::getMoveBack     , set : GL::setMoveBack
+    
+    uxMoveLeft      : get : GL::getMoveLeft     , set : GL::setMoveLeft
+    
+    uxMoveRight     : get : GL::getMoveRight    , set : GL::setMoveRight
+    
+    uxMoveUp        : get : GL::getMoveUp       , set : GL::setMoveUp
+    
+    uxMoveDown      : get : GL::getMoveDown     , set : GL::setMoveDown
 
-        x               : get : GL::getX            , set : GL::setX
+    x               : get : GL::getX            , set : GL::setX
 
-        xDelta          : get : GL::getXDelta       , set : GL::setXDelta
+    xDelta          : get : GL::getXDelta       , set : GL::setXDelta
 
-        xRotate         : get : GL::getXRotate      , set : GL::setXRotate
+    xRotate         : get : GL::getXRotate      , set : GL::setXRotate
 
-        xScale          : get : GL::getXScale       , set : GL::setXScale
+    xScale          : get : GL::getXScale       , set : GL::setXScale
 
-        xVector         : get : GL::getXVector      , set : GL::setXVector
+    xVector         : get : GL::getXVector      , set : GL::setXVector
 
-        y               : get : GL::getY            , set : GL::setY
+    y               : get : GL::getY            , set : GL::setY
 
-        yDelta          : get : GL::getYDelta       , set : GL::setYDelta
+    yDelta          : get : GL::getYDelta       , set : GL::setYDelta
 
-        yRotate         : get : GL::getYRotate      , set : GL::setYRotate
+    yRotate         : get : GL::getYRotate      , set : GL::setYRotate
 
-        yScale          : get : GL::getYScale       , set : GL::setYScale
+    yScale          : get : GL::getYScale       , set : GL::setYScale
 
-        yVector         : get : GL::getYVector      , set : GL::setYVector
+    yVector         : get : GL::getYVector      , set : GL::setYVector
 
-        zScale          : get : GL::getZScale       , set : GL::setZScale
+    zScale          : get : GL::getZScale       , set : GL::setZScale
 
-        zVector         : get : GL::getZVector      , set : GL::setZVector
+    zVector         : get : GL::getZVector      , set : GL::setZVector
 
 export default GL.registerClass()
 
@@ -939,7 +903,7 @@ OFFSET_NAME_LENGTH      = 4 * 3 + 2
 
 OFFSET_NAME_TARRAY      = 4 * 4
 
-export class ShaderKey extends Pointer
+export class ShaderKey  extends Pointer
 
     @byteLength         : 4 * 8
 
@@ -1005,7 +969,7 @@ OFFSET_ATTR_STRIDE      = 4 * 0 + 2
 
 OFFSET_ATTR_OFFSET      = 4 * 0 + 3
 
-export class Attribute extends ShaderKey
+export class Attribute  extends ShaderKey
 
     Object.defineProperties Attribute.registerClass(),
         
@@ -1117,7 +1081,7 @@ Object.defineProperties Attribute::,
 
     normalize           : get : Attribute::getNormalize     , set : Attribute::setNormalize
 
-export class Uniform extends ShaderKey
+export class Uniform    extends ShaderKey
 
     Object.defineProperties Uniform.registerClass(),
         
@@ -1170,26 +1134,6 @@ Object.defineProperties Uniform::,
 
     location            : get : Uniform::getGLLocation
 
-OFFSET_MODE_TYPEGLCODE  = 4 * 0
-
-OFFSET_MODE_DRAWOFFSET  = 4 * 1
-
-OFFSET_MODE_DRAWLENGTH  = 4 * 2
-
-OFFSET_MODE_BYTE_ALLOC  = 4 * 3
-
-OFFSET_MODE_BYTELENGTH  = 4 * 4
-
-OFFSET_MODE_ATTR_START  = 4 * 5
-
-OFFSET_MODE_ATTR_COUNT  = 4 * 6
-
-OFFSET_MODE_DST_OFFSET  = 4 * 7
-
-OFFSET_MODE_COMPONENTS  = 4 * 8
-
-OFFSET_MODE_FIRSTINDEX  = 4 * 9
-
 KEYEXTEND_OBJECT3D      =
     [ WebGL2RenderingContext        .POINTS ] : new (class           POINTS extends Number) WebGL2RenderingContext        .POINTS
     [ WebGL2RenderingContext         .LINES ] : new (class            LINES extends Number) WebGL2RenderingContext         .LINES
@@ -1203,7 +1147,7 @@ export class Draw extends Pointer
 
 Object.defineProperties Draw.registerClass(),
 
-    byteLength          : value : 4 * 4
+    byteLength          : value : 4 * 0
 
     typedArray          : value : Uint32Array
 
@@ -1241,7 +1185,7 @@ Object.defineProperties Draw::,
 
     setAttributes       : value : -> @getAttributes().set arguments[0] ; this
 
-    getVertices         : value : -> @ptrLinkedNode().getVertexArray()
+    getVertices         : value : -> @ptrLinkedNode().getVertices()
     
     getColor            : value : -> @ptrLinkedNode().getColor()
 
@@ -1269,14 +1213,18 @@ Object.defineProperties Draw::,
 
     matrix              : get   : Draw::getMatrix
     
-
 export class Mode extends Pointer
 
 Object.defineProperties Mode.registerClass(),
 
-    byteLength          : value : 4 * 9
+    byteLength          : value : 4 * 0
 
     typedArray          : value : Uint32Array
+
+Object.hiddenProperties Mode,
+
+    "array", "byteLength", "byteOffset", "headers", 
+    "length", "linkedNode", "protoClass"
 
 Object.defineProperties Mode::,
 
@@ -1285,10 +1233,9 @@ Object.defineProperties Mode::,
 
     malloc              : value : ->
 
-        object3 = arguments[ 0 ]
-        vertices = object3.getVertexArray()
+        obj3 = arguments[ 0 ]
+        vertices = obj3.getVertices()
         components = @getComponents()
-
 
         count = vertices.length / 3
         length = count * components
@@ -1302,7 +1249,7 @@ Object.defineProperties Mode::,
         draw = new Draw()
 
         draw . setParentPtri this
-        draw . setLinkedPtri object3 * 1
+        draw . setLinkedPtri obj3
         draw . setDstOffset destOffset
         draw . setStart destOffset / 4
         draw . setCount length
@@ -1315,88 +1262,63 @@ Object.defineProperties Mode::,
 
     getGL               : value : -> @getParentPtrP().getGL()
 
-    getAttrCount        : value : -> @getUint32 OFFSET_MODE_ATTR_COUNT
+    findObjects         : value : -> @findAllChilds().flatMap (v) -> v.object3
 
-    setAttrCount        : value : -> @setUint32 OFFSET_MODE_ATTR_COUNT, arguments[0]
+    getComponents       : value : -> @getResvUint16 0
 
-    getAttrStart        : value : -> @getUint32 OFFSET_MODE_ATTR_START
+    setComponents       : value : -> @setResvUint16 0, arguments[0]
 
-    setAttrStart        : value : -> @setUint32 OFFSET_MODE_ATTR_START, arguments[0]
+    keyTypeGLCode       : value : -> @keyResvUint16 1, KEYEXTEND_OBJECT3D
 
-    getAllocBytes       : value : -> @getUint32 OFFSET_MODE_BYTE_ALLOC
+    getTypeGLCode       : value : -> @getResvUint16 1
+
+    setTypeGLCode       : value : -> @setResvUint16 1, arguments[0]
+
+    getFirstIndex       : value : -> @getResvUint32 1
+
+    setFirstIndex       : value : -> @setResvUint32 1, arguments[0]
+
+    getModeLength       : value : -> @getResvUint32 2
     
-    addAllocBytes       : value : -> @addUint32 OFFSET_MODE_BYTE_ALLOC, arguments[0]
+    addModeLength       : value : -> @addResvUint32 2, arguments[0]
 
-    setAllocBytes       : value : -> @setUint32 OFFSET_MODE_BYTE_ALLOC, arguments[0]
+    setModeLength       : value : -> @setResvUint32 2, arguments[0]
 
-    keyTypeGLCode       : value : -> @keyUint16 OFFSET_MODE_TYPEGLCODE, KEYEXTEND_OBJECT3D
+    getDrawLength       : value : -> @getResvUint32 3
 
-    getTypeGLCode       : value : -> @getUint16 OFFSET_MODE_TYPEGLCODE
-
-    setTypeGLCode       : value : -> @setUint16 OFFSET_MODE_TYPEGLCODE, arguments[0]
-
-    getBegin            : value : -> @getModeOffset() / 4
+    addDrawLength       : value : -> @addResvUint32 3, arguments[0]
     
-    getModeOffset       : value : -> @getUint32 OFFSET_MODE_DRAWOFFSET
-
-    setModeOffset       : value : -> @setUint32 OFFSET_MODE_DRAWOFFSET, arguments[0]
-
-    getFirstIndex       : value : -> @getUint32 OFFSET_MODE_FIRSTINDEX
-
-    setFirstIndex       : value : -> @setUint32 OFFSET_MODE_FIRSTINDEX, arguments[0]
-
-    getModeLength       : value : -> @getUint32 OFFSET_MODE_BYTELENGTH
+    setDrawLength       : value : -> @setResvUint32 3, arguments[0]
+        
+    getAllocBytes       : value : -> @getResvUint32 4
     
-    addModeLength       : value : -> @addUint32 OFFSET_MODE_BYTELENGTH, arguments[0]
+    addAllocBytes       : value : -> @addResvUint32 4, arguments[0]
 
-    setModeLength       : value : -> @setUint32 OFFSET_MODE_BYTELENGTH, arguments[0]
+    setAllocBytes       : value : -> @setResvUint32 4, arguments[0]
 
-    getDrawLength       : value : -> @getUint32 OFFSET_MODE_DRAWLENGTH
+    getModeOffset       : value : -> @getResvUint32 5
 
-    addDrawLength       : value : -> @addUint32 OFFSET_MODE_DRAWLENGTH, arguments[0]
-    
-    setDrawLength       : value : -> @setUint32 OFFSET_MODE_DRAWLENGTH, arguments[0]
-
-    getDestOffset       : value : -> @getUint32 OFFSET_MODE_DST_OFFSET
-
-    setDestOffset       : value : -> @setUint32 OFFSET_MODE_DST_OFFSET, arguments[0]
-
-    getComponents       : value : -> @getUint8  OFFSET_MODE_COMPONENTS
-
-    setComponents       : value : -> @setUint8  OFFSET_MODE_COMPONENTS, arguments[0]
+    setModeOffset       : value : -> @setResvUint32 5, arguments[0]    
     
     getAttributes       : value : -> @getParentPtrP().getTArray @getModeOffset(), @getAllocBytes()
 
     setAttributes       : value : -> @getAttributes().set arguments[0] ; this
 
-
 Object.defineProperties Mode::,
+
+    objects             : get   : Mode::findObjects
 
     type                : get   : Mode::keyTypeGLCode , set   : Mode::setTypeGLCode
 
-    allocBytes          : get   : Mode::getAllocBytes , set   : Mode::setAllocBytes
-
-    firstIndex          : get   : Mode::getFirstIndex , set   : Mode::setFirstIndex
+    first               : get   : Mode::getFirstIndex , set   : Mode::setFirstIndex
     
-    drawLength          : get   : Mode::getDrawLength , set   : Mode::setDrawLength
+    count               : get   : Mode::getDrawLength , set   : Mode::setDrawLength
     
-    modeOffset          : get   : Mode::getModeOffset , set   : Mode::setModeOffset 
+    offset              : get   : Mode::getModeOffset , set   : Mode::setModeOffset 
     
-    components          : get   : Mode::getComponents , set   : Mode::setComponents
+    numCmponents        : get   : Mode::getComponents , set   : Mode::setComponents
 
     attributes          : get   : Mode::getAttributes , set   : Mode::setAttributes
-
-OFFSET_BINDING_TARGET   = 4 * 0
-
-OFFSET_BINDING_STATUS   = 4 * 0 + 2
-
-OFFSET_BUF_BYTELENGTH   = 4 * 1 # total usabe reserved on gpu
-
-OFFSET_BUF_MODEOFFSET   = 4 * 2 # allocated bytes of vertices 
-
-OFFSET_BUF_DRAWOFFSET   = 4 * 3 # offset on SharedArrayBuffer
-
-OFFSET_BUFFER_OFFSET    = 4 * 12
 
 export class Buffer extends Pointer
 
@@ -1488,7 +1410,7 @@ export class Buffer extends Pointer
     drawTriangleStrip   : ->
         @drawArrays arguments[0], WebGL2RenderingContext.TRIANGLE_STRIP
 
-    delete              : -> @setBindStatus @getGL().deleteBuffer @getLinkedNode() ; @
+    delete              : -> @setBindStatus @getParentPtrO().deleteBuffer @getLinkedNode() ; @
 
     getGL               : -> @getParentPtrO()
 
@@ -1498,171 +1420,73 @@ export class Buffer extends Pointer
 
     setGLBuffer         : -> @setLinkedNode arguments[0]
 
-    getGLIsBuffer       : -> @getGL().isBuffer @getLinkedNode()
+    getGLIsBuffer       : -> @getParentPtrO().isBuffer @getLinkedNode()
 
-    getGLParameter      : -> @getGL().getParameter arguments[0]
+    getGLParameter      : -> @getParentPtrO().getParameter arguments[0]
 
     getGLBindings       : ->
 
-        ARRAY_BUFFER    : @getGLParameter @getGL().ARRAY_BUFFER_BINDING
+        ARRAY_BUFFER    : @getGLParameter @getParentPtrO().ARRAY_BUFFER_BINDING
 
-        ELEMENT_BUFFER  : @getGLParameter @getGL().ELEMENT_ARRAY_BUFFER_BINDING
+        ELEMENT_BUFFER  : @getGLParameter @getParentPtrO().ELEMENT_ARRAY_BUFFER_BINDING
 
     isArrayBuffer       : -> @ELEMENT_BUFFER isnt @getBindTarget()
 
-    keyBindTarget       : -> @keyUint16 OFFSET_BINDING_TARGET
 
-    getBindTarget       : -> @getUint16 OFFSET_BINDING_TARGET
+    getBindStatus       : -> @getResvUint16 0
 
-    setBindTarget       : -> @setUint16 OFFSET_BINDING_TARGET , arguments[0]
+    setBindStatus       : -> @setResvUint16 0 , arguments[0]
 
-    getBindStatus       : -> @getUint16 OFFSET_BINDING_STATUS
+    keyBindTarget       : -> @keyResvUint16 1
 
-    setBindStatus       : -> @setUint16 OFFSET_BINDING_STATUS , arguments[0]
+    getBindTarget       : -> @getResvUint16 1
 
-    getModeOffset       : -> @getUint32 OFFSET_BUF_MODEOFFSET
+    setBindTarget       : -> @setResvUint16 1 , arguments[0]
 
-    addModeOffset       : -> @addUint32 OFFSET_BUF_MODEOFFSET , arguments[0] 
+    getModeOffset       : -> @getResvUint32 1
+
+    addModeOffset       : -> @addResvUint32 1 , arguments[0] 
     
-    setModeOffset       : -> @setUint32 OFFSET_BUF_MODEOFFSET , arguments[0] 
+    setModeOffset       : -> @setResvUint32 1 , arguments[0] 
+
+Object.hiddenProperties Buffer,
+
+    "headers", "protoClass", "length",  
+    "array", "byteOffset", "byteLength", 
 
 Object.defineProperties Buffer.registerClass()::,
-
-    gl                  : get : Buffer::getGL
-
-    glBindings          : get : Buffer::getGLBindings
-
-    glValidate          : get : Buffer::getGLIsBuffer 
-
-    glBuffer            : get : Buffer::getGLBuffer     , set : Buffer::setGLBuffer
 
     type                : get : Buffer::keyBindTarget   , set : Buffer::setBindTarget 
 
     status              : get : Buffer::getBindStatus   , set : Buffer::setBindStatus
 
-OFFSET_O3_DRAWTYPE      = 4 * 0
+OFFSET_O3_COLOR_4D      = 4 * 0
 
-OFFSET_O3_DRAWTYP2      = 4 * 0 + 2
+OFFSET_O3_POSITION      = 4 * 4
 
-OFFSET_O3_COLOR_4D      = 4 * 1
+OFFSET_O3_ROTATION      = 4 * 8
 
-OFFSET_O3_POSITION      = 4 * 6
-
-OFFSET_O3_ROTATION      = 4 * 10
-
-OFFSET_O3_SCALE_3D      = 4 * 14
-
-OFFSET_BUFFER_OFFSET    = 4 * 18
-
-OFFSET_O3_COPY_BEGIN    = 4 * 19
-
-OFFSET_O3_COPYLENGTH    = 4 * 20
-
-OFFSET_ATTRIB_LENGTH    = 4 * 21
-
-OFFSET_ATTRIB_STRIDE    = 4 * 21 + 2
-
-export class Vertices   extends Pointer
-
-Object.defineProperties Vertices.registerClass(),
-
-    typedArray          : value : Float32Array
-    
-    fromArray           : value : ->
-        len = arguments[ 0 ] . length
-        ptr = this . malloc len * this . BYTES_PER_ELEMENT
-        ptr . array.set ptr . setLinkedNode arguments[ 0 ]
-        ptr
-
-Object.defineProperties Vertices::,
-
-    type                : get   : -> @keyStatic WebGL2RenderingContext.FLOAT
-
-export class Attributes extends Pointer
-
-    @typedArray         : Float32Array
+OFFSET_O3_SCALE_3D      = 4 * 12
 
 export class Object3    extends Pointer
 
-    bind                : ->
-        shader = arguments[0]
-        shader.add this
-
-        [ vertex, color4 ] = shader.getAttributes()
-        
-        pointCount = @bufferArray.length / vertex.components
-        allocLength = pointCount * shader.sumComponents
-        ptrByteLength = allocLength * Attributes.BYTES_PER_ELEMENT
-
-        ptr = Attributes.malloc ptrByteLength
-
-        stride = shader.sumComponents
-        tarray = ptr.array
-        offset = -stride
-        sarray = @bufferArray
-        carray = @color.array
-
-        for i in [ 0 ... pointCount ]
-            tarray
-                .subarray offset += stride, offset + stride
-                .set [
-                    ...sarray.subarray( i * 3, i * 3 + 3 )
-                    ...carray
-                ]
-
-        ptr
-
 Object.defineProperties Object3.registerClass(),
 
-    byteLength          : value : 4 * 32
+    byteLength          : value : 4 * 12
 
     typedArray          : value : Float32Array
+
+Object.hiddenProperties Object3,
+
+    "array", "byteLength", "byteOffset", "headers", "length", "linkedNode", "protoClass"
 
 Object.defineProperties Object3::,
 
     getDraws            : value : -> @findAllLinks().filter (v) -> v instanceof Draw
 
-    getBufferObject     : value : -> new OffsetPointer this
+    getVertices         : value : -> @subarray( @constructor.LENGTH_OF_POINTER)
 
-    getBufferOffset     : value : -> @getUint32 OFFSET_BUFFER_OFFSET
-
-    setBufferOffset     : value : -> @setUint32 OFFSET_BUFFER_OFFSET , arguments[0]
-
-
-    getAttibLength      : value : -> @getUint16 OFFSET_ATTRIB_LENGTH
-
-    setAttibLength      : value : -> @setUint16 OFFSET_ATTRIB_LENGTH , arguments[0]
-
-    
-    getAttibStride      : value : -> @getUint8  OFFSET_ATTRIB_STRIDE
-
-    setAttibStride      : value : -> @setUint8  OFFSET_ATTRIB_STRIDE , arguments[0]
-
-    
-    getVertexCount      : value : -> (@length - @constructor.LENGTH_OF_POINTER) / 3
-
-    getVertexArray      : value : -> @subarray( @constructor.LENGTH_OF_POINTER)
-
-    setVertexArray      : value : -> @set(      @constructor.LENGTH_OF_POINTER, arguments[ 0 ])
-
-
-
-    getCopyBegin        : value : -> @getUint32 OFFSET_O3_COPY_BEGIN
-
-    setCopyBegin        : value : -> @setUint32 OFFSET_O3_COPY_BEGIN , arguments[0]
-
-
-    getCopyLength       : value : -> @getUint32 OFFSET_O3_COPYLENGTH
-
-    setCopyLength       : value : -> @setUint32 OFFSET_O3_COPYLENGTH , arguments[0]
-
-
-    keyTypeGLCode       : value : -> @keyUint16 OFFSET_O3_DRAWTYPE , KEYEXTEND_OBJECT3D
-
-    getTypeGLCode       : value : -> @getUint16 OFFSET_O3_DRAWTYPE
-
-    setTypeGLCode       : value : -> @setUint16 OFFSET_O3_DRAWTYPE , arguments[0]
-    
+    setVertices         : value : -> @set(      @constructor.LENGTH_OF_POINTER, arguments[ 0 ])
 
     getPosition         : value : -> new Vertex @byteOffset + OFFSET_O3_POSITION
 
@@ -1672,40 +1496,25 @@ Object.defineProperties Object3::,
     
     getColor            : value : -> new Color4 @byteOffset + OFFSET_O3_COLOR_4D
 
-    setPosition         : value : -> @setArray3 OFFSET_O3_POSITION , arguments[0]
+    setPosition         : value : -> @getPosition().getTypedArray().set arguments[0]
     
-    setRotation         : value : -> @setArray3 OFFSET_O3_ROTATION , arguments[0]
+    setRotation         : value : -> @getRotation().getTypedArray().set arguments[0]
     
-    setScale            : value : -> @setArray3 OFFSET_O3_SCALE_3D , arguments[0]
+    setScale            : value : ->    @getScale().getTypedArray().set arguments[0]
     
-    setColor            : value : -> @setArray4 OFFSET_O3_COLOR_4D , arguments[0]
+    setColor            : value : ->    @getColor().getTypedArray().set arguments[0]
 
     getMatrix           : value : ->
-        [
-            ...@getPosition().array, 1,
-            ...@getRotation().array, 1,
-            ...@getScale().array   , 1,
+        Float32Array.of(
+            ...@getPosition(), 1,
+            ...@getRotation(), 1,
+            ...@getScale()   , 1,
             1, 1, 1, 1,
-        ]
-
+        )
 
 Object.defineProperties Object3::,
 
-    vertexCount         : get : Object3::getVertexCount
-    
-    vertexArray         : get : Object3::getVertexArray   , set : Object3::setVertexArray
-
-    attribStride        : get : Object3::getAttibStride   , set : Object3::setAttibStride
-    
-    attribLength        : get : Object3::getAttibLength   , set : Object3::setAttibLength
-
-    bufferOffset        : get : Object3::getBufferOffset  , set : Object3::setBufferOffset
-    
-    bufferObject        : get : Object3::getBufferObject
-    
-    copyBegin           : get : Object3::getCopyBegin  , set : Object3::setCopyBegin
-
-    copyLength          : get : Object3::getCopyLength , set : Object3::setCopyLength
+    vertices            : get : Object3::getVertices   , set : Object3::setVertexArray
 
     position            : get : Object3::getPosition   , set : Object3::setPosition
     
@@ -1715,6 +1524,6 @@ Object.defineProperties Object3::,
     
     color               : get : Object3::getColor      , set : Object3::setColor
     
-    type                : get : Object3::keyTypeGLCode , set : Object3::setTypeGLCode
-
     draws               : get : Object3::getDraws
+
+    matrix              : get : Object3::getMatrix
