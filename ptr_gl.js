@@ -1,4 +1,4 @@
-var DEPTH_N_COLOR_BIT, KEYEXTEND_CLEARMASK, KEYEXTEND_OBJECT3D, OFFSET_ASPECT_RATIO, OFFSET_ATTACH_STATUS, OFFSET_ATTRIB_LENGTH, OFFSET_ATTRIB_STRIDE, OFFSET_ATTR_OFFSET, OFFSET_ATTR_STRIDE, OFFSET_BINDING_STATUS, OFFSET_BINDING_TARGET, OFFSET_BIND_TARGET, OFFSET_BLEND_ACTIVE, OFFSET_BLEND_EQUATE, OFFSET_BLEND_FUNC, OFFSET_BLEND_INARG, OFFSET_BLEND_OUTARG, OFFSET_BUFFER_OFFSET, OFFSET_BUF_BYTELENGTH, OFFSET_BUF_DRAWOFFSET, OFFSET_BUF_MODEOFFSET, OFFSET_CHAR_LENGTH, OFFSET_CLEAR_COLOR, OFFSET_CLEAR_DEPTH, OFFSET_CLEAR_MASK, OFFSET_CULL_ENABLED, OFFSET_CULL_FACE, OFFSET_DEPTH_ACTIVE, OFFSET_DEPTH_FUNC, OFFSET_DEPTH_TEST, OFFSET_DRAGGING, OFFSET_DRAW_ACTIVE, OFFSET_DX, OFFSET_DY, OFFSET_FRONTFACE, OFFSET_HEIGHT, OFFSET_INUSE_STATUS, OFFSET_ISNORMALIZE, OFFSET_IS_ATTACHED, OFFSET_IS_COMPILED, OFFSET_IS_UPLOADED, OFFSET_JUMPING, OFFSET_KEY_ALT, OFFSET_KEY_CTRL, OFFSET_KEY_LOCATED, OFFSET_KEY_META, OFFSET_KEY_SHIFT, OFFSET_LEFT, OFFSET_LINKED_STATUS, OFFSET_LOCATION_AT, OFFSET_LOOKING, OFFSET_MODE_ATTR_COUNT, OFFSET_MODE_ATTR_START, OFFSET_MODE_BYTELENGTH, OFFSET_MODE_BYTE_ALLOC, OFFSET_MODE_COMPONENTS, OFFSET_MODE_DRAWLENGTH, OFFSET_MODE_DRAWOFFSET, OFFSET_MODE_DST_OFFSET, OFFSET_MODE_FIRSTINDEX, OFFSET_MODE_TYPEGLCODE, OFFSET_MOVE_BACK, OFFSET_MOVE_DOWN, OFFSET_MOVE_FWD, OFFSET_MOVE_LEFT, OFFSET_MOVE_RIGHT, OFFSET_MOVE_UP, OFFSET_NAME_LENGTH, OFFSET_NAME_TARRAY, OFFSET_NCOMPONENTS, OFFSET_O3_COLOR_4D, OFFSET_O3_COPYLENGTH, OFFSET_O3_COPY_BEGIN, OFFSET_O3_DRAWTYP2, OFFSET_O3_DRAWTYPE, OFFSET_O3_POSITION, OFFSET_O3_ROTATION, OFFSET_O3_SCALE_3D, OFFSET_PIXEL_RATIO, OFFSET_PTR_BUTTON, OFFSET_PTR_CLICK, OFFSET_PTR_DCLICK, OFFSET_ROTATING, OFFSET_RX, OFFSET_RY, OFFSET_SHADER_TYPE, OFFSET_SHIFT_RATIO, OFFSET_SOURCE_TEXT, OFFSET_SX, OFFSET_SY, OFFSET_SZ, OFFSET_TIME, OFFSET_TOP, OFFSET_TYPE_GLCODE, OFFSET_UX_ENABLED, OFFSET_VX, OFFSET_VY, OFFSET_VZ, OFFSET_WALKING, OFFSET_WIDTH, OFFSET_X, OFFSET_Y, OFFSET_ZOOMING, POINTS;
+var DEPTH_N_COLOR_BIT, KEYEXTEND_CLEARMASK, KEYEXTEND_OBJECT3D, LINES, LINE_LOOP, LINE_STRIP, OFFSET_ASPECT_RATIO, OFFSET_ATTACH_STATUS, OFFSET_ATTRIB_LENGTH, OFFSET_ATTRIB_STRIDE, OFFSET_ATTR_OFFSET, OFFSET_ATTR_STRIDE, OFFSET_BINDING_STATUS, OFFSET_BINDING_TARGET, OFFSET_BIND_TARGET, OFFSET_BLEND_ACTIVE, OFFSET_BLEND_EQUATE, OFFSET_BLEND_FUNC, OFFSET_BLEND_INARG, OFFSET_BLEND_OUTARG, OFFSET_BUFFER_OFFSET, OFFSET_BUF_BYTELENGTH, OFFSET_BUF_DRAWOFFSET, OFFSET_BUF_MODEOFFSET, OFFSET_CHAR_LENGTH, OFFSET_CLEAR_COLOR, OFFSET_CLEAR_DEPTH, OFFSET_CLEAR_MASK, OFFSET_CULL_ENABLED, OFFSET_CULL_FACE, OFFSET_DEPTH_ACTIVE, OFFSET_DEPTH_FUNC, OFFSET_DEPTH_TEST, OFFSET_DRAGGING, OFFSET_DRAW_ACTIVE, OFFSET_DX, OFFSET_DY, OFFSET_FRONTFACE, OFFSET_HEIGHT, OFFSET_INUSE_STATUS, OFFSET_ISNORMALIZE, OFFSET_IS_ATTACHED, OFFSET_IS_COMPILED, OFFSET_IS_UPLOADED, OFFSET_JUMPING, OFFSET_KEY_ALT, OFFSET_KEY_CTRL, OFFSET_KEY_LOCATED, OFFSET_KEY_META, OFFSET_KEY_SHIFT, OFFSET_LEFT, OFFSET_LINKED_STATUS, OFFSET_LOCATION_AT, OFFSET_LOOKING, OFFSET_MODE_ATTR_COUNT, OFFSET_MODE_ATTR_START, OFFSET_MODE_BYTELENGTH, OFFSET_MODE_BYTE_ALLOC, OFFSET_MODE_COMPONENTS, OFFSET_MODE_DRAWLENGTH, OFFSET_MODE_DRAWOFFSET, OFFSET_MODE_DST_OFFSET, OFFSET_MODE_FIRSTINDEX, OFFSET_MODE_TYPEGLCODE, OFFSET_MOVE_BACK, OFFSET_MOVE_DOWN, OFFSET_MOVE_FWD, OFFSET_MOVE_LEFT, OFFSET_MOVE_RIGHT, OFFSET_MOVE_UP, OFFSET_NAME_LENGTH, OFFSET_NAME_TARRAY, OFFSET_NCOMPONENTS, OFFSET_O3_COLOR_4D, OFFSET_O3_COPYLENGTH, OFFSET_O3_COPY_BEGIN, OFFSET_O3_DRAWTYP2, OFFSET_O3_DRAWTYPE, OFFSET_O3_POSITION, OFFSET_O3_ROTATION, OFFSET_O3_SCALE_3D, OFFSET_PIXEL_RATIO, OFFSET_PTR_BUTTON, OFFSET_PTR_CLICK, OFFSET_PTR_DCLICK, OFFSET_ROTATING, OFFSET_RX, OFFSET_RY, OFFSET_SHADER_TYPE, OFFSET_SHIFT_RATIO, OFFSET_SOURCE_TEXT, OFFSET_SX, OFFSET_SY, OFFSET_SZ, OFFSET_TIME, OFFSET_TOP, OFFSET_TYPE_GLCODE, OFFSET_UX_ENABLED, OFFSET_VX, OFFSET_VY, OFFSET_VZ, OFFSET_WALKING, OFFSET_WIDTH, OFFSET_X, OFFSET_Y, OFFSET_ZOOMING, POINTS, TRIANGLES, TRIANGLE_FAN, TRIANGLE_STRIP;
 
 import Pointer from "./ptr.js";
 
@@ -2144,7 +2144,13 @@ OFFSET_MODE_COMPONENTS = 4 * 8;
 OFFSET_MODE_FIRSTINDEX = 4 * 9;
 
 KEYEXTEND_OBJECT3D = {
-  0: new (POINTS = class POINTS extends Number {})(WebGL2RenderingContext.POINTS)
+  [WebGL2RenderingContext.POINTS]: new (POINTS = class POINTS extends Number {})(WebGL2RenderingContext.POINTS),
+  [WebGL2RenderingContext.LINES]: new (LINES = class LINES extends Number {})(WebGL2RenderingContext.LINES),
+  [WebGL2RenderingContext.LINE_LOOP]: new (LINE_LOOP = class LINE_LOOP extends Number {})(WebGL2RenderingContext.LINE_LOOP),
+  [WebGL2RenderingContext.LINE_STRIP]: new (LINE_STRIP = class LINE_STRIP extends Number {})(WebGL2RenderingContext.LINE_STRIP),
+  [WebGL2RenderingContext.TRIANGLES]: new (TRIANGLES = class TRIANGLES extends Number {})(WebGL2RenderingContext.TRIANGLES),
+  [WebGL2RenderingContext.TRIANGLE_FAN]: new (TRIANGLE_FAN = class TRIANGLE_FAN extends Number {})(WebGL2RenderingContext.TRIANGLE_FAN),
+  [WebGL2RenderingContext.TRIANGLE_STRIP]: new (TRIANGLE_STRIP = class TRIANGLE_STRIP extends Number {})(WebGL2RenderingContext.TRIANGLE_STRIP)
 };
 
 export var Draw = class Draw extends Pointer {};
@@ -2294,6 +2300,11 @@ Object.defineProperties(Mode.registerClass(), {
 });
 
 Object.defineProperties(Mode.prototype, {
+  is: {
+    value: function() {
+      return 0 === this.getTypeGLCode() - arguments[0];
+    }
+  },
   malloc: {
     value: function() {
       var byteLength, components, count, destOffset, draw, length, mallocOffset, object3, vertices;
@@ -2315,16 +2326,17 @@ Object.defineProperties(Mode.prototype, {
       draw.setCount(length);
       draw.setModeBegin(mallocOffset / 4);
       draw.setModeEnd(draw.getModeBegin() + length);
-      console.log(draw);
-      object3.setBufferOffset(destOffset);
-      object3.setCopyBegin(destOffset / 4);
-      object3.setCopyLength(length);
       return this;
     }
   }
 });
 
 Object.defineProperties(Mode.prototype, {
+  getGL: {
+    value: function() {
+      return this.getParentPtrP().getGL();
+    }
+  },
   getAttrCount: {
     value: function() {
       return this.getUint32(OFFSET_MODE_ATTR_COUNT);
@@ -2534,47 +2546,68 @@ export var Buffer = (function() {
       return this;
     }
 
-    //* allocation for mode
-    malloc() {
-      return this.addModeOffset(arguments[0]);
+    mode() {
+      var BYTES_PER_ATTRIBUTE, BYTES_PER_ELEMENT, byteOffset, count, first, length, mode, numComponents, type;
+      type = arguments[0];
+      count = 1000;
+      numComponents = 7;
+      BYTES_PER_ELEMENT = 4;
+      BYTES_PER_ATTRIBUTE = BYTES_PER_ELEMENT * numComponents;
+      byteOffset = this.addModeOffset(BYTES_PER_ATTRIBUTE * count);
+      length = count * numComponents;
+      first = byteOffset / BYTES_PER_ATTRIBUTE;
+      mode = new Mode();
+      mode.setParentPtri(this);
+      mode.setTypeGLCode(type);
+      mode.setComponents(numComponents);
+      mode.setModeOffset(byteOffset);
+      mode.setFirstIndex(first);
+      return mode;
     }
 
-    //* allocation for object
-    alloc() {
-      var MODETYPE, attrByteLength, bytesPerAttribute, bytesPerElement, firstAttrIndex, j, len1, mode, modeByteOffset, numComponents, object3d, ref, typeCode, vertexCount;
-      object3d = arguments[0];
-      typeCode = object3d.getTypeGLCode();
-      vertexCount = object3d.getVertexCount();
-      numComponents = 7;
-      bytesPerElement = 4;
-      bytesPerAttribute = numComponents * bytesPerElement;
-      attrByteLength = vertexCount * numComponents * bytesPerElement;
-      MODETYPE = object3d.type.constructor.name;
-      mode = null;
-      ref = this.findAllChilds();
+    getMode() {
+      var j, len1, mode, ref, type;
+      type = arguments[0];
+      ref = this.getModes();
       for (j = 0, len1 = ref.length; j < len1; j++) {
         mode = ref[j];
-        1;
-        mode = 0;
+        if (mode.is(type)) {
+          return mode;
+        }
       }
-      if (!mode) {
-        
-        //? no mode matched need to allocate in buffer
-        log(`NO_MODE_MATCHED_FOR_${MODETYPE}_ALLOCATING`);
-        modeByteOffset = this.malloc(attrByteLength);
-        firstAttrIndex = modeByteOffset / bytesPerAttribute;
-        mode = new Mode();
-        mode.setParentPtri(this);
-        mode.setTypeGLCode(typeCode);
-        mode.setComponents(numComponents);
-        mode.setModeOffset(modeByteOffset);
-        mode.setFirstIndex(firstAttrIndex);
-        mode.malloc(object3d); //TODO move to right
-      } else {
-        2;
-      }
-      console.warn(mode);
-      return mode;
+      return this.mode(type);
+    }
+
+    drawArrays() {
+      return this.getMode(arguments[1]).malloc(arguments[0]);
+    }
+
+    drawLines() {
+      return this.drawArrays(arguments[0], WebGL2RenderingContext.LINES);
+    }
+
+    drawLineLoop() {
+      return this.drawArrays(arguments[0], WebGL2RenderingContext.LINE_LOOP);
+    }
+
+    drawLineStrip() {
+      return this.drawArrays(arguments[0], WebGL2RenderingContext.LINE_STRIP);
+    }
+
+    drawPoints() {
+      return this.drawArrays(arguments[0], WebGL2RenderingContext.POINTS);
+    }
+
+    drawTriangles() {
+      return this.drawArrays(arguments[0], WebGL2RenderingContext.TRIANGLES);
+    }
+
+    drawTriangleFan() {
+      return this.drawArrays(arguments[0], WebGL2RenderingContext.TRIANGLE_FAN);
+    }
+
+    drawTriangleStrip() {
+      return this.drawArrays(arguments[0], WebGL2RenderingContext.TRIANGLE_STRIP);
     }
 
     delete() {
@@ -2584,6 +2617,12 @@ export var Buffer = (function() {
 
     getGL() {
       return this.getParentPtrO();
+    }
+
+    getModes() {
+      return this.findAllChilds().filter(function(v) {
+        return v instanceof Mode;
+      });
     }
 
     getGLBuffer() {
@@ -2795,6 +2834,13 @@ Object.defineProperties(Object3.registerClass(), {
 });
 
 Object.defineProperties(Object3.prototype, {
+  getDraws: {
+    value: function() {
+      return this.findAllLinks().filter(function(v) {
+        return v instanceof Draw;
+      });
+    }
+  },
   getBufferObject: {
     value: function() {
       return new OffsetPointer(this);
@@ -2977,5 +3023,8 @@ Object.defineProperties(Object3.prototype, {
   type: {
     get: Object3.prototype.keyTypeGLCode,
     set: Object3.prototype.setTypeGLCode
+  },
+  draws: {
+    get: Object3.prototype.getDraws
   }
 });

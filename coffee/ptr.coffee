@@ -51,6 +51,10 @@ Object.defineProperties Array::,
         n = arguments[ s = 0 ]
         s += v for { [n]: v } in @ ; s
 
+    getAttrib : value : ->
+        [ func , value ] = arguments
+        ( this . find (v) -> 0 is v[ func ]() - value )
+
 Object.defineProperties DataView::,
     
     setObject : value : ( offset, object ) ->
@@ -63,8 +67,11 @@ Object.defineProperties DataView::,
         OBJECTS.splice offset, 1 ; 0
 
     getObject : value : ( offset ) ->
-        return unless i = @getUint32 offset, LE
-        return OBJECTS[ i ] ?= proxy i
+        return unless i = @getUint32 offset , LE
+        unless o = OBJECTS[ i ]
+            return OBJECTS[ i ] = proxy i unless window?
+            return new Pointer i
+        return o
 
     toPointer : value : ( offset, Prototype = Pointer ) ->
         new Prototype i if i = @getUint32 offset, LE
@@ -467,15 +474,19 @@ Object.defineProperties Pointer::,
 
     getTypedLength  : value : -> @getByteLength() / @constructor.typedArray . BYTES_PER_ELEMENT
 
+    findAllLinks    : value : ->
+        @findAllChilds OFFSET_LINKEDNODE
+
     findAllChilds   : value : ->
-        offset = POINTERS_BYTEOFFSET + OFFSET_PARENT_PTR
+        stride = arguments[0] or OFFSET_PARENT_PTR
+        offset = POINTERS_BYTEOFFSET + stride
         finish = Atomics.load u32, INDEX_PTR
         number = this * 1
         childs = []
 
         while offset < finish
             if -0 is number - dvw.getUint32 offset, LE
-                childs.push new Pointer offset - OFFSET_PARENT_PTR
+                childs.push new Pointer offset - stride
             offset += BYTES_PER_POINTER
 
         childs
@@ -704,7 +715,8 @@ if  window?
             ival = clearInterval ival
         else ival = setInterval dump, 90
 
-    document?.body.onclick = -> dump clearInterval ival
+    document?.body.onclick = ->
+        dump clearInterval ival
         
     hist = [] 
     fill = "".padStart 1e2, '\n'
@@ -729,9 +741,9 @@ if  window?
                 type        : child.type
                 classId     : child.getProtoClass()
                 link        : child.getLinkedNode()
-                offset      : child.byteOffset
-                allocated   : child.byteLength,
-                array       : child.array
+                offset      : child.getByteOffset()
+                allocated   : child.getByteLength(),
+                array       : child.getTypedArray()
                 childs      : child.children.length or null
             }
 

@@ -1190,8 +1190,14 @@ OFFSET_MODE_COMPONENTS  = 4 * 8
 
 OFFSET_MODE_FIRSTINDEX  = 4 * 9
 
-KEYEXTEND_OBJECT3D      = 0 : new (class POINTS extends Number) WebGL2RenderingContext.POINTS
-
+KEYEXTEND_OBJECT3D      =
+    [ WebGL2RenderingContext        .POINTS ] : new (class           POINTS extends Number) WebGL2RenderingContext        .POINTS
+    [ WebGL2RenderingContext         .LINES ] : new (class            LINES extends Number) WebGL2RenderingContext         .LINES
+    [ WebGL2RenderingContext     .LINE_LOOP ] : new (class        LINE_LOOP extends Number) WebGL2RenderingContext     .LINE_LOOP
+    [ WebGL2RenderingContext    .LINE_STRIP ] : new (class       LINE_STRIP extends Number) WebGL2RenderingContext    .LINE_STRIP
+    [ WebGL2RenderingContext     .TRIANGLES ] : new (class        TRIANGLES extends Number) WebGL2RenderingContext     .TRIANGLES
+    [ WebGL2RenderingContext  .TRIANGLE_FAN ] : new (class     TRIANGLE_FAN extends Number) WebGL2RenderingContext  .TRIANGLE_FAN
+    [ WebGL2RenderingContext.TRIANGLE_STRIP ] : new (class   TRIANGLE_STRIP extends Number) WebGL2RenderingContext.TRIANGLE_STRIP
 
 export class Draw extends Pointer
 
@@ -1274,6 +1280,9 @@ Object.defineProperties Mode.registerClass(),
 
 Object.defineProperties Mode::,
 
+    is                  : value : ->
+        0 is @getTypeGLCode() - arguments[0]
+
     malloc              : value : ->
 
         object3 = arguments[ 0 ]
@@ -1286,7 +1295,6 @@ Object.defineProperties Mode::,
         byteLength = length * vertices.BYTES_PER_ELEMENT
         mallocOffset = @addAllocBytes byteLength
         destOffset = @getModeOffset() + mallocOffset
-
 
         @addModeLength length 
         @addDrawLength count
@@ -1301,16 +1309,11 @@ Object.defineProperties Mode::,
         draw . setModeBegin mallocOffset / 4
         draw . setModeEnd draw.getModeBegin() + length
 
-        console.log draw
-
-        object3 . setBufferOffset destOffset 
-        object3 . setCopyBegin destOffset / 4
-        object3 . setCopyLength length
-
-
         this
 
 Object.defineProperties Mode::,
+
+    getGL               : value : -> @getParentPtrP().getGL()
 
     getAttrCount        : value : -> @getUint32 OFFSET_MODE_ATTR_COUNT
 
@@ -1430,62 +1433,66 @@ export class Buffer extends Pointer
         @getGL().bindBuffer @getBindTarget() , @getGLBuffer()
         @setBindStatus 1 ; this
 
-    load                : -> @create() ; @bind() ; this
+    load                : ->
+        @create() ; @bind() ; this
 
-    #* allocation for mode
-    malloc              : ->
-        @addModeOffset arguments[0]
-
-    #* allocation for object
-    alloc               : ->
-        object3d = arguments[ 0 ]
-        typeCode = object3d . getTypeGLCode()
-
-        vertexCount = object3d.getVertexCount()
-        numComponents = 7
-        bytesPerElement = 4
-        bytesPerAttribute = numComponents * bytesPerElement  
-        attrByteLength = vertexCount * numComponents * bytesPerElement
-
-        MODETYPE = object3d.type.constructor.name
-
-        mode = null
-        for mode in @findAllChilds()
-            1
-            mode = 0
-
-
-        unless mode 
-            #? no mode matched need to allocate in buffer
-            log "NO_MODE_MATCHED_FOR_#{MODETYPE}_ALLOCATING"
-
-            modeByteOffset = this . malloc attrByteLength
-            firstAttrIndex = modeByteOffset / bytesPerAttribute
-
-            mode = new Mode()
-
-
-            mode . setParentPtri this
-            mode . setTypeGLCode typeCode
-            mode . setComponents numComponents
-            mode . setModeOffset modeByteOffset
-            mode . setFirstIndex firstAttrIndex
-
-            mode . malloc object3d
-
-
-        else #TODO move to right
-            2 
-
-        console.warn mode
+    mode                : ->
+        type = arguments[ 0 ]
         
+        count = 1000
+        numComponents = 7
+        
+        BYTES_PER_ELEMENT = 4
+        BYTES_PER_ATTRIBUTE = BYTES_PER_ELEMENT * numComponents 
+
+        byteOffset = @addModeOffset BYTES_PER_ATTRIBUTE * count
+        length = count * numComponents
+        first = byteOffset / BYTES_PER_ATTRIBUTE
+
+        mode = new Mode()
+        mode . setParentPtri this
+        mode . setTypeGLCode type
+        mode . setComponents numComponents
+        mode . setModeOffset byteOffset
+        mode . setFirstIndex first
+
         mode
 
+    getMode             : ->
+        type = arguments[ 0 ]
+        for mode in this . getModes()
+            return mode if mode.is type
+        return this . mode type
 
+    drawArrays          : ->
+        @getMode((( arguments[1] ))).malloc arguments[0]
+
+    drawLines           : ->
+        @drawArrays arguments[0], WebGL2RenderingContext.LINES
+
+    drawLineLoop        : ->
+        @drawArrays arguments[0], WebGL2RenderingContext.LINE_LOOP
+
+    drawLineStrip       : ->
+        @drawArrays arguments[0], WebGL2RenderingContext.LINE_STRIP
+
+    drawPoints          : ->
+        @drawArrays arguments[0], WebGL2RenderingContext.POINTS
+
+    drawTriangles       : ->
+        @drawArrays arguments[0], WebGL2RenderingContext.TRIANGLES
+
+    drawTriangleFan     : ->
+        @drawArrays arguments[0], WebGL2RenderingContext.TRIANGLE_FAN
+
+    drawTriangleStrip   : ->
+        @drawArrays arguments[0], WebGL2RenderingContext.TRIANGLE_STRIP
 
     delete              : -> @setBindStatus @getGL().deleteBuffer @getLinkedNode() ; @
 
     getGL               : -> @getParentPtrO()
+
+    getModes            : -> @findAllChilds().filter (v) -> v instanceof Mode
 
     getGLBuffer         : -> @getLinkedNode() or @setGLBuffer @create()
 
@@ -1613,6 +1620,8 @@ Object.defineProperties Object3.registerClass(),
 
 Object.defineProperties Object3::,
 
+    getDraws            : value : -> @findAllLinks().filter (v) -> v instanceof Draw
+
     getBufferObject     : value : -> new OffsetPointer this
 
     getBufferOffset     : value : -> @getUint32 OFFSET_BUFFER_OFFSET
@@ -1707,3 +1716,5 @@ Object.defineProperties Object3::,
     color               : get : Object3::getColor      , set : Object3::setColor
     
     type                : get : Object3::keyTypeGLCode , set : Object3::setTypeGLCode
+
+    draws               : get : Object3::getDraws

@@ -135,14 +135,13 @@
             o32.type = WebGL2RenderingContext.TRIANGLES;
             o32.color = [ 1, 1, 0, 1 ];
 
-            buff.alloc( o3 )
-            buff.alloc( o32 )
-
-            //gl.drawww( o32 );
-            //gl.drawww( o3 );
-
             console.warn(o3)
             console.warn(o32)
+
+            console.warn(buff.drawPoints( o3 ))
+            console.warn(buff.drawTriangles( o3 ))
+            console.warn(buff.drawTriangles( o32 ))
+            console.warn(buff.drawLines( o32 ))
 
         </script>
 
@@ -190,7 +189,7 @@
                 };
 
                 if ( sessionStorage.getItem("credential.rawId") ) {
-                    onclick = fingerprint;
+                    ondblclick = fingerprint;
                 }
                 else
                 if ( localStorage.getItem("credential.rawId") ) {

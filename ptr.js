@@ -77,6 +77,15 @@ Object.defineProperties(Array.prototype, {
       }
       return s;
     }
+  },
+  getAttrib: {
+    value: function() {
+      var func, value;
+      [func, value] = arguments;
+      return this.find(function(v) {
+        return 0 === v[func]() - value;
+      });
+    }
   }
 });
 
@@ -99,11 +108,17 @@ Object.defineProperties(DataView.prototype, {
   },
   getObject: {
     value: function(offset) {
-      var i;
+      var i, o;
       if (!(i = this.getUint32(offset, LE))) {
         return;
       }
-      return OBJECTS[i] != null ? OBJECTS[i] : OBJECTS[i] = proxy(i);
+      if (!(o = OBJECTS[i])) {
+        if (typeof window === "undefined" || window === null) {
+          return OBJECTS[i] = proxy(i);
+        }
+        return new Pointer(i);
+      }
+      return o;
     }
   },
   toPointer: {
@@ -720,16 +735,22 @@ Object.defineProperties(Pointer.prototype, {
       return this.getByteLength() / this.constructor.typedArray.BYTES_PER_ELEMENT;
     }
   },
+  findAllLinks: {
+    value: function() {
+      return this.findAllChilds(OFFSET_LINKEDNODE);
+    }
+  },
   findAllChilds: {
     value: function() {
-      var childs, finish, number, offset;
-      offset = POINTERS_BYTEOFFSET + OFFSET_PARENT_PTR;
+      var childs, finish, number, offset, stride;
+      stride = arguments[0] || OFFSET_PARENT_PTR;
+      offset = POINTERS_BYTEOFFSET + stride;
       finish = Atomics.load(u32, INDEX_PTR);
       number = this * 1;
       childs = [];
       while (offset < finish) {
         if (-0 === number - dvw.getUint32(offset, LE)) {
-          childs.push(new Pointer(offset - OFFSET_PARENT_PTR));
+          childs.push(new Pointer(offset - stride));
         }
         offset += BYTES_PER_POINTER;
       }
@@ -1177,9 +1198,9 @@ if (typeof window !== "undefined" && window !== null) {
         type: child.type,
         classId: child.getProtoClass(),
         link: child.getLinkedNode(),
-        offset: child.byteOffset,
-        allocated: child.byteLength,
-        array: child.array,
+        offset: child.getByteOffset(),
+        allocated: child.getByteLength(),
+        array: child.getTypedArray(),
         childs: child.children.length || null
       });
       byteLength += child.byteLength;
