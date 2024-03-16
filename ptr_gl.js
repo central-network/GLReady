@@ -1560,11 +1560,11 @@ export var Shader = (function() {
     }
 
     getByteSource() {
-      return this.getTArray(OFFSET_SOURCE_TEXT, Uint8Array);
+      return this.getTArray(OFFSET_SOURCE_TEXT);
     }
 
     setByteSource() {
-      this.setTArray(OFFSET_SOURCE_TEXT, arguments[0], Uint8Array);
+      this.setTArray(OFFSET_SOURCE_TEXT, arguments[0]);
       return this;
     }
 
@@ -2147,9 +2147,144 @@ KEYEXTEND_OBJECT3D = {
   0: new (POINTS = class POINTS extends Number {})(WebGL2RenderingContext.POINTS)
 };
 
-export var BufferMode = class BufferMode extends Pointer {};
+export var Draw = class Draw extends Pointer {};
 
-Object.defineProperties(BufferMode.registerClass(), {
+Object.defineProperties(Draw.registerClass(), {
+  byteLength: {
+    value: 4 * 4
+  },
+  typedArray: {
+    value: Uint32Array
+  }
+});
+
+Object.hiddenProperties(Draw, "parent", "linkedNode", "array", "headers", "protoClass", "length", "children", "byteOffset", "byteLength");
+
+Object.defineProperties(Draw.prototype, {
+  keyTypeGLCode: {
+    value: function() {
+      return this.ptrParentNode().keyTypeGLCode();
+    }
+  },
+  getDstOffset: {
+    value: function() {
+      return this.getResvUint32(0);
+    }
+  },
+  setDstOffset: {
+    value: function() {
+      return this.setResvUint32(0, arguments[0]);
+    }
+  },
+  getModeBegin: {
+    value: function() {
+      return this.getResvUint32(3);
+    }
+  },
+  setModeBegin: {
+    value: function() {
+      return this.setResvUint32(3, arguments[0]);
+    }
+  },
+  getModeEnd: {
+    value: function() {
+      return this.getResvUint32(4);
+    }
+  },
+  setModeEnd: {
+    value: function() {
+      return this.setResvUint32(4, arguments[0]);
+    }
+  },
+  getStart: {
+    value: function() {
+      return this.getResvUint32(1);
+    }
+  },
+  setStart: {
+    value: function() {
+      return this.setResvUint32(1, arguments[0]);
+    }
+  },
+  getCount: {
+    value: function() {
+      return this.getResvUint32(2);
+    }
+  },
+  setCount: {
+    value: function() {
+      return this.setResvUint32(2, arguments[0]);
+    }
+  },
+  getAttributes: {
+    value: function() {
+      return this.ptrParentNode().getAttributes().subarray(this.getModeBegin(), this.getModeEnd());
+    }
+  },
+  setAttributes: {
+    value: function() {
+      this.getAttributes().set(arguments[0]);
+      return this;
+    }
+  },
+  getVertices: {
+    value: function() {
+      return this.ptrLinkedNode().getVertexArray();
+    }
+  },
+  getColor: {
+    value: function() {
+      return this.ptrLinkedNode().getColor();
+    }
+  },
+  getMatrix: {
+    value: function() {
+      return this.ptrLinkedNode().getMatrix();
+    }
+  }
+});
+
+Object.defineProperties(Draw.prototype, {
+  object3: {
+    get: Draw.prototype.ptrLinkedNode,
+    set: Draw.prototype.setLinkedPtri
+  },
+  mode: {
+    get: Draw.prototype.ptrParentNode,
+    set: Draw.prototype.setParentPtri
+  },
+  type: {
+    get: Draw.prototype.keyTypeGLCode
+  },
+  dstOffset: {
+    get: Draw.prototype.getDstOffset,
+    set: Draw.prototype.setDstOffset
+  },
+  start: {
+    get: Draw.prototype.getStart,
+    set: Draw.prototype.setStart
+  },
+  count: {
+    get: Draw.prototype.getCount,
+    set: Draw.prototype.setCount
+  },
+  attributes: {
+    get: Draw.prototype.getAttributes
+  },
+  vertices: {
+    get: Draw.prototype.getVertices
+  },
+  color: {
+    get: Draw.prototype.getColor
+  },
+  matrix: {
+    get: Draw.prototype.getMatrix
+  }
+});
+
+export var Mode = class Mode extends Pointer {};
+
+Object.defineProperties(Mode.registerClass(), {
   byteLength: {
     value: 4 * 9
   },
@@ -2158,29 +2293,38 @@ Object.defineProperties(BufferMode.registerClass(), {
   }
 });
 
-Object.defineProperties(BufferMode.prototype, {
+Object.defineProperties(Mode.prototype, {
   malloc: {
     value: function() {
-      var byteLength, components, count, destOffset, length, mallocOffset, object3d, vertices;
-      object3d = arguments[0];
-      vertices = object3d.getVertexArray();
+      var byteLength, components, count, destOffset, draw, length, mallocOffset, object3, vertices;
+      object3 = arguments[0];
+      vertices = object3.getVertexArray();
       components = this.getComponents();
       count = vertices.length / 3;
       length = count * components;
       byteLength = length * vertices.BYTES_PER_ELEMENT;
-      mallocOffset = this.addMallocByte(byteLength);
+      mallocOffset = this.addAllocBytes(byteLength);
       destOffset = this.getModeOffset() + mallocOffset;
-      object3d.setBufferOffset(destOffset);
-      object3d.setCopyBegin(destOffset / 4);
-      object3d.setCopyLength(length);
       this.addModeLength(length);
       this.addDrawLength(count);
+      draw = new Draw();
+      draw.setParentPtri(this);
+      draw.setLinkedPtri(object3 * 1);
+      draw.setDstOffset(destOffset);
+      draw.setStart(destOffset / 4);
+      draw.setCount(length);
+      draw.setModeBegin(mallocOffset / 4);
+      draw.setModeEnd(draw.getModeBegin() + length);
+      console.log(draw);
+      object3.setBufferOffset(destOffset);
+      object3.setCopyBegin(destOffset / 4);
+      object3.setCopyLength(length);
       return this;
     }
   }
 });
 
-Object.defineProperties(BufferMode.prototype, {
+Object.defineProperties(Mode.prototype, {
   getAttrCount: {
     value: function() {
       return this.getUint32(OFFSET_MODE_ATTR_COUNT);
@@ -2201,17 +2345,17 @@ Object.defineProperties(BufferMode.prototype, {
       return this.setUint32(OFFSET_MODE_ATTR_START, arguments[0]);
     }
   },
-  getMallocByte: {
+  getAllocBytes: {
     value: function() {
       return this.getUint32(OFFSET_MODE_BYTE_ALLOC);
     }
   },
-  addMallocByte: {
+  addAllocBytes: {
     value: function() {
       return this.addUint32(OFFSET_MODE_BYTE_ALLOC, arguments[0]);
     }
   },
-  setMallocByte: {
+  setAllocBytes: {
     value: function() {
       return this.setUint32(OFFSET_MODE_BYTE_ALLOC, arguments[0]);
     }
@@ -2229,6 +2373,11 @@ Object.defineProperties(BufferMode.prototype, {
   setTypeGLCode: {
     value: function() {
       return this.setUint16(OFFSET_MODE_TYPEGLCODE, arguments[0]);
+    }
+  },
+  getBegin: {
+    value: function() {
+      return this.getModeOffset() / 4;
     }
   },
   getModeOffset: {
@@ -2300,33 +2449,48 @@ Object.defineProperties(BufferMode.prototype, {
     value: function() {
       return this.setUint8(OFFSET_MODE_COMPONENTS, arguments[0]);
     }
+  },
+  getAttributes: {
+    value: function() {
+      return this.getParentPtrP().getTArray(this.getModeOffset(), this.getAllocBytes());
+    }
+  },
+  setAttributes: {
+    value: function() {
+      this.getAttributes().set(arguments[0]);
+      return this;
+    }
   }
 });
 
-Object.defineProperties(BufferMode.prototype, {
+Object.defineProperties(Mode.prototype, {
   type: {
-    get: BufferMode.prototype.keyTypeGLCode,
-    set: BufferMode.prototype.setTypeGLCode
+    get: Mode.prototype.keyTypeGLCode,
+    set: Mode.prototype.setTypeGLCode
   },
-  alloc: {
-    get: BufferMode.prototype.getMallocByte,
-    set: BufferMode.prototype.setMallocByte
+  allocBytes: {
+    get: Mode.prototype.getAllocBytes,
+    set: Mode.prototype.setAllocBytes
   },
-  first: {
-    get: BufferMode.prototype.getFirstIndex,
-    set: BufferMode.prototype.setFirstIndex
+  firstIndex: {
+    get: Mode.prototype.getFirstIndex,
+    set: Mode.prototype.setFirstIndex
   },
-  count: {
-    get: BufferMode.prototype.getDrawLength,
-    set: BufferMode.prototype.setDrawLength
+  drawLength: {
+    get: Mode.prototype.getDrawLength,
+    set: Mode.prototype.setDrawLength
   },
-  offset: {
-    get: BufferMode.prototype.getModeOffset,
-    set: BufferMode.prototype.setModeOffset
+  modeOffset: {
+    get: Mode.prototype.getModeOffset,
+    set: Mode.prototype.setModeOffset
   },
   components: {
-    get: BufferMode.prototype.getComponents,
-    set: BufferMode.prototype.setComponents
+    get: Mode.prototype.getComponents,
+    set: Mode.prototype.setComponents
+  },
+  attributes: {
+    get: Mode.prototype.getAttributes,
+    set: Mode.prototype.setAttributes
   }
 });
 
@@ -2391,6 +2555,7 @@ export var Buffer = (function() {
       for (j = 0, len1 = ref.length; j < len1; j++) {
         mode = ref[j];
         1;
+        mode = 0;
       }
       if (!mode) {
         
@@ -2398,24 +2563,13 @@ export var Buffer = (function() {
         log(`NO_MODE_MATCHED_FOR_${MODETYPE}_ALLOCATING`);
         modeByteOffset = this.malloc(attrByteLength);
         firstAttrIndex = modeByteOffset / bytesPerAttribute;
-        mode = new BufferMode();
+        mode = new Mode();
+        mode.setParentPtri(this);
         mode.setTypeGLCode(typeCode);
         mode.setComponents(numComponents);
         mode.setModeOffset(modeByteOffset);
         mode.setFirstIndex(firstAttrIndex);
-        console.log({
-          first: mode.getFirstIndex()
-        });
-        console.log({
-          offset: mode.getModeOffset()
-        });
-        mode.malloc(object3d);
-        console.log({
-          first: mode.getFirstIndex()
-        });
-        console.log({
-          offset: mode.getModeOffset() //TODO move to right
-        });
+        mode.malloc(object3d); //TODO move to right
       } else {
         2;
       }
@@ -2764,6 +2918,11 @@ Object.defineProperties(Object3.prototype, {
   setColor: {
     value: function() {
       return this.setArray4(OFFSET_O3_COLOR_4D, arguments[0]);
+    }
+  },
+  getMatrix: {
+    value: function() {
+      return [...this.getPosition().array, 1, ...this.getRotation().array, 1, ...this.getScale().array, 1, 1, 1, 1, 1];
     }
   }
 });

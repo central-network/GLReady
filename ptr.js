@@ -1,4 +1,4 @@
-var BYTES_PER_POINTER, Colour4, INDEX_BUF, INDEX_FPS, INDEX_HIT, INDEX_NOW, INDEX_PTR, KEYED, KEYEX, LE, LENGTH_OF_POINTER, NONE, OBJECTS, OFFSET_BYTELENGTH, OFFSET_BYTEOFFSET, OFFSET_LINKEDNODE, OFFSET_PARENT_PTR, OFFSET_PROTOCLASS, OFFSET_PTRCLASS_0, OFFSET_PTRCLASS_1, OFFSET_PTRCLASS_2, OFFSET_PTRCLASS_3, OFFSET_PTRCLASS_4, POINTERS_BYTELENGTH, POINTERS_BYTEOFFSET, POINTER_PROTOTYPE, Pointer, buf, dump, dvw, fill, hist, i32, ival, k, malloc, palloc, proxy, u32, v;
+var BYTES_PER_POINTER, Colour4, INDEX_BUF, INDEX_FPS, INDEX_HIT, INDEX_NOW, INDEX_PTR, KEYED, KEYEX, LE, LENGTH_OF_POINTER, NONE, OBJECTS, OFFSET_BYTELENGTH, OFFSET_BYTEOFFSET, OFFSET_LINKEDNODE, OFFSET_PARENT_PTR, OFFSET_PROTOCLASS, OFFSET_PTRCLASS_0, OFFSET_PTRCLASS_1, OFFSET_PTRCLASS_2, OFFSET_PTRCLASS_3, OFFSET_PTRCLASS_4, OFFSET_RESVERVEDS, POINTERS_BYTELENGTH, POINTERS_BYTEOFFSET, POINTER_PROTOTYPE, Pointer, buf, dump, dvw, fill, hist, i32, ival, k, malloc, palloc, proxy, u32, v;
 
 import "./ptr_self.js";
 
@@ -140,12 +140,9 @@ Object.defineProperties(OffsetPointer, {
 });
 
 Object.defineProperties(OffsetPointer.prototype, {
-  getVertexAttrib: {
-    value: function() {}
-  },
   getArrayLength: {
     value: function() {
-      return this.getLinkedNode().length - this.getLinkedNode().constructor.LENGTH_OF_POINTER;
+      return this.getLinkedNode().getTypedLength() - this.getLinkedNode().constructor.LENGTH_OF_POINTER;
     }
   },
   getArray: {
@@ -155,18 +152,17 @@ Object.defineProperties(OffsetPointer.prototype, {
   },
   getByteOffset: {
     value: function() {
-      return this.getLinkedNode().byteOffset;
+      return this.getLinkedNode().getByteOffset();
     }
   },
   getLinkedNode: {
     value: function() {
-      var ptr;
-      return ptr = new Pointer(this * 1);
+      return new Pointer(this * 1);
     }
   },
   getBufferOffset: {
     value: function() {
-      return this.getLinkedNode().bufferOffset;
+      return this.getLinkedNode().getBufferOffset();
     }
   }
 });
@@ -483,6 +479,8 @@ OFFSET_LINKEDNODE = 4 * 4;
 
 OFFSET_PARENT_PTR = 4 * 5;
 
+OFFSET_RESVERVEDS = 4 * 6;
+
 OFFSET_PTRCLASS_0 = 4 * 6;
 
 OFFSET_PTRCLASS_1 = 4 * 7;
@@ -494,6 +492,37 @@ OFFSET_PTRCLASS_3 = 4 * 9;
 OFFSET_PTRCLASS_4 = 4 * 10;
 
 POINTER_PROTOTYPE = [, ];
+
+Object.defineProperty(Object, "hiddenProperties", {
+  value: function() {
+    var desc, get, i, j, len, prop, proto, ref, set;
+    proto = null;
+    desc = {
+      configurable: true
+    };
+    ref = [...arguments];
+    for (i = j = 0, len = ref.length; j < len; i = ++j) {
+      prop = ref[i];
+      if (!i) {
+        proto = prop;
+      } else {
+        ({get, set} = Object.getOwnPropertyDescriptor(Object.getPrototypeOf(proto.prototype), prop));
+        Object.defineProperty(proto.prototype, prop, {
+          value: (function(getter, setter) {
+            return function() {
+              if (!arguments[0]) {
+                return getter.call(this);
+              }
+              setter.call(this, arguments[0]);
+              return this;
+            };
+          })(get, set)
+        });
+      }
+    }
+    return proto;
+  }
+});
 
 export default Pointer = class Pointer extends Number {
   static setBuffer(buf, max = 1e20) {
@@ -683,12 +712,12 @@ Object.defineProperties(Pointer.prototype, {
   },
   getTypedArray: {
     value: function() {
-      return new this.constructor.typedArray(this.buffer, this.byteOffset, this.length);
+      return new this.constructor.typedArray(this.buffer, this.getByteOffset(), this.getTypedLength());
     }
   },
   getTypedLength: {
     value: function() {
-      return this.byteLength / this.constructor.typedArray.BYTES_PER_ELEMENT;
+      return this.getByteLength() / this.constructor.typedArray.BYTES_PER_ELEMENT;
     }
   },
   findAllChilds: {
@@ -754,6 +783,16 @@ Object.defineProperties(Pointer.prototype, {
       return this;
     }
   },
+  getLinkedPtri: {
+    value: function() {
+      return dvw.getUint32(this + OFFSET_LINKEDNODE, LE);
+    }
+  },
+  setLinkedPtri: {
+    value: function() {
+      return dvw.setUint32(this + OFFSET_LINKEDNODE, arguments[0], LE);
+    }
+  },
   getLinkedNode: {
     value: function() {
       return dvw.getObject(this + OFFSET_LINKEDNODE);
@@ -805,46 +844,71 @@ Object.defineProperties(Pointer.prototype, {
     value: function() {
       return dvw.toPointer(this + OFFSET_PARENT_PTR, arguments[0] || Pointer);
     }
+  },
+  ptrLinkedNode: {
+    value: function() {
+      return new Pointer(dvw.getUint32(this + OFFSET_LINKEDNODE, LE));
+    }
+  },
+  ptrParentNode: {
+    value: function() {
+      return new Pointer(dvw.getUint32(this + OFFSET_PARENT_PTR, LE));
+    }
+  },
+  ptrResvUint32: {
+    value: function() {
+      return new Pointer(dvw.getUint32(this + OFFSET_RESVERVEDS + arguments[0] * 4, LE));
+    }
+  },
+  getResvUint32: {
+    value: function() {
+      return dvw.getUint32(this + OFFSET_RESVERVEDS + arguments[0] * 4, LE);
+    }
+  },
+  setResvUint32: {
+    value: function() {
+      return dvw.setUint32(this + OFFSET_RESVERVEDS + arguments[0] * 4, arguments[1], LE);
+    }
   }
 });
 
 Object.defineProperties(Pointer.prototype, {
   getTArray: {
     value: function() {
-      var TypedArray, byteOffset, length, offset;
-      [offset = 0, TypedArray = this.constructor.typedArray] = arguments;
-      (byteOffset = this.byteOffset + offset);
-      (length = this.byteLength / TypedArray.BYTES_PER_ELEMENT);
+      var TypedArray, byteLength, byteOffset, length, offset;
+      [offset = 0, byteLength = this.getByteLength(), TypedArray = this.constructor.typedArray] = arguments;
+      byteOffset = this.getByteOffset() + offset;
+      length = byteLength / TypedArray.BYTES_PER_ELEMENT;
       return new TypedArray(this.buffer, byteOffset, length);
     }
   },
   setTArray: {
     value: function() {
       var TypedArray, offset, value;
-      [offset, value, TypedArray] = arguments;
-      (this.getTArray(offset, TypedArray)).set(value);
+      [offset, value, TypedArray = this.constructor.typedArray] = arguments;
+      (this.getTArray(offset, this.getByteLength(), TypedArray)).set(value);
       return this;
     }
   },
   getFloat32: {
     value: function() {
-      return dvw.getFloat32(this.byteOffset + arguments[0], LE);
+      return dvw.getFloat32(this.getByteOffset() + arguments[0], LE);
     }
   },
   setFloat32: {
     value: function() {
-      dvw.setFloat32(this.byteOffset + arguments[0], arguments[1], LE);
+      dvw.setFloat32(this.getByteOffset() + arguments[0], arguments[1], LE);
       return arguments[1];
     }
   },
   getUint8: {
     value: function() {
-      return dvw.getUint8(this.byteOffset + arguments[0]);
+      return dvw.getUint8(this.getByteOffset() + arguments[0]);
     }
   },
   setUint8: {
     value: function() {
-      dvw.setUint8(this.byteOffset + arguments[0], arguments[1]);
+      dvw.setUint8(this.getByteOffset() + arguments[0], arguments[1]);
       return arguments[1];
     }
   },
@@ -855,40 +919,40 @@ Object.defineProperties(Pointer.prototype, {
   },
   keyUint16: {
     value: function() {
-      return dvw.keyUint16(this.byteOffset + arguments[0], arguments[1], arguments[2]);
+      return dvw.keyUint16(this.getByteOffset() + arguments[0], arguments[1], arguments[2]);
     }
   },
   getUint16: {
     value: function() {
-      return dvw.getUint16(this.byteOffset + arguments[0], LE);
+      return dvw.getUint16(this.getByteOffset() + arguments[0], LE);
     }
   },
   setUint16: {
     value: function() {
-      dvw.setUint16(this.byteOffset + arguments[0], arguments[1], LE);
+      dvw.setUint16(this.getByteOffset() + arguments[0], arguments[1], LE);
       return arguments[1];
     }
   },
   getUint32: {
     value: function() {
-      return dvw.getUint32(this.byteOffset + arguments[0], LE);
+      return dvw.getUint32(this.getByteOffset() + arguments[0], LE);
     }
   },
   setUint32: {
     value: function() {
-      dvw.setUint32(this.byteOffset + arguments[0], arguments[1], LE);
+      dvw.setUint32(this.getByteOffset() + arguments[0], arguments[1], LE);
       return arguments[1];
     }
   },
   addUint32: {
     value: function() {
-      dvw.setUint32(this.byteOffset + arguments[0], arguments[1] + (v = this.getUint32(arguments[0])), LE);
+      dvw.setUint32(this.getByteOffset() + arguments[0], arguments[1] + (v = this.getUint32(arguments[0], LE)), LE);
       return v;
     }
   },
   setColour4: {
     value: function() {
-      dvw.setUint32(this.byteOffset + arguments[0], Colour4.u32(arguments[1]), LE);
+      dvw.setUint32(this.getByteOffset() + arguments[0], Colour4.u32(arguments[1]), LE);
       return arguments[1];
     }
   },
@@ -905,7 +969,7 @@ Object.defineProperties(Pointer.prototype, {
   setArray3: {
     value: function() {
       var byteOffset, value, x, y, z;
-      byteOffset = this.byteOffset + arguments[0];
+      byteOffset = this.getByteOffset() + arguments[0];
       if (!isNaN(value = arguments[1])) {
         x = y = z = value;
       } else if (value[Symbol.iterator]) {
@@ -923,7 +987,7 @@ Object.defineProperties(Pointer.prototype, {
   setArray4: {
     value: function() {
       var byteOffset, value, w, x, y, z;
-      byteOffset = this.byteOffset + arguments[0];
+      byteOffset = this.getByteOffset() + arguments[0];
       if (!isNaN(value = arguments[1])) {
         x = y = z = w = value;
       } else if (value[Symbol.iterator]) {
@@ -942,9 +1006,9 @@ Object.defineProperties(Pointer.prototype, {
     value: function() {
       var j, length, lengthOffset, ref, startOffset, tarray;
       [startOffset, lengthOffset] = [...arguments];
-      (startOffset = this.byteOffset + startOffset);
-      tarray = new Uint8Array(this.buffer, startOffset, this.byteLength);
-      if (!lengthOffset || !(length = this.getUint16(lengthOffset))) {
+      (startOffset = this.getByteOffset() + startOffset);
+      tarray = new Uint8Array(this.buffer, startOffset, this.getByteLength());
+      if (!lengthOffset || !(length = this.getUint16(lengthOffset, LE))) {
         for (length = j = ref = tarray.length; (ref <= 0 ? j <= 0 : j >= 0); length = ref <= 0 ? ++j : --j) {
           if (tarray[length] && length++) {
             break;
@@ -959,10 +1023,10 @@ Object.defineProperties(Pointer.prototype, {
       var lengthOffset, source, startOffset, stringSource, tarray;
       [startOffset, stringSource, lengthOffset] = [...arguments];
       source = new TextEncoder().encode(stringSource);
-      tarray = new Uint8Array(this.buffer, this.byteOffset, this.byteLength);
+      tarray = new Uint8Array(this.buffer, this.getByteOffset(), this.getByteLength());
       tarray.set(source, startOffset);
       if (lengthOffset) {
-        this.setUint16(lengthOffset, source.byteLength);
+        this.setUint16(lengthOffset, source.byteLength, LE);
       }
       return this;
     }
@@ -1050,12 +1114,12 @@ Object.defineProperties(WorkerPointer.prototype, {
 Object.defineProperties(WorkerPointer.prototype, {
   getOnlineState: {
     value: function() {
-      return dvw.getUint32(this + OFFSET_PTRCLASS_0, LE);
+      return this.getResvUint32(0);
     }
   },
   setOnlineState: {
     value: function() {
-      dvw.setUint32(this + OFFSET_PTRCLASS_0, arguments[0], LE);
+      this.setResvUint32(0, arguments[0]);
       return this;
     }
   }

@@ -875,9 +875,9 @@ export class Shader extends Pointer
 
     setSourceText       : -> @setString OFFSET_SOURCE_TEXT , arguments[0] , OFFSET_CHAR_LENGTH
     
-    getByteSource       : -> @getTArray OFFSET_SOURCE_TEXT , Uint8Array
+    getByteSource       : -> @getTArray OFFSET_SOURCE_TEXT
 
-    setByteSource       : -> @setTArray OFFSET_SOURCE_TEXT , arguments[0] , Uint8Array ; this
+    setByteSource       : -> @setTArray OFFSET_SOURCE_TEXT , arguments[0] ; this
 
     getIsUploaded       : -> @getUint8  OFFSET_IS_UPLOADED
     
@@ -1193,38 +1193,124 @@ OFFSET_MODE_FIRSTINDEX  = 4 * 9
 KEYEXTEND_OBJECT3D      = 0 : new (class POINTS extends Number) WebGL2RenderingContext.POINTS
 
 
-export class BufferMode extends Pointer
+export class Draw extends Pointer
 
-Object.defineProperties BufferMode.registerClass(),
+Object.defineProperties Draw.registerClass(),
+
+    byteLength          : value : 4 * 4
+
+    typedArray          : value : Uint32Array
+
+Object.hiddenProperties Draw,
+
+    "parent", "linkedNode", "array",
+    "headers", "protoClass", "length",  
+    "children", "byteOffset", "byteLength", 
+
+Object.defineProperties Draw::,
+
+    keyTypeGLCode       : value : -> @ptrParentNode().keyTypeGLCode()
+
+    getDstOffset        : value : -> @getResvUint32 0
+
+    setDstOffset        : value : -> @setResvUint32 0, arguments[0]
+
+    getModeBegin        : value : -> @getResvUint32 3
+    
+    setModeBegin        : value : -> @setResvUint32 3, arguments[0]
+
+    getModeEnd          : value : -> @getResvUint32 4
+    
+    setModeEnd          : value : -> @setResvUint32 4, arguments[0]
+
+    getStart            : value : -> @getResvUint32 1
+
+    setStart            : value : -> @setResvUint32 1, arguments[0]
+
+    getCount            : value : -> @getResvUint32 2
+
+    setCount            : value : -> @setResvUint32 2, arguments[0]
+
+    getAttributes       : value : -> @ptrParentNode().getAttributes().subarray( @getModeBegin(), @getModeEnd() )
+
+    setAttributes       : value : -> @getAttributes().set arguments[0] ; this
+
+    getVertices         : value : -> @ptrLinkedNode().getVertexArray()
+    
+    getColor            : value : -> @ptrLinkedNode().getColor()
+
+    getMatrix           : value : -> @ptrLinkedNode().getMatrix()
+
+Object.defineProperties Draw::,
+
+    object3             : get   : Draw::ptrLinkedNode   , set   : Draw::setLinkedPtri
+
+    mode                : get   : Draw::ptrParentNode   , set   : Draw::setParentPtri
+    
+    type                : get   : Draw::keyTypeGLCode
+
+    dstOffset           : get   : Draw::getDstOffset    , set   : Draw::setDstOffset
+    
+    start               : get   : Draw::getStart        , set   : Draw::setStart
+
+    count               : get   : Draw::getCount        , set   : Draw::setCount
+    
+    attributes          : get   : Draw::getAttributes
+
+    vertices            : get   : Draw::getVertices
+
+    color               : get   : Draw::getColor
+
+    matrix              : get   : Draw::getMatrix
+    
+
+export class Mode extends Pointer
+
+Object.defineProperties Mode.registerClass(),
 
     byteLength          : value : 4 * 9
 
     typedArray          : value : Uint32Array
 
-Object.defineProperties BufferMode::,
+Object.defineProperties Mode::,
 
     malloc              : value : ->
 
-        object3d = arguments[ 0 ]
-        vertices = object3d.getVertexArray()
+        object3 = arguments[ 0 ]
+        vertices = object3.getVertexArray()
         components = @getComponents()
+
 
         count = vertices.length / 3
         length = count * components
         byteLength = length * vertices.BYTES_PER_ELEMENT
-        mallocOffset = @addMallocByte byteLength
+        mallocOffset = @addAllocBytes byteLength
         destOffset = @getModeOffset() + mallocOffset
 
-        object3d . setBufferOffset destOffset 
-        object3d . setCopyBegin destOffset / 4
-        object3d . setCopyLength length
 
         @addModeLength length 
         @addDrawLength count
 
+        draw = new Draw()
+
+        draw . setParentPtri this
+        draw . setLinkedPtri object3 * 1
+        draw . setDstOffset destOffset
+        draw . setStart destOffset / 4
+        draw . setCount length
+        draw . setModeBegin mallocOffset / 4
+        draw . setModeEnd draw.getModeBegin() + length
+
+        console.log draw
+
+        object3 . setBufferOffset destOffset 
+        object3 . setCopyBegin destOffset / 4
+        object3 . setCopyLength length
+
+
         this
 
-Object.defineProperties BufferMode::,
+Object.defineProperties Mode::,
 
     getAttrCount        : value : -> @getUint32 OFFSET_MODE_ATTR_COUNT
 
@@ -1234,11 +1320,11 @@ Object.defineProperties BufferMode::,
 
     setAttrStart        : value : -> @setUint32 OFFSET_MODE_ATTR_START, arguments[0]
 
-    getMallocByte       : value : -> @getUint32 OFFSET_MODE_BYTE_ALLOC
+    getAllocBytes       : value : -> @getUint32 OFFSET_MODE_BYTE_ALLOC
     
-    addMallocByte       : value : -> @addUint32 OFFSET_MODE_BYTE_ALLOC, arguments[0]
+    addAllocBytes       : value : -> @addUint32 OFFSET_MODE_BYTE_ALLOC, arguments[0]
 
-    setMallocByte       : value : -> @setUint32 OFFSET_MODE_BYTE_ALLOC, arguments[0]
+    setAllocBytes       : value : -> @setUint32 OFFSET_MODE_BYTE_ALLOC, arguments[0]
 
     keyTypeGLCode       : value : -> @keyUint16 OFFSET_MODE_TYPEGLCODE, KEYEXTEND_OBJECT3D
 
@@ -1246,6 +1332,8 @@ Object.defineProperties BufferMode::,
 
     setTypeGLCode       : value : -> @setUint16 OFFSET_MODE_TYPEGLCODE, arguments[0]
 
+    getBegin            : value : -> @getModeOffset() / 4
+    
     getModeOffset       : value : -> @getUint32 OFFSET_MODE_DRAWOFFSET
 
     setModeOffset       : value : -> @setUint32 OFFSET_MODE_DRAWOFFSET, arguments[0]
@@ -1273,20 +1361,27 @@ Object.defineProperties BufferMode::,
     getComponents       : value : -> @getUint8  OFFSET_MODE_COMPONENTS
 
     setComponents       : value : -> @setUint8  OFFSET_MODE_COMPONENTS, arguments[0]
-
-Object.defineProperties BufferMode::,
-
-    type                : get   : BufferMode::keyTypeGLCode , set   : BufferMode::setTypeGLCode
-
-    alloc               : get   : BufferMode::getMallocByte , set   : BufferMode::setMallocByte
-
-    first               : get   : BufferMode::getFirstIndex , set   : BufferMode::setFirstIndex
     
-    count               : get   : BufferMode::getDrawLength , set   : BufferMode::setDrawLength
+    getAttributes       : value : -> @getParentPtrP().getTArray @getModeOffset(), @getAllocBytes()
+
+    setAttributes       : value : -> @getAttributes().set arguments[0] ; this
+
+
+Object.defineProperties Mode::,
+
+    type                : get   : Mode::keyTypeGLCode , set   : Mode::setTypeGLCode
+
+    allocBytes          : get   : Mode::getAllocBytes , set   : Mode::setAllocBytes
+
+    firstIndex          : get   : Mode::getFirstIndex , set   : Mode::setFirstIndex
     
-    offset              : get   : BufferMode::getModeOffset , set   : BufferMode::setModeOffset 
+    drawLength          : get   : Mode::getDrawLength , set   : Mode::setDrawLength
     
-    components          : get   : BufferMode::getComponents , set   : BufferMode::setComponents
+    modeOffset          : get   : Mode::getModeOffset , set   : Mode::setModeOffset 
+    
+    components          : get   : Mode::getComponents , set   : Mode::setComponents
+
+    attributes          : get   : Mode::getAttributes , set   : Mode::setAttributes
 
 OFFSET_BINDING_TARGET   = 4 * 0
 
@@ -1357,6 +1452,7 @@ export class Buffer extends Pointer
         mode = null
         for mode in @findAllChilds()
             1
+            mode = 0
 
 
         unless mode 
@@ -1366,20 +1462,17 @@ export class Buffer extends Pointer
             modeByteOffset = this . malloc attrByteLength
             firstAttrIndex = modeByteOffset / bytesPerAttribute
 
-            mode = new BufferMode()
+            mode = new Mode()
 
+
+            mode . setParentPtri this
             mode . setTypeGLCode typeCode
             mode . setComponents numComponents
             mode . setModeOffset modeByteOffset
             mode . setFirstIndex firstAttrIndex
 
-            console.log first: mode.getFirstIndex()
-            console.log offset: mode.getModeOffset()
-
             mode . malloc object3d
 
-            console.log first: mode.getFirstIndex()
-            console.log offset: mode.getModeOffset()
 
         else #TODO move to right
             2 
@@ -1484,7 +1577,6 @@ export class Attributes extends Pointer
 
 export class Object3    extends Pointer
 
-
     bind                : ->
         shader = arguments[0]
         shader.add this
@@ -1578,6 +1670,15 @@ Object.defineProperties Object3::,
     setScale            : value : -> @setArray3 OFFSET_O3_SCALE_3D , arguments[0]
     
     setColor            : value : -> @setArray4 OFFSET_O3_COLOR_4D , arguments[0]
+
+    getMatrix           : value : ->
+        [
+            ...@getPosition().array, 1,
+            ...@getRotation().array, 1,
+            ...@getScale().array   , 1,
+            1, 1, 1, 1,
+        ]
+
 
 Object.defineProperties Object3::,
 

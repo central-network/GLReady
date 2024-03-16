@@ -90,23 +90,21 @@ Object.defineProperties OffsetPointer,
 
 Object.defineProperties OffsetPointer::,
 
-    getVertexAttrib : value : ->
-
     getArrayLength  : value : ->
-        @getLinkedNode().length -
+        @getLinkedNode().getTypedLength() -
         @getLinkedNode().constructor.LENGTH_OF_POINTER
 
     getArray        : value : ->
         @getLinkedNode().subarray -@getArrayLength()
 
     getByteOffset   : value : ->
-        @getLinkedNode().byteOffset
+        @getLinkedNode().getByteOffset()
 
     getLinkedNode   : value : ->
-        ptr = new Pointer this * 1
+        new Pointer this * 1
 
     getBufferOffset : value : ->
-        @getLinkedNode().bufferOffset
+        @getLinkedNode().getBufferOffset()
 
 Object.defineProperties OffsetPointer::,
 
@@ -288,6 +286,7 @@ OFFSET_BYTELENGTH   = 4 * 2
 OFFSET_PROTOCLASS   = 4 * 3
 OFFSET_LINKEDNODE   = 4 * 4
 OFFSET_PARENT_PTR   = 4 * 5
+OFFSET_RESVERVEDS   = 4 * 6
 
 OFFSET_PTRCLASS_0   = 4 * 6
 OFFSET_PTRCLASS_1   = 4 * 7
@@ -296,6 +295,25 @@ OFFSET_PTRCLASS_3   = 4 * 9
 OFFSET_PTRCLASS_4   = 4 * 10
 
 POINTER_PROTOTYPE   = [,]
+
+Object.defineProperty Object, "hiddenProperties", value : ->
+    proto = null
+    desc = configurable : yes
+    
+    for prop , i in [ ...arguments ]
+        unless i then proto = prop
+        else
+            { get, set } = Object.getOwnPropertyDescriptor(
+                Object.getPrototypeOf( proto:: ) , prop
+            )
+
+            Object.defineProperty proto::, prop, value : ( ( getter, setter ) ->
+                ->
+                    return getter.call( this ) if ! arguments[0]
+                    setter.call this, arguments[0] ; return this
+            )( get, set )
+                    
+    proto
 
 export default class Pointer extends Number
 
@@ -420,8 +438,7 @@ export default class Pointer extends Number
 
                 #* proxy unlocked now --->
 
-    add         : ->
-        arguments[0].setParentPtri this
+    add         : -> arguments[ 0 ].setParentPtri this
         
     set         : -> @getTypedArray().set( ...arguments ) ; this
 
@@ -438,7 +455,7 @@ Object.defineProperties Pointer,
 
     removePointer   : value : -> ( arguments[ 0 ].delParentPtri() ); this    
     
-    BYTES_PER_ELEMENT : get : -> ( this.typedArray.BYTES_PER_ELEMENT )
+    BYTES_PER_ELEMENT : get : -> ( this.typedArray . BYTES_PER_ELEMENT )
 
     LENGTH_OF_POINTER : get : -> ( this.byteLength / this.BYTES_PER_ELEMENT )
 
@@ -446,9 +463,9 @@ Object.defineProperties Pointer::,
 
     getHeader       : value : -> dvw.getUint32 this + arguments[0] * 4, LE    
 
-    getTypedArray   : value : -> new this.constructor.typedArray @buffer, @byteOffset, @length
+    getTypedArray   : value : -> new this.constructor.typedArray @buffer, @getByteOffset(), @getTypedLength()
 
-    getTypedLength  : value : -> @byteLength / this.constructor.typedArray.BYTES_PER_ELEMENT
+    getTypedLength  : value : -> @getByteLength() / @constructor.typedArray . BYTES_PER_ELEMENT
 
     findAllChilds   : value : ->
         offset = POINTERS_BYTEOFFSET + OFFSET_PARENT_PTR
@@ -478,7 +495,11 @@ Object.defineProperties Pointer::,
     getProtoClass   : value : -> dvw.getUint32 this + OFFSET_PROTOCLASS, LE
 
     setProtoClass   : value : -> dvw.setUint32 this + OFFSET_PROTOCLASS, arguments[0], LE ; @
-
+    
+    getLinkedPtri   : value : -> dvw.getUint32 this + OFFSET_LINKEDNODE, LE
+    
+    setLinkedPtri   : value : -> dvw.setUint32 this + OFFSET_LINKEDNODE, arguments[0], LE
+    
     getLinkedNode   : value : -> dvw.getObject this + OFFSET_LINKEDNODE
 
     setLinkedNode   : value : -> dvw.setObject this + OFFSET_LINKEDNODE, arguments[0]
@@ -498,54 +519,63 @@ Object.defineProperties Pointer::,
     setParentPtrO   : value : -> dvw.setObject this + OFFSET_PARENT_PTR, arguments[0]
 
     getParentPtrP   : value : -> dvw.toPointer this + OFFSET_PARENT_PTR, arguments[0] or Pointer
+    
+    ptrLinkedNode   : value : -> new Pointer dvw.getUint32 this + OFFSET_LINKEDNODE, LE
+
+    ptrParentNode   : value : -> new Pointer dvw.getUint32 this + OFFSET_PARENT_PTR, LE
+
+    ptrResvUint32   : value : -> new Pointer dvw.getUint32 this + OFFSET_RESVERVEDS + arguments[0] * 4, LE
+    
+    getResvUint32   : value : -> dvw.getUint32 this + OFFSET_RESVERVEDS + arguments[0] * 4, LE
+    
+    setResvUint32   : value : -> dvw.setUint32 this + OFFSET_RESVERVEDS + arguments[0] * 4, arguments[1], LE
 
 Object.defineProperties Pointer::,
 
     getTArray       : value : ->
-        [ offset = 0, TypedArray = @constructor.typedArray ] = arguments
-        ( byteOffset = @byteOffset + offset )
-        ( length = @byteLength / TypedArray.BYTES_PER_ELEMENT )
+        [ offset = 0, byteLength = @getByteLength(), TypedArray = @constructor.typedArray ] = arguments
+        
+        byteOffset  = @getByteOffset() + offset
+        length      = byteLength / TypedArray . BYTES_PER_ELEMENT
 
         new TypedArray( @buffer, byteOffset, length )
 
     setTArray       : value : ->
-        [ offset, value, TypedArray ] = arguments
-        ( @getTArray offset, TypedArray ).set value ; this
+        [ offset, value, TypedArray = @constructor . typedArray ] = arguments
+        ( @getTArray offset, @getByteLength(), TypedArray ).set value ; this
 
-    getFloat32      : value : -> dvw.getFloat32 @byteOffset + arguments[0], LE
+    getFloat32      : value : -> dvw.getFloat32 @getByteOffset() + arguments[0], LE
         
-    setFloat32      : value : -> dvw.setFloat32 @byteOffset + arguments[0], arguments[1], LE ; arguments[1]
+    setFloat32      : value : -> dvw.setFloat32 @getByteOffset() + arguments[0], arguments[1], LE ; arguments[1]
 
-    getUint8        : value : -> dvw.getUint8   @byteOffset + arguments[0]
+    getUint8        : value : -> dvw.getUint8   @getByteOffset() + arguments[0]
     
-    setUint8        : value : -> dvw.setUint8   @byteOffset + arguments[0], arguments[1] ; arguments[1]
+    setUint8        : value : -> dvw.setUint8   @getByteOffset() + arguments[0], arguments[1] ; arguments[1]
 
     keyStatic       : value : -> KEYED[ this ]
 
-    keyUint16       : value : -> dvw.keyUint16  @byteOffset + arguments[0], arguments[1] , arguments[2]
+    keyUint16       : value : -> dvw.keyUint16  @getByteOffset() + arguments[0], arguments[1] , arguments[2]
 
-    getUint16       : value : -> dvw.getUint16  @byteOffset + arguments[0], LE
+    getUint16       : value : -> dvw.getUint16  @getByteOffset() + arguments[0], LE
     
-    setUint16       : value : -> dvw.setUint16  @byteOffset + arguments[0], arguments[1], LE ; arguments[1]
+    setUint16       : value : -> dvw.setUint16  @getByteOffset() + arguments[0], arguments[1], LE ; arguments[1]
 
-    getUint32       : value : -> dvw.getUint32  @byteOffset + arguments[0], LE
+    getUint32       : value : -> dvw.getUint32  @getByteOffset() + arguments[0], LE
     
-    setUint32       : value : -> dvw.setUint32  @byteOffset + arguments[0], arguments[1], LE ; arguments[1]
+    setUint32       : value : -> dvw.setUint32  @getByteOffset() + arguments[0], arguments[1], LE ; arguments[1]
     
-    addUint32       : value : -> dvw.setUint32  @byteOffset + arguments[0], arguments[1] + ( v = @getUint32 arguments[0] ), LE ; v
+    addUint32       : value : -> dvw.setUint32  @getByteOffset() + arguments[0], arguments[1] + ( v = @getUint32 arguments[0], LE ), LE ; v
 
-    setColour4       : value : -> dvw.setUint32  @byteOffset + arguments[0], Colour4.u32(arguments[1]), LE ; arguments[1]
+    setColour4      : value : -> dvw.setUint32  @getByteOffset() + arguments[0], Colour4.u32(arguments[1]), LE ; arguments[1]
 
-    rgbColour4       : value : -> @getColour4( ...arguments ).f32
+    rgbColour4      : value : -> @getColour4( ...arguments ).f32
     
-    getColour4       : value : -> new Colour4 dvw.getUint32 arguments[0], LE
+    getColour4      : value : -> new Colour4 dvw.getUint32 arguments[0], LE
     
 
-
-    
     setArray3       : value : ->
 
-        byteOffset = @byteOffset + arguments[0]
+        byteOffset = @getByteOffset() + arguments[0]
 
         unless isNaN value = arguments[1]
             x = y = z = value
@@ -563,7 +593,7 @@ Object.defineProperties Pointer::,
 
     setArray4       : value : ->
 
-        byteOffset = @byteOffset + arguments[0]
+        byteOffset = @getByteOffset() + arguments[0]
 
         unless isNaN value = arguments[1]
             x = y = z = w = value
@@ -580,11 +610,11 @@ Object.defineProperties Pointer::,
 
     getString       : value : ->
         [ startOffset , lengthOffset ] = [ ...arguments ]
-        ( startOffset = @byteOffset + startOffset )
+        ( startOffset = @getByteOffset() + startOffset )
 
-        tarray = new Uint8Array @buffer, startOffset, @byteLength
+        tarray = new Uint8Array @buffer, startOffset, @getByteLength()
 
-        if !lengthOffset or !(length = @getUint16 lengthOffset)
+        if !lengthOffset or !(length = @getUint16 lengthOffset, LE)
             for length in [ tarray.length .. 0 ]
                 break if tarray[ length ] and length++
             
@@ -594,10 +624,10 @@ Object.defineProperties Pointer::,
         [ startOffset, stringSource, lengthOffset ] = [ ...arguments ]
 
         source = new TextEncoder().encode stringSource 
-        tarray = new Uint8Array @buffer, @byteOffset, @byteLength
+        tarray = new Uint8Array @buffer, @getByteOffset(), @getByteLength()
         
         tarray.set source, startOffset
-        @setUint16 lengthOffset, source.byteLength if lengthOffset
+        @setUint16 lengthOffset, source.byteLength, LE if lengthOffset
 
         ; @
 
@@ -646,9 +676,9 @@ Object.defineProperties WorkerPointer::,
 
 Object.defineProperties WorkerPointer::,
     
-    getOnlineState  : value : -> dvw.getUint32 this + OFFSET_PTRCLASS_0, LE
+    getOnlineState  : value : -> @getResvUint32 0
 
-    setOnlineState  : value : -> dvw.setUint32 this + OFFSET_PTRCLASS_0, arguments[0], LE ; @
+    setOnlineState  : value : -> @setResvUint32 0, arguments[0] ; this
 
 Object.defineProperties WorkerPointer::,
 
