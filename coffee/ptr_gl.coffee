@@ -1490,13 +1490,12 @@ Object.hidden Object3,
 Object.symbol Object3::,
 
     iterate             : value : ->
-        done = Boolean value = 0
-        obj3 = this
+        obj3 = @ ; ptri = 0
 
         next : ->
-            unless value = obj3 . getNextChild value
-                return { done : yes , value : obj3 }
-            return { done , value }
+            unless ptri = obj3 . getNextChild ptri
+                return done : yes , value : obj3
+            return done : no , value : ptri
 
 Object.define Object3::,
 

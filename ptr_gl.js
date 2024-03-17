@@ -2665,18 +2665,21 @@ Object.hidden(Object3, "array", "byteLength", "byteOffset", "headers", "length",
 Object.symbol(Object3.prototype, {
   iterate: {
     value: function() {
-      var done, obj3, value;
-      done = Boolean(value = 0);
+      var obj3, ptri;
       obj3 = this;
+      ptri = 0;
       return {
         next: function() {
-          if (!(value = obj3.getNextChild(value))) {
+          if (!(ptri = obj3.getNextChild(ptri))) {
             return {
               done: true,
               value: obj3
             };
           }
-          return {done, value};
+          return {
+            done: false,
+            value: ptri
+          };
         }
       };
     }

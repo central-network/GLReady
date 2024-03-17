@@ -597,7 +597,6 @@ Object.define Pointer,
 
     LENGTH_OF_POINTER : get : -> ( this.byteLength / this.BYTES_PER_ELEMENT )  
 
-
 Object.define Pointer::,
 
     getNextChild    : value : ->
@@ -622,8 +621,7 @@ Object.define Pointer::,
 
     getTypedLength  : value : -> @getByteLength() / @constructor.typedArray . BYTES_PER_ELEMENT
 
-    findAllLinks    : value : ->
-        @findAllChilds OFFSET_LINKEDNODE
+    findAllLinks    : value : -> @findAllChilds OFFSET_LINKEDNODE
 
     findAllChilds   : value : ->
         stride = arguments[0] or OFFSET_PARENT_PTR

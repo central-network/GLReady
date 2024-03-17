@@ -152,22 +152,26 @@
             buff.drawTriangles( o3 )
             buff.drawTriangles( o32 )
             buff.drawTriangles( o33 )
+
             let draw = buff.drawLines( o32 )
 
             gl.add( o3 )
             gl.add( o32 )
             gl.add( o33 )
 
-            console.log( "inline o3c :", [...o3.color]);
-            console.log( "inline o32c:", [...o32.color]);
-            console.log( "inline prg :", [...program]);
-            console.log( "inline vert:", [...program.vertexShader]);
-            console.log( "inline draw:", [...draw]);
 
             o32.add(o3);
             o32.add(o33);
 
-            queueMicrotask( e => console.log( "inline obj:", [...o32]))
+            console.log( "inline c3  :", [...o3.color]);
+            console.log( "inline c32 :", [...o32.color]);
+            console.log( "inline prg :", [...program]);
+            console.log( "inline draw:", [...draw]);
+            console.log( "inline o32 :", [...o32 ]);
+
+            for ( let child of o32 ) {
+                console.log( performance.now(), child  )
+            }
 
 
         </script>
