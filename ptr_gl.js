@@ -2674,42 +2674,42 @@ Object.defineProperties(Object3.prototype, {
   },
   getPosition: {
     value: function() {
-      return new Vertex(this.byteOffset + OFFSET_O3_POSITION);
+      return new Vertex(this.getByteOffset(OFFSET_O3_POSITION));
     }
   },
   getRotation: {
     value: function() {
-      return new Angle3(this.byteOffset + OFFSET_O3_ROTATION);
+      return new Angle3(this.getByteOffset(OFFSET_O3_ROTATION));
     }
   },
   getScale: {
     value: function() {
-      return new Scale3(this.byteOffset + OFFSET_O3_SCALE_3D);
+      return new Scale3(this.getByteOffset(OFFSET_O3_SCALE_3D));
     }
   },
   getColor: {
     value: function() {
-      return new Color4(this.byteOffset + OFFSET_O3_COLOR_4D);
+      return new Color4(this.getByteOffset(OFFSET_O3_COLOR_4D));
     }
   },
   setPosition: {
     value: function() {
-      return this.getPosition().getTypedArray().set(arguments[0]);
+      return this.getPosition().set(...arguments);
     }
   },
   setRotation: {
     value: function() {
-      return this.getRotation().getTypedArray().set(arguments[0]);
+      return this.getRotation().set(...arguments);
     }
   },
   setScale: {
     value: function() {
-      return this.getScale().getTypedArray().set(arguments[0]);
+      return this.getScale().set(...arguments);
     }
   },
   setColor: {
     value: function() {
-      return this.getColor().getTypedArray().set(arguments[0]);
+      return this.getColor().set(...arguments);
     }
   },
   getMatrix: {

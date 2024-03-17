@@ -1488,21 +1488,21 @@ Object.defineProperties Object3::,
 
     setVertices         : value : -> @set(      @constructor.LENGTH_OF_POINTER, arguments[ 0 ])
 
-    getPosition         : value : -> new Vertex @byteOffset + OFFSET_O3_POSITION
+    getPosition         : value : -> new Vertex @getByteOffset OFFSET_O3_POSITION
 
-    getRotation         : value : -> new Angle3 @byteOffset + OFFSET_O3_ROTATION
+    getRotation         : value : -> new Angle3 @getByteOffset OFFSET_O3_ROTATION
 
-    getScale            : value : -> new Scale3 @byteOffset + OFFSET_O3_SCALE_3D
+    getScale            : value : -> new Scale3 @getByteOffset OFFSET_O3_SCALE_3D
     
-    getColor            : value : -> new Color4 @byteOffset + OFFSET_O3_COLOR_4D
+    getColor            : value : -> new Color4 @getByteOffset OFFSET_O3_COLOR_4D
 
-    setPosition         : value : -> @getPosition().getTypedArray().set arguments[0]
+    setPosition         : value : -> @getPosition().set ...arguments
     
-    setRotation         : value : -> @getRotation().getTypedArray().set arguments[0]
+    setRotation         : value : -> @getRotation().set ...arguments
     
-    setScale            : value : ->    @getScale().getTypedArray().set arguments[0]
+    setScale            : value : ->    @getScale().set ...arguments
     
-    setColor            : value : ->    @getColor().getTypedArray().set arguments[0]
+    setColor            : value : ->    @getColor().set ...arguments
 
     getMatrix           : value : ->
         Float32Array.of(

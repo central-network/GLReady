@@ -93,6 +93,8 @@ export class Scale3 extends Vector
 
 export class Color4 extends Number
 
+export class Color4Number extends Number
+
 export class OffsetPointer extends Number
 
 Object.defineProperties OffsetPointer,
@@ -129,12 +131,12 @@ Object.defineProperties Vector,
     
 Object.defineProperties Vector::,
 
-    [ Symbol.iterator ] :  value : ->
-        yield dvw.getFloat32 this + i * 4, LE for i in [ 0 ... 3 ]
-
-Object.defineProperties Vector::,
+    [Symbol.iterator] : value : -> yield dvw.getFloat32 this + i * 4, LE for i in [ 0 ... 3 ]
 
     getTypedArray   : value   : -> new Float32Array dvw.buffer, this, 3
+
+    set             : value   : ->
+        @getTypedArray().set( [ ...arguments ].flat() ) ; this
 
 Object.defineProperties Vector::,
 
@@ -188,32 +190,66 @@ Object.defineProperties Color4,
     
 Object.defineProperties Color4::,
     
-    [ Symbol.iterator ] : value : ->
-        yield dvw.getFloat32 this + i * 4, LE for i in [ 0 ... 4 ]
+    [Symbol.iterator] : value : -> yield dvw.getFloat32 this + i * 4, LE for i in [ 0 ... 4 ]
 
     getTypedArray   : value : -> new Float32Array dvw.buffer, this, 4
 
-    getR            : value : -> dvw.getFloat32 this      , LE
+    set             : value : ->
+        color = [ ...arguments ].flat()
+        [ r, g, b, a ] = color
 
-    getG            : value : -> dvw.getFloat32 this +  4 , LE
-    
-    getB            : value : -> dvw.getFloat32 this +  8 , LE
-    
-    getA            : value : -> dvw.getFloat32 this + 12 , LE
-    
-    setR            : value : -> dvw.setFloat32 this      , arguments[0], LE
+        if (r > 1) or (g > 1) or (b > 1) or (a > 1)
+            a = ( color[3] ? 100 ) / 0xff
+            @setRed(r / 0xff).setGreen(g / 0xff).setBlue(b / 0xff).setAlpha( a );
 
-    setG            : value : -> dvw.setFloat32 this +  4 , arguments[0], LE
-    
-    setB            : value : -> dvw.setFloat32 this +  8 , arguments[0], LE
+        else if (r and r <= 1) or (g and g <= 1) or (b and b <= 1)
+            a = ( color[3] ? 1 )
+            @setRed(r).setGreen(g).setBlue(b).setAlpha(a);
 
-    setA            : value : -> dvw.setFloat32 this + 12 , arguments[0], LE
+        this
+
+    getRed          : value : -> dvw.getFloat32 this      , LE
+
+    getGreen        : value : -> dvw.getFloat32 this +  4 , LE
+    
+    getBlue         : value : -> dvw.getFloat32 this +  8 , LE
+    
+    getAlpha        : value : -> dvw.getFloat32 this + 12 , LE
+    
+    setRed          : value : -> dvw.setFloat32 this      , arguments[0], LE ; @
+
+    setGreen        : value : -> dvw.setFloat32 this +  4 , arguments[0], LE ; @
+    
+    setBlue         : value : -> dvw.setFloat32 this +  8 , arguments[0], LE ; @
+
+    setAlpha        : value : -> dvw.setFloat32 this + 12 , arguments[0], LE ; @
 
 Object.defineProperties Color4::,
 
     f32 : get : ->
+        new Float32Array dvw.buffer, this, 4
+
+    ui8 : get : ->
+        [ ...@f32 ].map (v) -> v * 0xff
+
+    hex : get : ->
+        "#" + [ ...@ui8 ].map (n) ->
+            n.toString(16).padStart(2,0)
+        .join ""
+
+    css : get : ->
+        [ r, g, b, a ] = @ui8
+        ( a = ( a / 2.55 ).toFixed(2) )
+        "rgba( #{r} #{g} #{b} / #{a}% )"
+
+    u32 : get : ->
+        parseInt @hex.substring(1), 16
+
+Object.defineProperties Color4Number::,
+
+    f32 : get : ->
         dv = new DataView new ArrayBuffer 4
-        dv.setUint32 0, this, LE
+        dv . setUint32 0, this, LE
 
         i8 = new Uint8Array dv.buffer
         i8.reverse() if LE 
@@ -229,16 +265,9 @@ Object.defineProperties Color4::,
         i8.reverse() if LE 
         i8
 
-    hex : get : ->
-        "#" + [ ...@ui8 ].map (n) ->
-            n.toString(16).padStart(2,0)
-        .join ""
+    hex : Object.getOwnPropertyDescriptor Color4::, "hex"
 
-    css : get : ->
-        [ r, g, b, a ] = @ui8
-        ( a = ( a / 2.55 ).toFixed(2) )
-        "rgba( #{r} #{g} #{b} / #{a}% )"
-
+    css : Object.getOwnPropertyDescriptor Color4::, "css"
 
     Object.defineProperties Number::,
 
@@ -360,9 +389,9 @@ export default class Pointer extends Number
             this.init()
 
     @from       : ( arrayLike ) ->
-        
-        ptr = @malloc( @byteLength + @BYTES_PER_ELEMENT * arrayLike.length )
-        ptr .subarray( @byteLength / @BYTES_PER_ELEMENT ) . set( arrayLike )
+        arr = [ ...arguments ].flat() 
+        ptr = @malloc( @byteLength + @BYTES_PER_ELEMENT * arr.length )
+        ptr .subarray( @byteLength / @BYTES_PER_ELEMENT ) . set arr
         ptr
 
     @malloc     : ( byteLength ) ->
@@ -480,7 +509,7 @@ Object.defineProperties Pointer::,
     
     setAllHeaders   : value : -> @getAllHeaders().set arguments[0]
 
-    getByteOffset   : value : -> dvw.getUint32 this + OFFSET_BYTEOFFSET, LE
+    getByteOffset   : value : -> (arguments[0] or 0) + dvw.getUint32 this + OFFSET_BYTEOFFSET, LE
 
     setByteOffset   : value : -> dvw.setUint32 this + OFFSET_BYTEOFFSET, arguments[0], LE ; @
 
@@ -541,9 +570,9 @@ Object.defineProperties Pointer::,
 Object.defineProperties Pointer::,
 
     getTArray       : value : ->
-        [ offset = 0, byteLength = @getByteLength(), TypedArray = @constructor.typedArray ] = arguments
+        [ offset, byteLength = @getByteLength(), TypedArray = @constructor.typedArray ] = arguments
         
-        byteOffset  = @getByteOffset() + offset
+        byteOffset  = @getByteOffset offset
         length      = byteLength / TypedArray . BYTES_PER_ELEMENT
 
         new TypedArray( @buffer, byteOffset, length )
@@ -552,32 +581,32 @@ Object.defineProperties Pointer::,
         [ offset, value, TypedArray = @constructor . typedArray ] = arguments
         ( @getTArray offset, @getByteLength(), TypedArray ).set value ; this
 
-    getFloat32      : value : -> dvw.getFloat32 @getByteOffset() + arguments[0], LE
+    getFloat32      : value : -> dvw.getFloat32 @getByteOffset( arguments[0] ), LE
         
-    setFloat32      : value : -> dvw.setFloat32 @getByteOffset() + arguments[0], arguments[1], LE ; arguments[1]
+    setFloat32      : value : -> dvw.setFloat32 @getByteOffset( arguments[0] ), arguments[1], LE ; arguments[1]
 
-    getUint8        : value : -> dvw.getUint8   @getByteOffset() + arguments[0]
+    getUint8        : value : -> dvw.getUint8   @getByteOffset( arguments[0] )
     
-    setUint8        : value : -> dvw.setUint8   @getByteOffset() + arguments[0], arguments[1] ; arguments[1]
+    setUint8        : value : -> dvw.setUint8   @getByteOffset( arguments[0] ), arguments[1] ; arguments[1]
 
     keyStatic       : value : -> KEYED[ this ]
 
-    keyUint16       : value : -> dvw.keyUint16  @getByteOffset() + arguments[0], arguments[1] , arguments[2]
+    keyUint16       : value : -> dvw.keyUint16  @getByteOffset( arguments[0] ), arguments[1] , arguments[2]
 
-    getUint16       : value : -> dvw.getUint16  @getByteOffset() + arguments[0], LE
+    getUint16       : value : -> dvw.getUint16  @getByteOffset( arguments[0] ), LE
     
-    setUint16       : value : -> dvw.setUint16  @getByteOffset() + arguments[0], arguments[1], LE ; arguments[1]
+    setUint16       : value : -> dvw.setUint16  @getByteOffset( arguments[0] ), arguments[1], LE ; arguments[1]
 
-    getUint32       : value : -> dvw.getUint32  @getByteOffset() + arguments[0], LE
+    getUint32       : value : -> dvw.getUint32  @getByteOffset( arguments[0] ), LE
     
-    setUint32       : value : -> dvw.setUint32  @getByteOffset() + arguments[0], arguments[1], LE ; arguments[1]
+    setUint32       : value : -> dvw.setUint32  @getByteOffset( arguments[0] ), arguments[1], LE ; arguments[1]
     
-    addUint32       : value : -> dvw.setUint32  @getByteOffset() + arguments[0], arguments[1] + ( v = @getUint32 arguments[0], LE ), LE ; v
+    addUint32       : value : -> dvw.setUint32  @getByteOffset( arguments[0] ), arguments[1] + ( v = @getUint32 arguments[0], LE ), LE ; v
 
 
     setArray3       : value : ->
 
-        byteOffset = @getByteOffset() + arguments[0]
+        byteOffset = @getByteOffset( arguments[0] )
 
         unless isNaN value = arguments[1]
             x = y = z = value
@@ -595,7 +624,7 @@ Object.defineProperties Pointer::,
 
     setArray4       : value : ->
 
-        byteOffset = @getByteOffset() + arguments[0]
+        byteOffset = @getByteOffset( arguments[0] )
 
         unless isNaN value = arguments[1]
             x = y = z = w = value
@@ -612,7 +641,7 @@ Object.defineProperties Pointer::,
 
     getString       : value : ->
         [ startOffset , lengthOffset ] = [ ...arguments ]
-        ( startOffset = @getByteOffset() + startOffset )
+        ( startOffset = @getByteOffset startOffset )
 
         tarray = new Uint8Array @buffer, startOffset, @getByteLength()
 
