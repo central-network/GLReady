@@ -167,17 +167,16 @@ Object.define Vector,
 Object.symbol Vector::,
 
     iterate         : value : ->
-        iterate             : value : ->
-            length = i = -4 + this
-            offset = Uint32Array.of(
-                length += 4 , length += 4,
-                length += 4
-            ).reverse()
-    
-            next : =>
-                value = if done = length is i then @
-                else dvw.getFloat32 i = 4 + i , LE
-                return { done , value }  
+        length = i = -4 + this
+        offset = Uint32Array.of(
+            length += 4 , length += 4,
+            length += 4
+        ).reverse()
+
+        next : =>
+            value = if done = length is i then @
+            else dvw.getFloat32 i = 4 + i , LE
+            return { done , value }  
     
 Object.define Vector::,
 
@@ -606,6 +605,8 @@ Object.define Pointer::,
 
         [   offset = POINTERS_BYTEOFFSET,
             stride = OFFSET_PARENT_PTR ] = arguments
+
+        console.log @constructor.name, stride:stride
 
         offset += stride
 

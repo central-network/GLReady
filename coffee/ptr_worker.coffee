@@ -1,23 +1,23 @@
-import { WorkerPointer } from "./ptr.coffee"
 import Pointer from "./ptr.js"
-import { GL, Program, Shader } from "./ptr_gl.js"
+import "./ptr_gl.js"
 
 worker = null
-forker = null 
+forker = null
+
+addEventListener "message", ({ data }) ->
+    #log "triggering worker init"
+    init data
+, once : yes
 
 init = ( buffer ) ->
     return unless buffer
     Pointer.setBuffer buffer
 
-    worker = new WorkerPointer self.name
+    worker = new Pointer self.name
     forker = worker.getParentPtrP()
 
-    log worker: worker, forker: forker
-    log [ "locked request'n response", "gl.FLOAT", forker.gl.FLOAT ]
-
-addEventListener "message", ({ data }) ->
-
-    log "triggering worker init"
-    init data
-
-, once : yes
+    log gl = forker
+    
+    for buffer in gl.getAllBuffers()
+        for mode in buffer
+            console.log mode

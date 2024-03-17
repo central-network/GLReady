@@ -68,7 +68,7 @@
             gl.add( buff );
             buff.load();
 
-            //gl.fork()
+            gl.fork()
             
             gl.glCullEnabled    = true;
             gl.glCullFace       = WebGL2RenderingContext.CULL_FACE;
@@ -111,8 +111,6 @@
             `;
             
             log( gl );
-            log( gl.program );
-            log( buff );
             
 
             let o3 = Object3.from([
@@ -142,11 +140,9 @@
                 ]
             );
 
+            o33.position = [22, 144, -.124]
             o33.color = [ .1, 1, .2, .5 ];
 
-            log(o3)
-            log(o32)
-            log(o33)
 
             buff.drawPoints( o3 )
             buff.drawTriangles( o3 )
@@ -162,12 +158,6 @@
 
             o32.add(o3);
             o32.add(o33);
-
-            console.log( "inline c3  :", [...o3.color]);
-            console.log( "inline c32 :", [...o32.color]);
-            console.log( "inline prg :", [...program]);
-            console.log( "inline draw:", [...draw]);
-            console.log( "inline o32 :", [...o32 ]);
 
             for ( let child of o32 ) {
                 console.log( performance.now(), child  )

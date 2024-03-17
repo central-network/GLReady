@@ -299,20 +299,14 @@ Object.define(Vector, {
 Object.symbol(Vector.prototype, {
   iterate: {
     value: function() {
+      var i, length, offset;
+      length = i = -4 + this;
+      offset = Uint32Array.of(length += 4, length += 4, length += 4).reverse();
       return {
-        iterate: {
-          value: function() {
-            var i, length, offset;
-            length = i = -4 + this;
-            offset = Uint32Array.of(length += 4, length += 4, length += 4).reverse();
-            return {
-              next: () => {
-                var done, value;
-                value = (done = length === i) ? this : dvw.getFloat32(i = 4 + i, LE);
-                return {done, value};
-              }
-            };
-          }
+        next: () => {
+          var done, value;
+          value = (done = length === i) ? this : dvw.getFloat32(i = 4 + i, LE);
+          return {done, value};
         }
       };
     }
@@ -950,6 +944,9 @@ Object.define(Pointer.prototype, {
       parent = this * 1;
       finish = Atomics.load(u32, INDEX_PTR);
       [offset = POINTERS_BYTEOFFSET, stride = OFFSET_PARENT_PTR] = arguments;
+      console.log(this.constructor.name, {
+        stride: stride
+      });
       offset += stride;
       while (finish > (offset += BYTES_PER_POINTER)) {
         if (!(parent - dvw.getUint32(offset, LE))) {

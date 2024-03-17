@@ -66,7 +66,13 @@ KEYEXTEND_CLEARMASK = [ 16640 ] : new (class DEPTH_N_COLOR_BIT extends Number) 1
 
 export { Pointer }
 
-export class GL extends Pointer
+export class Object3 extends Pointer
+
+export class Draw    extends Pointer
+
+export class Mode    extends Pointer
+
+export class GL      extends Pointer
 
     @byteLength     = 4 * 48
 
@@ -1149,8 +1155,6 @@ KEYEXTEND_OBJECT3D      =
     [ WebGL2RenderingContext  .TRIANGLE_FAN ] : new (class     TRIANGLE_FAN extends Number) WebGL2RenderingContext  .TRIANGLE_FAN
     [ WebGL2RenderingContext.TRIANGLE_STRIP ] : new (class   TRIANGLE_STRIP extends Number) WebGL2RenderingContext.TRIANGLE_STRIP
 
-export class Draw extends Pointer
-
 Object.define Draw.registerClass(),
 
     byteLength          : value : 4 * 0
@@ -1219,8 +1223,6 @@ Object.define Draw::,
 
     matrix              : get   : Draw::getMatrix
     
-export class Mode extends Pointer
-
 Object.define Mode.registerClass(),
 
     byteLength          : value : 4 * 0
@@ -1460,6 +1462,15 @@ Object.hidden Buffer,
     "headers", "protoClass", "length",  
     "array", "byteOffset", "byteLength", 
 
+Object.symbol Buffer::,
+
+    iterate             : value : ->
+        mode = @ ; ptri = 0.00
+        next : ->
+            unless ptri = mode . getNextChild ptri , 16
+                return done : yes , value : mode
+            return done : no , value : ptri
+
 Object.define Buffer.registerClass()::,
 
     type                : get : Buffer::keyBindTarget   , set : Buffer::setBindTarget 
@@ -1474,15 +1485,13 @@ OFFSET_O3_ROTATION      = 4 * 8
 
 OFFSET_O3_SCALE_3D      = 4 * 12
 
-export class Object3    extends Pointer
-
-Object.define Object3.registerClass(),
+Object.define Object3 . registerClass(),
 
     byteLength          : value : 4 * 12
 
     typedArray          : value : Float32Array
 
-Object.hidden Object3,
+Object.hidden Object3 , 
 
     "array", "byteLength", "byteOffset", 
     "headers", "length", "link", "protoClass"
@@ -1490,9 +1499,8 @@ Object.hidden Object3,
 Object.symbol Object3::,
 
     iterate             : value : ->
-        obj3 = @ ; ptri = 0
 
-        next : ->
+        obj3 = @ ; ptri = 0.00 ; next : ->
             unless ptri = obj3 . getNextChild ptri
                 return done : yes , value : obj3
             return done : no , value : ptri

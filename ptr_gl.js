@@ -130,6 +130,12 @@ export {
   Pointer
 };
 
+export var Object3 = class Object3 extends Pointer {};
+
+export var Draw = class Draw extends Pointer {};
+
+export var Mode = class Mode extends Pointer {};
+
 export var GL = (function() {
   class GL extends Pointer {
     load() {
@@ -2099,8 +2105,6 @@ KEYEXTEND_OBJECT3D = {
   [WebGL2RenderingContext.TRIANGLE_STRIP]: new (TRIANGLE_STRIP = class TRIANGLE_STRIP extends Number {})(WebGL2RenderingContext.TRIANGLE_STRIP)
 };
 
-export var Draw = class Draw extends Pointer {};
-
 Object.define(Draw.registerClass(), {
   byteLength: {
     value: 4 * 0
@@ -2233,8 +2237,6 @@ Object.define(Draw.prototype, {
     get: Draw.prototype.getMatrix
   }
 });
-
-export var Mode = class Mode extends Pointer {};
 
 Object.define(Mode.registerClass(), {
   byteLength: {
@@ -2630,6 +2632,30 @@ export var Buffer = (function() {
 
 Object.hidden(Buffer, "headers", "protoClass", "length", "array", "byteOffset", "byteLength");
 
+Object.symbol(Buffer.prototype, {
+  iterate: {
+    value: function() {
+      var mode, ptri;
+      mode = this;
+      ptri = 0.00;
+      return {
+        next: function() {
+          if (!(ptri = mode.getNextChild(ptri, 16))) {
+            return {
+              done: true,
+              value: mode
+            };
+          }
+          return {
+            done: false,
+            value: ptri
+          };
+        }
+      };
+    }
+  }
+});
+
 Object.define(Buffer.registerClass().prototype, {
   type: {
     get: Buffer.prototype.keyBindTarget,
@@ -2649,8 +2675,6 @@ OFFSET_O3_ROTATION = 4 * 8;
 
 OFFSET_O3_SCALE_3D = 4 * 12;
 
-export var Object3 = class Object3 extends Pointer {};
-
 Object.define(Object3.registerClass(), {
   byteLength: {
     value: 4 * 12
@@ -2667,7 +2691,7 @@ Object.symbol(Object3.prototype, {
     value: function() {
       var obj3, ptri;
       obj3 = this;
-      ptri = 0;
+      ptri = 0.00;
       return {
         next: function() {
           if (!(ptri = obj3.getNextChild(ptri))) {
