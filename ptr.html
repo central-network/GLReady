@@ -47,7 +47,7 @@
 
 
         <script type="module">
-            import { GL, Program, Shader, Buffer, Object3 } from "./ptr_gl.js"
+            import { GL, Program, Shader, Buffer, Object3, Pointer } from "./ptr_gl.js"
 
             self.gl = null;
             self.vshader = null;
@@ -121,7 +121,7 @@
                 .3, 1, 22
             ]);
 
-            o3.color = [ 1, 0, 0, 1 ];
+            o3.color = [ 1, 0, 0, .1 ];
 
             let o32 = Object3.from(
                 [
@@ -130,18 +130,45 @@
                 ]
             );
 
-            o32.color = [ 1, 1, 0, 1 ];
+            o32.color = [ .1, 1, 0, .5 ];
+
+            let o33 = Object3.from(
+                [
+                    -3, 1, .2,
+                    3, 1, 2,
+                    -3, 1, 2,
+                    .3, 1, 22,
+                    .3, 1, -22
+                ]
+            );
+
+            o33.color = [ .1, 1, .2, .5 ];
 
             log(o3)
             log(o32)
+            log(o33)
 
             buff.drawPoints( o3 )
             buff.drawTriangles( o3 )
             buff.drawTriangles( o32 )
-            buff.drawLines( o32 )
+            buff.drawTriangles( o33 )
+            let draw = buff.drawLines( o32 )
 
             gl.add( o3 )
             gl.add( o32 )
+            gl.add( o33 )
+
+            console.log( "inline o3c :", [...o3.color]);
+            console.log( "inline o32c:", [...o32.color]);
+            console.log( "inline prg :", [...program]);
+            console.log( "inline vert:", [...program.vertexShader]);
+            console.log( "inline draw:", [...draw]);
+
+            o32.add(o3);
+            o32.add(o33);
+
+            queueMicrotask( e => console.log( "inline obj:", [...o32]))
+
 
         </script>
 

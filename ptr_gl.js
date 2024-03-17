@@ -10,77 +10,77 @@ import {
   OffsetPointer
 } from "./ptr.js";
 
-OFFSET_DRAW_ACTIVE = 4 * 2;
+OFFSET_DRAW_ACTIVE = 4 * 0;
 
-OFFSET_CULL_ENABLED = 4 * 2 + 1;
+OFFSET_CULL_ENABLED = 4 * 0 + 1;
 
-OFFSET_BLEND_ACTIVE = 4 * 2 + 2;
+OFFSET_BLEND_ACTIVE = 4 * 0 + 2;
 
-OFFSET_DEPTH_ACTIVE = 4 * 2 + 3;
+OFFSET_DEPTH_ACTIVE = 4 * 0 + 3;
 
-OFFSET_CULL_FACE = 4 * 3;
+OFFSET_CULL_FACE = 4 * 1;
 
-OFFSET_FRONTFACE = 4 * 3 + 2;
+OFFSET_FRONTFACE = 4 * 1 + 2;
 
-OFFSET_DEPTH_FUNC = 4 * 4;
+OFFSET_DEPTH_FUNC = 4 * 2;
 
-OFFSET_CLEAR_MASK = 4 * 4 + 2;
+OFFSET_CLEAR_MASK = 4 * 2 + 2;
 
-OFFSET_CLEAR_DEPTH = 4 * 5;
+OFFSET_CLEAR_DEPTH = 4 * 3;
 
-OFFSET_CLEAR_COLOR = 4 * 6;
+OFFSET_CLEAR_COLOR = 4 * 4;
 
-OFFSET_BIND_TARGET = 4 * 7;
+OFFSET_BIND_TARGET = 4 * 8;
 
-OFFSET_BLEND_EQUATE = 4 * 7 + 2;
+OFFSET_BLEND_EQUATE = 4 * 8 + 2;
 
-OFFSET_BLEND_INARG = 4 * 8;
+OFFSET_BLEND_INARG = 4 * 9;
 
-OFFSET_BLEND_OUTARG = 4 * 8 + 2;
+OFFSET_BLEND_OUTARG = 4 * 9 + 2;
 
-OFFSET_BLEND_FUNC = 4 * 9;
+OFFSET_BLEND_FUNC = 4 * 10;
 
-OFFSET_DEPTH_TEST = 4 * 9 + 2;
+OFFSET_DEPTH_TEST = 4 * 10 + 2;
 
-OFFSET_WALKING = 4 * 10;
+OFFSET_WALKING = 4 * 11;
 
-OFFSET_JUMPING = 4 * 10 + 1;
+OFFSET_JUMPING = 4 * 11 + 1;
 
-OFFSET_KEY_SHIFT = 4 * 10 + 2;
+OFFSET_KEY_SHIFT = 4 * 11 + 2;
 
-OFFSET_KEY_ALT = 4 * 10 + 3;
+OFFSET_KEY_ALT = 4 * 11 + 3;
 
-OFFSET_KEY_CTRL = 4 * 11;
+OFFSET_KEY_CTRL = 4 * 12;
 
-OFFSET_KEY_META = 4 * 11 + 1;
+OFFSET_KEY_META = 4 * 12 + 1;
 
-OFFSET_MOVE_FWD = 4 * 11 + 2;
+OFFSET_MOVE_FWD = 4 * 12 + 2;
 
-OFFSET_MOVE_BACK = 4 * 11 + 3;
+OFFSET_MOVE_BACK = 4 * 12 + 3;
 
-OFFSET_MOVE_LEFT = 4 * 12;
+OFFSET_MOVE_LEFT = 4 * 13;
 
-OFFSET_MOVE_RIGHT = 4 * 12 + 1;
+OFFSET_MOVE_RIGHT = 4 * 13 + 1;
 
-OFFSET_MOVE_UP = 4 * 12 + 2;
+OFFSET_MOVE_UP = 4 * 13 + 2;
 
-OFFSET_MOVE_DOWN = 4 * 12 + 3;
+OFFSET_MOVE_DOWN = 4 * 13 + 3;
 
-OFFSET_LOOKING = 4 * 13;
+OFFSET_LOOKING = 4 * 14;
 
-OFFSET_ZOOMING = 4 * 13 + 1;
+OFFSET_ZOOMING = 4 * 14 + 1;
 
-OFFSET_PTR_DCLICK = 4 * 13 + 2;
+OFFSET_PTR_DCLICK = 4 * 14 + 2;
 
-OFFSET_PTR_CLICK = 4 * 13 + 3;
+OFFSET_PTR_CLICK = 4 * 14 + 3;
 
-OFFSET_PTR_BUTTON = 4 * 14;
+OFFSET_PTR_BUTTON = 4 * 15;
 
-OFFSET_ROTATING = 4 * 15;
+OFFSET_ROTATING = 4 * 16;
 
-OFFSET_DRAGGING = 4 * 15 + 1;
+OFFSET_DRAGGING = 4 * 16 + 1;
 
-OFFSET_UX_ENABLED = 4 * 15 + 2;
+OFFSET_UX_ENABLED = 4 * 16 + 2;
 
 OFFSET_X = 4 * 21;
 
@@ -124,6 +124,10 @@ OFFSET_ASPECT_RATIO = 4 * 45;
 
 KEYEXTEND_CLEARMASK = {
   [16640]: new (DEPTH_N_COLOR_BIT = class DEPTH_N_COLOR_BIT extends Number {})(16640)
+};
+
+export {
+  Pointer
 };
 
 export var GL = (function() {
@@ -373,16 +377,12 @@ export var GL = (function() {
       return this;
     }
 
-    rgbClearColor() {
-      return 1;
-    }
-
     getClearColor() {
-      return 1;
+      return new Color4(this.getByteOffset(OFFSET_CLEAR_COLOR));
     }
 
     setClearColor() {
-      return 1;
+      return this.getClearColor().set(...arguments);
     }
 
     keyBindTarget() {
@@ -792,7 +792,15 @@ export var GL = (function() {
 
 }).call(this);
 
-Object.defineProperties(GL.prototype, {
+Object.symbol(GL, {
+  instance: {
+    value: function() {
+      return this.isPrototypeOf(Object.getPrototypeOf(arguments[0]));
+    }
+  }
+});
+
+Object.define(GL.prototype, {
   gl: {
     get: GL.prototype.getLinkedNode
   },
@@ -1248,7 +1256,7 @@ export var Program = (function() {
 
 }).call(this);
 
-Object.defineProperties(Program.registerClass().prototype, {
+Object.define(Program.registerClass().prototype, {
   gl: {
     get: Program.prototype.getParentPtrO
   },
@@ -1596,7 +1604,7 @@ export var Shader = (function() {
 
   Shader.prototype.HIGH_INT = WebGL2RenderingContext.HIGH_INT;
 
-  Object.defineProperties(Shader.registerClass().prototype, {
+  Object.define(Shader.registerClass().prototype, {
     gl: {
       get: Shader.prototype.getGL
     },
@@ -1751,7 +1759,7 @@ export var ShaderKey = (function() {
 
 }).call(this);
 
-Object.defineProperties(ShaderKey.registerClass().prototype, {
+Object.define(ShaderKey.registerClass().prototype, {
   gl: {
     get: ShaderKey.prototype.getGL
   },
@@ -1884,7 +1892,7 @@ export var Attribute = (function() {
 
   };
 
-  Object.defineProperties(Attribute.registerClass(), {
+  Object.define(Attribute.registerClass(), {
     vec3: {
       value: vec3 = (function() {
         class vec3 extends Attribute {};
@@ -1947,7 +1955,7 @@ export var Attribute = (function() {
 
 }).call(this);
 
-Object.defineProperties(Attribute.prototype, {
+Object.define(Attribute.prototype, {
   glLocation: {
     get: Attribute.prototype.getGLLocation
   },
@@ -2009,7 +2017,7 @@ export var Uniform = (function() {
 
   };
 
-  Object.defineProperties(Uniform.registerClass(), {
+  Object.define(Uniform.registerClass(), {
     vec3: {
       value: vec3 = (function() {
         class vec3 extends Uniform {};
@@ -2072,7 +2080,7 @@ export var Uniform = (function() {
 
 }).call(this);
 
-Object.defineProperties(Uniform.prototype, {
+Object.define(Uniform.prototype, {
   glLocation: {
     get: Uniform.prototype.getGLLocation
   },
@@ -2093,7 +2101,7 @@ KEYEXTEND_OBJECT3D = {
 
 export var Draw = class Draw extends Pointer {};
 
-Object.defineProperties(Draw.registerClass(), {
+Object.define(Draw.registerClass(), {
   byteLength: {
     value: 4 * 0
   },
@@ -2102,9 +2110,9 @@ Object.defineProperties(Draw.registerClass(), {
   }
 });
 
-Object.hiddenProperties(Draw, "parent", "linkedNode", "array", "headers", "protoClass", "length", "children", "byteOffset", "byteLength");
+Object.hidden(Draw, "parent", "link", "array", "headers", "protoClass", "length", "children", "byteOffset", "byteLength");
 
-Object.defineProperties(Draw.prototype, {
+Object.define(Draw.prototype, {
   keyTypeGLCode: {
     value: function() {
       return this.ptrParentNode().keyTypeGLCode();
@@ -2188,7 +2196,7 @@ Object.defineProperties(Draw.prototype, {
   }
 });
 
-Object.defineProperties(Draw.prototype, {
+Object.define(Draw.prototype, {
   object3: {
     get: Draw.prototype.ptrLinkedNode,
     set: Draw.prototype.setLinkedPtri
@@ -2228,7 +2236,7 @@ Object.defineProperties(Draw.prototype, {
 
 export var Mode = class Mode extends Pointer {};
 
-Object.defineProperties(Mode.registerClass(), {
+Object.define(Mode.registerClass(), {
   byteLength: {
     value: 4 * 0
   },
@@ -2237,9 +2245,9 @@ Object.defineProperties(Mode.registerClass(), {
   }
 });
 
-Object.hiddenProperties(Mode, "array", "byteLength", "byteOffset", "headers", "length", "linkedNode", "protoClass");
+Object.hidden(Mode, "array", "byteLength", "byteOffset", "headers", "length", "link", "protoClass");
 
-Object.defineProperties(Mode.prototype, {
+Object.define(Mode.prototype, {
   is: {
     value: function() {
       return 0 === this.getTypeGLCode() - arguments[0];
@@ -2266,12 +2274,12 @@ Object.defineProperties(Mode.prototype, {
       draw.setCount(length);
       draw.setModeBegin(mallocOffset / 4);
       draw.setModeEnd(draw.getModeBegin() + length);
-      return this;
+      return draw;
     }
   }
 });
 
-Object.defineProperties(Mode.prototype, {
+Object.define(Mode.prototype, {
   getGL: {
     value: function() {
       return this.getParentPtrP().getGL();
@@ -2387,7 +2395,7 @@ Object.defineProperties(Mode.prototype, {
   }
 });
 
-Object.defineProperties(Mode.prototype, {
+Object.define(Mode.prototype, {
   objects: {
     get: Mode.prototype.findObjects
   },
@@ -2589,7 +2597,7 @@ export var Buffer = (function() {
 
   Buffer.typedArray = Float32Array;
 
-  Object.defineProperties(Buffer.prototype, {
+  Object.define(Buffer.prototype, {
     ARRAY_BUFFER: {
       value: WebGL2RenderingContext.ARRAY_BUFFER
     },
@@ -2620,9 +2628,9 @@ export var Buffer = (function() {
 
 }).call(this);
 
-Object.hiddenProperties(Buffer, "headers", "protoClass", "length", "array", "byteOffset", "byteLength");
+Object.hidden(Buffer, "headers", "protoClass", "length", "array", "byteOffset", "byteLength");
 
-Object.defineProperties(Buffer.registerClass().prototype, {
+Object.define(Buffer.registerClass().prototype, {
   type: {
     get: Buffer.prototype.keyBindTarget,
     set: Buffer.prototype.setBindTarget
@@ -2643,7 +2651,7 @@ OFFSET_O3_SCALE_3D = 4 * 12;
 
 export var Object3 = class Object3 extends Pointer {};
 
-Object.defineProperties(Object3.registerClass(), {
+Object.define(Object3.registerClass(), {
   byteLength: {
     value: 4 * 12
   },
@@ -2652,9 +2660,30 @@ Object.defineProperties(Object3.registerClass(), {
   }
 });
 
-Object.hiddenProperties(Object3, "array", "byteLength", "byteOffset", "headers", "length", "linkedNode", "protoClass");
+Object.hidden(Object3, "array", "byteLength", "byteOffset", "headers", "length", "link", "protoClass");
 
-Object.defineProperties(Object3.prototype, {
+Object.symbol(Object3.prototype, {
+  iterate: {
+    value: function() {
+      var done, obj3, value;
+      done = Boolean(value = 0);
+      obj3 = this;
+      return {
+        next: function() {
+          if (!(value = obj3.getNextChild(value))) {
+            return {
+              done: true,
+              value: obj3
+            };
+          }
+          return {done, value};
+        }
+      };
+    }
+  }
+});
+
+Object.define(Object3.prototype, {
   getDraws: {
     value: function() {
       return this.findAllLinks().filter(function(v) {
@@ -2719,7 +2748,7 @@ Object.defineProperties(Object3.prototype, {
   }
 });
 
-Object.defineProperties(Object3.prototype, {
+Object.define(Object3.prototype, {
   vertices: {
     get: Object3.prototype.getVertices,
     set: Object3.prototype.setVertexArray

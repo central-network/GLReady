@@ -2,6 +2,7 @@ import "./ptr_self.coffee"
 
 LE = ! new Uint8Array( Float32Array.of( 1 ).buffer )[ 0 ]
 OBJECTS = [,]
+SYM_LOOP = Symbol.iterator
 
 buf = u32 = i32 = dvw =
 palloc = malloc = false
@@ -42,11 +43,45 @@ proxy = ->
 KEYED = {}
 KEYEX = 0 : new (class NONE extends Number) 0
 
-do ->
-    for k , v of WebGL2RenderingContext then KEYED[ v ] =
-        eval "new (class #{k} extends Number {})(#{v})"
+do -> for k , v of WebGL2RenderingContext then KEYED[ v ] =
+    eval "new (class #{k} extends Number {})(#{v})"
 
-Object.defineProperties Array::,
+Object.defineProperty Object, "define", value : ->
+    try [ proto, prop, desc ] = [ ...arguments ]
+    if desc then @define proto , [ prop ] : desc
+    else @defineProperties proto , prop , ( desc )
+    return proto
+
+Object.defineProperty Object, "symbol", value : ->
+    try [ proto, prop, desc ] = [ ...arguments ]
+    if desc then @symbol proto , [ prop ] : desc
+    else for key , desc of prop
+        symbol = switch key
+            when "primitive" then Symbol.toPrimitive
+            when "instance" then Symbol.hasInstance
+            when "iterate" then Symbol.iterator
+            else Symbol[ key ]
+        try @define proto , symbol , desc
+        catch fail then throw fail
+    return proto
+
+Object.defineProperty Object, "hidden", value : ->
+
+    try [ proto , ...props ] = [ ...arguments ]
+    finally desc = configurable : yes
+    for prop in props
+        { get , set } = Object.getOwnPropertyDescriptor(
+            Object.getPrototypeOf( proto:: ) , prop
+        )
+
+        @define proto::, prop, value : ( ( getter, setter ) -> ->
+            return getter.call( this ) if ! arguments[0]
+            setter.call this, arguments[0] ; return this
+        )( get, set )
+
+    proto  
+
+Object.define Array::,
 
     sumAttrib : value : ->
         n = arguments[ s = 0 ]
@@ -56,7 +91,7 @@ Object.defineProperties Array::,
         [ func , value ] = arguments
         ( this . find (v) -> 0 is v[ func ]() - value )
 
-Object.defineProperties DataView::,
+Object.define DataView::,
     
     setObject : value : ( offset, object ) ->
         if -1 is i = OBJECTS.indexOf object
@@ -97,11 +132,11 @@ export class Color4Number extends Number
 
 export class OffsetPointer extends Number
 
-Object.defineProperties OffsetPointer,
+Object.define OffsetPointer,
 
     typedArray      : value : Float32Array
 
-Object.defineProperties OffsetPointer::,
+Object.define OffsetPointer::,
 
     getArrayLength  : value : ->
         @getLinkedNode().getTypedLength() -
@@ -119,26 +154,38 @@ Object.defineProperties OffsetPointer::,
     getBufferOffset : value : ->
         @getLinkedNode().getBufferOffset()
 
-Object.defineProperties OffsetPointer::,
+Object.define OffsetPointer::,
 
     link            : get   : OffsetPointer::getLinkedNode          
 
-Object.defineProperties Vector,
+Object.define Vector,
 
     byteLength      : value : 4 * 3
 
     length          : value : 3
-    
-Object.defineProperties Vector::,
 
-    [Symbol.iterator] : value : -> yield dvw.getFloat32 this + i * 4, LE for i in [ 0 ... 3 ]
+Object.symbol Vector::,
+
+    iterate         : value : ->
+        iterate             : value : ->
+            length = i = -4 + this
+            offset = Uint32Array.of(
+                length += 4 , length += 4,
+                length += 4
+            ).reverse()
+    
+            next : =>
+                value = if done = length is i then @
+                else dvw.getFloat32 i = 4 + i , LE
+                return { done , value }  
+    
+Object.define Vector::,
 
     getTypedArray   : value   : -> new Float32Array dvw.buffer, this, 3
 
-    set             : value   : ->
-        @getTypedArray().set( [ ...arguments ].flat() ) ; this
+    set             : value   : -> @getTypedArray().set( [ ...arguments ].flat() ) ; this
 
-Object.defineProperties Vector::,
+Object.define Vector::,
 
     getX            : value : -> dvw.getFloat32 this     , LE
 
@@ -152,7 +199,7 @@ Object.defineProperties Vector::,
     
     setZ            : value : -> dvw.setFloat32 this + 8 , arguments[0], LE
 
-Object.defineProperties Vector::,
+Object.define Vector::,
 
     x               : get   : Vector::getX , set : Vector::setX
 
@@ -160,13 +207,43 @@ Object.defineProperties Vector::,
     
     z               : get   : Vector::getZ , set : Vector::setZ
 
-Object.defineProperties Color4,
+export class RGBA extends Uint8Array
 
-    byteLength      : value : 4 * 4
+    Object.define RGBA::,
 
-    length          : value : 4
+        getRed          : value : -> this[0]
 
-    u32             : value : ( any ) ->
+        setRed          : value : -> this[0] = arguments[0]
+
+        getGreen        : value : -> this[1]
+
+        setGreen        : value : -> this[1] = arguments[0]
+
+        getBlue         : value : -> this[2]
+
+        setBlue         : value : -> this[2] = arguments[0]
+
+        getAlpha        : value : -> this[3]
+
+        setAlpha        : value : -> this[3] = arguments[0]
+
+    Object.define RGBA::,
+
+        red             : get   : RGBA::getRed      , set : RGBA::setRed
+
+        green           : get   : RGBA::getGreen    , set : RGBA::setGreen
+        
+        blue            : get   : RGBA::getBlue     , set : RGBA::setBlue
+
+        alpha           : get   : RGBA::getAlpha    , set : RGBA::setAlpha
+
+Object.define Color4,
+
+    byteLength          : value : 4 * 4
+
+    length              : value : 4
+
+    fromAny             : value : ( any ) ->
         if isNaN any
             if  any.map
                 [ r = 0, g = 0, b = 0, a = 1 ] = any
@@ -188,23 +265,46 @@ Object.defineProperties Color4,
             return parseInt any
         return any    
     
-Object.defineProperties Color4::,
-    
-    [Symbol.iterator] : value : -> yield dvw.getFloat32 this + i * 4, LE for i in [ 0 ... 4 ]
+Object.symbol Color4::,
 
+    iterate             : value : ->
+        length = i = -4 + this
+        offset = Uint32Array.of(
+            length += 4 , length += 4,
+            length += 4 , length += 4
+        ).reverse()
+
+        next : =>
+            value = if done = length is i then @
+            else dvw.getFloat32 i = 4 + i , LE
+            return { done , value }  
+
+Object.define Color4::,
+    
     getTypedArray   : value : -> new Float32Array dvw.buffer, this, 4
 
     set             : value : ->
-        color = [ ...arguments ].flat()
+        if  arguments[0] and !arguments[0].map and arguments.length is 1
+            dv = new DataView new ArrayBuffer 4
+            dv . setUint32 0, argv, LE
+
+            i8 = new Uint8Array dv.buffer
+            i8.reverse() if LE 
+            di = 255
+            color = Float32Array.of ...[ ...i8 ].map (n) -> n/di
+
+        else
+            color = [ ...arguments ].flat().slice(0, 4)
+
         [ r, g, b, a ] = color
 
         if (r > 1) or (g > 1) or (b > 1) or (a > 1)
-            a = ( color[3] ? 100 ) / 0xff
-            @setRed(r / 0xff).setGreen(g / 0xff).setBlue(b / 0xff).setAlpha( a );
+            a = 0xff if isNaN a ; a /= 0xff 
+            @setRed(r / 0xff).setGreen(g / 0xff).setBlue(b / 0xff).setAlpha( a )
 
         else if (r and r <= 1) or (g and g <= 1) or (b and b <= 1)
-            a = ( color[3] ? 1 )
-            @setRed(r).setGreen(g).setBlue(b).setAlpha(a);
+            a = 1 if isNaN a
+            @setRed(r).setGreen(g).setBlue(b).setAlpha(a)
 
         this
 
@@ -216,6 +316,7 @@ Object.defineProperties Color4::,
     
     getAlpha        : value : -> dvw.getFloat32 this + 12 , LE
     
+
     setRed          : value : -> dvw.setFloat32 this      , arguments[0], LE ; @
 
     setGreen        : value : -> dvw.setFloat32 this +  4 , arguments[0], LE ; @
@@ -224,16 +325,18 @@ Object.defineProperties Color4::,
 
     setAlpha        : value : -> dvw.setFloat32 this + 12 , arguments[0], LE ; @
 
-Object.defineProperties Color4::,
+    toString        : value : -> @hex
+
+Object.define Color4::,
 
     f32 : get : ->
         new Float32Array dvw.buffer, this, 4
 
     ui8 : get : ->
-        [ ...@f32 ].map (v) -> v * 0xff
+        Uint8Array.from [ ...@f32 ].map (v) -> v * 0xff
 
     hex : get : ->
-        "#" + [ ...@ui8 ].map (n) ->
+        "0x" + [ ...@ui8 ].map (n) ->
             n.toString(16).padStart(2,0)
         .join ""
 
@@ -243,9 +346,17 @@ Object.defineProperties Color4::,
         "rgba( #{r} #{g} #{b} / #{a}% )"
 
     u32 : get : ->
-        parseInt @hex.substring(1), 16
+        parseInt @hex, 16
 
-Object.defineProperties Color4Number::,
+    rgb : get : -> 
+        RGBA.of(
+            @getRed()   * 0xff,
+            @getGreen() * 0xff,
+            @getBlue()  * 0xff,
+            @getAlpha() * 0xff,
+        )
+
+Object.define Color4Number::,
 
     f32 : get : ->
         dv = new DataView new ArrayBuffer 4
@@ -269,7 +380,7 @@ Object.defineProperties Color4Number::,
 
     css : Object.getOwnPropertyDescriptor Color4::, "css"
 
-    Object.defineProperties Number::,
+    Object.define Number::,
 
         toUint32Number  : value : ->
             return 0 unless this
@@ -303,9 +414,9 @@ LENGTH_OF_POINTER   = 16
 BYTES_PER_POINTER   = 4 * LENGTH_OF_POINTER
 OFFSET_BYTEOFFSET   = 4 * 1
 OFFSET_BYTELENGTH   = 4 * 2
-OFFSET_PROTOCLASS   = 4 * 3
-OFFSET_LINKEDNODE   = 4 * 4
-OFFSET_PARENT_PTR   = 4 * 5
+OFFSET_PROTOCLASS   = 4 * INDEX_PROTOCLASS = 3
+OFFSET_LINKEDNODE   = 4 * INDEX_LINKEDNODE = 4
+OFFSET_PARENT_PTR   = 4 * INDEX_PARENT_PTR = 5
 OFFSET_RESVERVEDS   = 4 * 6
 
 OFFSET_PTRCLASS_0   = 4 * 6
@@ -316,24 +427,7 @@ OFFSET_PTRCLASS_4   = 4 * 10
 
 POINTER_PROTOTYPE   = [,]
 
-Object.defineProperty Object, "hiddenProperties", value : ->
-    proto = null
-    desc = configurable : yes
-    
-    for prop , i in [ ...arguments ]
-        unless i then proto = prop
-        else
-            { get, set } = Object.getOwnPropertyDescriptor(
-                Object.getPrototypeOf( proto:: ) , prop
-            )
 
-            Object.defineProperty proto::, prop, value : ( ( getter, setter ) ->
-                ->
-                    return getter.call( this ) if ! arguments[0]
-                    setter.call this, arguments[0] ; return this
-            )( get, set )
-                    
-    proto
 
 export default class Pointer extends Number
 
@@ -465,10 +559,33 @@ export default class Pointer extends Number
 
     subarray    : -> @getTypedArray().subarray( ...arguments )
 
-
 export class WorkerPointer extends Pointer
 
-Object.defineProperties Pointer,
+Object.symbol Pointer::,
+
+    iterate             : value : ->
+        
+        obj = this
+        min = @getByteOffset()
+        len = @getByteLength()
+        max = min + len
+
+        [ stride , reader ] = switch this.constructor.typedArray
+            when Int32Array     then [ 4, DataView::getInt32 ]
+            when Uint8Array     then [ 1, DataView::getUint8 ]
+            when Uint16Array    then [ 2, DataView::getUint16 ]
+            when Uint32Array    then [ 4, DataView::getUint32 ]
+            when Float32Array   then [ 4, DataView::getFloat32 ]
+            else throw [ "UNDEFINED_ITERATOR_FOR_POINTER", this ]
+
+        i = min - stride
+
+        next : ->
+            value = if done = max < i then obj
+            else reader.call( dvw , i += stride , LE )
+            return { done , value }
+
+Object.define Pointer,
 
     registerClass   : value : -> ( @protoClass or= -1 + POINTER_PROTOTYPE.push this  ); @
 
@@ -478,9 +595,26 @@ Object.defineProperties Pointer,
     
     BYTES_PER_ELEMENT : get : -> ( this.typedArray . BYTES_PER_ELEMENT )
 
-    LENGTH_OF_POINTER : get : -> ( this.byteLength / this.BYTES_PER_ELEMENT )
+    LENGTH_OF_POINTER : get : -> ( this.byteLength / this.BYTES_PER_ELEMENT )  
 
-Object.defineProperties Pointer::,
+
+Object.define Pointer::,
+
+    getNextChild    : value : ->
+
+        parent = this * 1
+        finish = Atomics.load u32, INDEX_PTR
+
+        [   offset = POINTERS_BYTEOFFSET,
+            stride = OFFSET_PARENT_PTR ] = arguments
+
+        offset += stride
+
+        while finish > offset += BYTES_PER_POINTER
+            unless parent - dvw.getUint32 offset, LE
+                return new Pointer offset - stride
+
+        null  
 
     getHeader       : value : -> dvw.getUint32 this + arguments[0] * 4, LE    
 
@@ -567,7 +701,7 @@ Object.defineProperties Pointer::,
     
     addResvUint16   : value : -> dvw.setUint16 this + OFFSET_RESVERVEDS + arguments[0] * 2, arguments[1] + o = @getResvUint16( arguments[0] ), LE ; o
 
-Object.defineProperties Pointer::,
+Object.define Pointer::,
 
     getTArray       : value : ->
         [ offset, byteLength = @getByteLength(), TypedArray = @constructor.typedArray ] = arguments
@@ -662,7 +796,7 @@ Object.defineProperties Pointer::,
 
         ; @
 
-Object.defineProperties Pointer::,
+Object.define Pointer::,
 
     length          : get : Pointer::getTypedLength
 
@@ -678,15 +812,15 @@ Object.defineProperties Pointer::,
     
     protoClass      : get : Pointer::getProtoClass , set : Pointer::setProtoClass
 
-    linkedNode      : get : Pointer::getLinkedNode , set : Pointer::setLinkedNode
+    link            : get : Pointer::getLinkedNode , set : Pointer::setLinkedNode
     
     parent          : get : Pointer::getParentPtrP , set : Pointer::setParentPtri
 
-Object.defineProperties WorkerPointer.registerClass(),
+Object.define WorkerPointer.registerClass(),
     
     byteLength      : value : 4 * 64
 
-Object.defineProperties WorkerPointer::,
+Object.define WorkerPointer::,
 
     type            : value : "module"
 
@@ -705,13 +839,13 @@ Object.defineProperties WorkerPointer::,
 
     send            : value : -> @getLinkedNode().postMessage ...arguments
 
-Object.defineProperties WorkerPointer::,
+Object.define WorkerPointer::,
     
     getOnlineState  : value : -> @getResvUint32 0
 
     setOnlineState  : value : -> @setResvUint32 0, arguments[0] ; this
 
-Object.defineProperties WorkerPointer::,
+Object.define WorkerPointer::,
 
     onlineState     :
         get : WorkerPointer::getOnlineState,

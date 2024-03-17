@@ -1,44 +1,44 @@
 import Pointer from "./ptr.coffee"
 import { Vertex, Angle3, Scale3, Color4, OffsetPointer } from "./ptr.coffee"
 
-OFFSET_DRAW_ACTIVE  = 4 * 2
-OFFSET_CULL_ENABLED = 4 * 2 + 1
-OFFSET_BLEND_ACTIVE = 4 * 2 + 2
-OFFSET_DEPTH_ACTIVE = 4 * 2 + 3
+OFFSET_DRAW_ACTIVE  = 4 * 0
+OFFSET_CULL_ENABLED = 4 * 0 + 1
+OFFSET_BLEND_ACTIVE = 4 * 0 + 2
+OFFSET_DEPTH_ACTIVE = 4 * 0 + 3
 
-OFFSET_CULL_FACE    = 4 * 3
-OFFSET_FRONTFACE    = 4 * 3 + 2
-OFFSET_DEPTH_FUNC   = 4 * 4
-OFFSET_CLEAR_MASK   = 4 * 4 + 2
-OFFSET_CLEAR_DEPTH  = 4 * 5
-OFFSET_CLEAR_COLOR  = 4 * 6
-OFFSET_BIND_TARGET  = 4 * 7
-OFFSET_BLEND_EQUATE = 4 * 7 + 2
-OFFSET_BLEND_INARG  = 4 * 8
-OFFSET_BLEND_OUTARG = 4 * 8 + 2
-OFFSET_BLEND_FUNC   = 4 * 9
-OFFSET_DEPTH_TEST   = 4 * 9 + 2
+OFFSET_CULL_FACE    = 4 *  1
+OFFSET_FRONTFACE    = 4 *  1 + 2
+OFFSET_DEPTH_FUNC   = 4 *  2
+OFFSET_CLEAR_MASK   = 4 *  2 + 2
+OFFSET_CLEAR_DEPTH  = 4 *  3
+OFFSET_CLEAR_COLOR  = 4 *  4
+OFFSET_BIND_TARGET  = 4 *  8
+OFFSET_BLEND_EQUATE = 4 *  8 + 2
+OFFSET_BLEND_INARG  = 4 *  9
+OFFSET_BLEND_OUTARG = 4 *  9 + 2
+OFFSET_BLEND_FUNC   = 4 * 10
+OFFSET_DEPTH_TEST   = 4 * 10 + 2
 
-OFFSET_WALKING      = 4 * 10
-OFFSET_JUMPING      = 4 * 10 + 1
-OFFSET_KEY_SHIFT    = 4 * 10 + 2
-OFFSET_KEY_ALT      = 4 * 10 + 3
-OFFSET_KEY_CTRL     = 4 * 11
-OFFSET_KEY_META     = 4 * 11 + 1
-OFFSET_MOVE_FWD     = 4 * 11 + 2
-OFFSET_MOVE_BACK    = 4 * 11 + 3
-OFFSET_MOVE_LEFT    = 4 * 12
-OFFSET_MOVE_RIGHT   = 4 * 12 + 1
-OFFSET_MOVE_UP      = 4 * 12 + 2
-OFFSET_MOVE_DOWN    = 4 * 12 + 3
-OFFSET_LOOKING      = 4 * 13
-OFFSET_ZOOMING      = 4 * 13 + 1
-OFFSET_PTR_DCLICK   = 4 * 13 + 2
-OFFSET_PTR_CLICK    = 4 * 13 + 3
-OFFSET_PTR_BUTTON   = 4 * 14
-OFFSET_ROTATING     = 4 * 15
-OFFSET_DRAGGING     = 4 * 15 + 1
-OFFSET_UX_ENABLED   = 4 * 15 + 2
+OFFSET_WALKING      = 4 * 11
+OFFSET_JUMPING      = 4 * 11 + 1
+OFFSET_KEY_SHIFT    = 4 * 11 + 2
+OFFSET_KEY_ALT      = 4 * 11 + 3
+OFFSET_KEY_CTRL     = 4 * 12
+OFFSET_KEY_META     = 4 * 12 + 1
+OFFSET_MOVE_FWD     = 4 * 12 + 2
+OFFSET_MOVE_BACK    = 4 * 12 + 3
+OFFSET_MOVE_LEFT    = 4 * 13
+OFFSET_MOVE_RIGHT   = 4 * 13 + 1
+OFFSET_MOVE_UP      = 4 * 13 + 2
+OFFSET_MOVE_DOWN    = 4 * 13 + 3
+OFFSET_LOOKING      = 4 * 14
+OFFSET_ZOOMING      = 4 * 14 + 1
+OFFSET_PTR_DCLICK   = 4 * 14 + 2
+OFFSET_PTR_CLICK    = 4 * 14 + 3
+OFFSET_PTR_BUTTON   = 4 * 15
+OFFSET_ROTATING     = 4 * 16
+OFFSET_DRAGGING     = 4 * 16 + 1
+OFFSET_UX_ENABLED   = 4 * 16 + 2
 
 OFFSET_X            = 4 * 21
 OFFSET_Y            = 4 * 22
@@ -63,6 +63,8 @@ OFFSET_PIXEL_RATIO  = 4 * 44
 OFFSET_ASPECT_RATIO = 4 * 45
 
 KEYEXTEND_CLEARMASK = [ 16640 ] : new (class DEPTH_N_COLOR_BIT extends Number) 16640
+
+export { Pointer }
 
 export class GL extends Pointer
 
@@ -211,11 +213,9 @@ export class GL extends Pointer
     
     setClearMask    : -> @setUint16 OFFSET_CLEAR_MASK      , arguments[0] ; this
     
-    rgbClearColor   : -> 1; #@rgbColor4 OFFSET_CLEAR_COLOR
+    getClearColor   : -> new Color4 @getByteOffset OFFSET_CLEAR_COLOR
     
-    getClearColor   : -> 1; #@getColour4 OFFSET_CLEAR_COLOR
-    
-    setClearColor   : -> 1; #@setColour4 OFFSET_CLEAR_COLOR     , arguments[0] ; this
+    setClearColor   : -> @getClearColor().set ...arguments
 
     keyBindTarget   : -> @keyUint16 OFFSET_BIND_TARGET
     
@@ -399,7 +399,13 @@ export class GL extends Pointer
 
     setZVector      : -> @setFloat32 OFFSET_VZ             , arguments[0]
 
-Object.defineProperties GL::,
+Object.symbol GL,
+
+    instance        : value : ->
+        
+        @isPrototypeOf Object.getPrototypeOf arguments[0]
+
+Object.define GL::,
 
     gl              : get : GL::getLinkedNode
 
@@ -650,7 +656,7 @@ export class Program extends Pointer
 
             ; @
 
-    Object.defineProperties Program.registerClass()::,
+    Object.define Program.registerClass()::,
 
         gl              : get : Program::getParentPtrO
 
@@ -861,7 +867,7 @@ export class Shader extends Pointer
 
     getUniforms         : -> @findAllChilds().filter (i) -> i instanceof Uniform
 
-    Object.defineProperties Shader.registerClass()::,
+    Object.define Shader.registerClass()::,
 
         gl              : get : Shader::getGL
 
@@ -943,7 +949,7 @@ export class ShaderKey  extends Pointer
 
     setKeyLocated       : -> @setUint8  OFFSET_KEY_LOCATED , arguments[0] ; arguments[0]
 
-Object.defineProperties ShaderKey.registerClass()::,
+Object.define ShaderKey.registerClass()::,
 
     gl                  : get : ShaderKey::getGL
 
@@ -971,7 +977,7 @@ OFFSET_ATTR_OFFSET      = 4 * 0 + 3
 
 export class Attribute  extends ShaderKey
 
-    Object.defineProperties Attribute.registerClass(),
+    Object.define Attribute.registerClass(),
         
         vec3    : value : class  vec3 extends this
             @components : 3
@@ -1069,7 +1075,7 @@ export class Attribute  extends ShaderKey
 
     setOffset           : -> @setUint8 OFFSET_ATTR_OFFSET , arguments[0]
 
-Object.defineProperties Attribute::,
+Object.define Attribute::,
 
     glLocation          : get : Attribute::getGLLocation
 
@@ -1083,7 +1089,7 @@ Object.defineProperties Attribute::,
 
 export class Uniform    extends ShaderKey
 
-    Object.defineProperties Uniform.registerClass(),
+    Object.define Uniform.registerClass(),
         
         vec3    : value : class  vec3 extends this
             @components : 3
@@ -1128,7 +1134,7 @@ export class Uniform    extends ShaderKey
         return unless location = gl.getUniformLocation program, @getNameString()
         @setKeyLocated 1 ; @setLinkedNode location ; locatio
 
-Object.defineProperties Uniform::,
+Object.define Uniform::,
 
     glLocation          : get : Uniform::getGLLocation
 
@@ -1145,19 +1151,19 @@ KEYEXTEND_OBJECT3D      =
 
 export class Draw extends Pointer
 
-Object.defineProperties Draw.registerClass(),
+Object.define Draw.registerClass(),
 
     byteLength          : value : 4 * 0
 
     typedArray          : value : Uint32Array
 
-Object.hiddenProperties Draw,
+Object.hidden Draw,
 
-    "parent", "linkedNode", "array",
+    "parent", "link", "array",
     "headers", "protoClass", "length",  
     "children", "byteOffset", "byteLength", 
 
-Object.defineProperties Draw::,
+Object.define Draw::,
 
     keyTypeGLCode       : value : -> @ptrParentNode().keyTypeGLCode()
 
@@ -1191,7 +1197,7 @@ Object.defineProperties Draw::,
 
     getMatrix           : value : -> @ptrLinkedNode().getMatrix()
 
-Object.defineProperties Draw::,
+Object.define Draw::,
 
     object3             : get   : Draw::ptrLinkedNode   , set   : Draw::setLinkedPtri
 
@@ -1215,18 +1221,18 @@ Object.defineProperties Draw::,
     
 export class Mode extends Pointer
 
-Object.defineProperties Mode.registerClass(),
+Object.define Mode.registerClass(),
 
     byteLength          : value : 4 * 0
 
     typedArray          : value : Uint32Array
 
-Object.hiddenProperties Mode,
+Object.hidden Mode,
 
     "array", "byteLength", "byteOffset", "headers", 
-    "length", "linkedNode", "protoClass"
+    "length", "link", "protoClass"
 
-Object.defineProperties Mode::,
+Object.define Mode::,
 
     is                  : value : ->
         0 is @getTypeGLCode() - arguments[0]
@@ -1256,9 +1262,9 @@ Object.defineProperties Mode::,
         draw . setModeBegin mallocOffset / 4
         draw . setModeEnd draw.getModeBegin() + length
 
-        this
+        draw
 
-Object.defineProperties Mode::,
+Object.define Mode::,
 
     getGL               : value : -> @getParentPtrP().getGL()
 
@@ -1304,7 +1310,7 @@ Object.defineProperties Mode::,
 
     setAttributes       : value : -> @getAttributes().set arguments[0] ; this
 
-Object.defineProperties Mode::,
+Object.define Mode::,
 
     objects             : get   : Mode::findObjects
 
@@ -1326,7 +1332,7 @@ export class Buffer extends Pointer
 
     @typedArray         : Float32Array
 
-    Object.defineProperties this::,
+    Object.define this::,
 
         ARRAY_BUFFER    : value : WebGL2RenderingContext.ARRAY_BUFFER
 
@@ -1372,6 +1378,7 @@ export class Buffer extends Pointer
         first = byteOffset / BYTES_PER_ATTRIBUTE
 
         mode = new Mode()
+
         mode . setParentPtri this
         mode . setTypeGLCode type
         mode . setComponents numComponents
@@ -1432,7 +1439,6 @@ export class Buffer extends Pointer
 
     isArrayBuffer       : -> @ELEMENT_BUFFER isnt @getBindTarget()
 
-
     getBindStatus       : -> @getResvUint16 0
 
     setBindStatus       : -> @setResvUint16 0 , arguments[0]
@@ -1449,12 +1455,12 @@ export class Buffer extends Pointer
     
     setModeOffset       : -> @setResvUint32 1 , arguments[0] 
 
-Object.hiddenProperties Buffer,
+Object.hidden Buffer,
 
     "headers", "protoClass", "length",  
     "array", "byteOffset", "byteLength", 
 
-Object.defineProperties Buffer.registerClass()::,
+Object.define Buffer.registerClass()::,
 
     type                : get : Buffer::keyBindTarget   , set : Buffer::setBindTarget 
 
@@ -1470,17 +1476,29 @@ OFFSET_O3_SCALE_3D      = 4 * 12
 
 export class Object3    extends Pointer
 
-Object.defineProperties Object3.registerClass(),
+Object.define Object3.registerClass(),
 
     byteLength          : value : 4 * 12
 
     typedArray          : value : Float32Array
 
-Object.hiddenProperties Object3,
+Object.hidden Object3,
 
-    "array", "byteLength", "byteOffset", "headers", "length", "linkedNode", "protoClass"
+    "array", "byteLength", "byteOffset", 
+    "headers", "length", "link", "protoClass"
 
-Object.defineProperties Object3::,
+Object.symbol Object3::,
+
+    iterate             : value : ->
+        done = Boolean value = 0
+        obj3 = this
+
+        next : ->
+            unless value = obj3 . getNextChild value
+                return { done : yes , value : obj3 }
+            return { done , value }
+
+Object.define Object3::,
 
     getDraws            : value : -> @findAllLinks().filter (v) -> v instanceof Draw
 
@@ -1512,7 +1530,7 @@ Object.defineProperties Object3::,
             1, 1, 1, 1,
         )
 
-Object.defineProperties Object3::,
+Object.define Object3::,
 
     vertices            : get : Object3::getVertices   , set : Object3::setVertexArray
 
