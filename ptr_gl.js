@@ -1880,6 +1880,10 @@ export var Attribute = (function() {
       return argv;
     }
 
+    enable() {
+      return this.getLinkedNode()();
+    }
+
     setLocation() {
       return this.setUint8(OFFSET_LOCATION_AT, arguments[0]);
     }
@@ -2345,14 +2349,8 @@ Object.define(Mode.prototype, {
       return draw;
     }
   },
-  draw: {
+  render: {
     value: function() {
-      var attr, j, len, ref;
-      ref = this.program.attributes;
-      for (j = 0, len = ref.length; j < len; j++) {
-        attr = ref[j];
-        attr.link();
-      }
       return this.gl.drawArrays(this.mode, this.first, this.count);
     }
   }

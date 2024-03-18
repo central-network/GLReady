@@ -1078,6 +1078,8 @@ export class Attribute  extends ShaderKey
 
         argv
 
+    enable              : -> @getLinkedNode()()
+
     setLocation         : -> @setUint8 OFFSET_LOCATION_AT , arguments[0]
 
     getNormalize        : -> @getUint8 OFFSET_ISNORMALIZE
@@ -1300,9 +1302,7 @@ Object.define Mode::,
 
         draw
 
-    draw                : value : ->
-        do attr.link for attr in @program . attributes
-        @gl.drawArrays @mode , @first , @count
+    render              : value : -> @gl.drawArrays @mode , @first , @count
 
 Object.define Mode::,
 
