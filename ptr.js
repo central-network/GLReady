@@ -810,9 +810,11 @@ export var Pointer = class Pointer extends Number {
     if (arguments.length) {
       if (this.constructor === Pointer) {
         if (!(proto = POINTER_PROTOTYPE[this.getProtoClass()])) {
-          throw ["PROTOCLASS_NOT_FOUND", this];
+          console.error(["PROTOCLASS_NOT_FOUND", this * 1]);
         }
-        Object.setPrototypeOf(this, proto.prototype);
+        try {
+          Object.setPrototypeOf(this, proto.prototype);
+        } catch (error) {}
       }
     } else {
       byteLength = this.constructor.byteLength;
@@ -1632,6 +1634,9 @@ Object.define(Matrix4.prototype, {
 Object.define(WorkerPointer.registerClass(), {
   byteLength: {
     value: 4 * 64
+  },
+  typedArray: {
+    value: Uint8Array
   }
 });
 
@@ -1734,12 +1739,12 @@ if (typeof window !== "undefined" && window !== null) {
         ptr: child * 1,
         object: child,
         parent: child.parent * 1 || null,
-        type: child.type,
+        type: child.type || child.mode || child.target,
         classId: child.getProtoClass(),
         link: child.getLinkedNode(),
         offset: child.getByteOffset(),
         allocated: child.getByteLength(),
-        array: child.getTypedArray(),
+        array: child.getByteLength() ? child.getTypedArray() : void 0,
         childs: child.children.length || null
       });
       byteLength += child.byteLength;

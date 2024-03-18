@@ -1072,7 +1072,7 @@ export class Attribute  extends ShaderKey
             enable()
             pointer()
 
-            log "attr enabled  <-  #{name}"
+            log "attr link  ->  #{name}"
 
             ; null
 
@@ -1302,7 +1302,9 @@ Object.define Mode::,
 
         draw
 
-    render              : value : -> @gl.drawArrays @mode , @first , @count
+    render              : value : ->
+        @gl.drawArrays @mode , @first , @count
+        log "draw call  ->  #{@mode.constructor.name}"
 
 Object.define Mode::,
 

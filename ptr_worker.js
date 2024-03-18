@@ -37,21 +37,26 @@ init = function(buffer) {
         results1 = [];
         for (mode of buffer) {
           numCmponents = mode.numCmponents;
-          for (draw of mode) {
-            color = draw.object3.color;
-            matrix = draw.object3.matrix;
-            attribs = draw.attributes;
-            numIndex = -numCmponents;
-            while (vertex = draw.object3.nextVertex()) {
-              position = matrix.apply(vertex);
-              attribs.set([...position, ...color], numIndex += numCmponents);
+          results1.push((function() {
+            var results2;
+            results2 = [];
+            for (draw of mode) {
+              color = draw.object3.color;
+              matrix = draw.object3.matrix;
+              attribs = draw.attributes;
+              numIndex = -numCmponents;
+              results2.push((function() {
+                var results3;
+                results3 = [];
+                while (vertex = draw.object3.nextVertex()) {
+                  position = matrix.apply(vertex);
+                  results3.push(attribs.set([...position, ...color], numIndex += numCmponents));
+                }
+                return results3;
+              })());
             }
-            draw.isUpdated = 1;
-            mode.needUpload = 1;
-          }
-          mode.isUpdated = 1;
-          mode.needUpload = 1;
-          results1.push(console.log(mode));
+            return results2;
+          })());
         }
         return results1;
       })());

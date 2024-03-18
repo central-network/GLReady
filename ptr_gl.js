@@ -1874,7 +1874,7 @@ export var Attribute = (function() {
       this.setLinkedNode(function() {
         enable();
         pointer();
-        log(`attr enabled  <-  ${name}`);
+        log(`attr link  ->  ${name}`);
         return null;
       });
       return argv;
@@ -2351,7 +2351,8 @@ Object.define(Mode.prototype, {
   },
   render: {
     value: function() {
-      return this.gl.drawArrays(this.mode, this.first, this.count);
+      this.gl.drawArrays(this.mode, this.first, this.count);
+      return log(`draw call  ->  ${this.mode.constructor.name}`);
     }
   }
 });

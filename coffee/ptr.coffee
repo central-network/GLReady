@@ -512,9 +512,9 @@ export class Pointer        extends Number
             if  this.constructor is Pointer
 
                 unless proto = POINTER_PROTOTYPE[ @getProtoClass() ]
-                    throw [ "PROTOCLASS_NOT_FOUND", this ]
-
-                Object.setPrototypeOf this, proto::
+                    console.error [ "PROTOCLASS_NOT_FOUND", this * 1 ]
+                try Object.setPrototypeOf this, proto::
+                
         else
             byteLength = @constructor.byteLength
             
@@ -1071,6 +1071,8 @@ Object.define WorkerPointer.registerClass(),
     
     byteLength      : value : 4 * 64
 
+    typedArray      : value : Uint8Array
+
 Object.define WorkerPointer::,
 
     type            : value : "module"
@@ -1142,12 +1144,12 @@ if window?
                 ptr         : child * 1  
                 object      : child
                 parent      : child.parent * 1 or null
-                type        : child.type
+                type        : child.type or child.mode or child.target
                 classId     : child.getProtoClass()
                 link        : child.getLinkedNode()
                 offset      : child.getByteOffset()
-                allocated   : child.getByteLength(),
-                array       : child.getTypedArray()
+                allocated   : child.getByteLength()
+                array       : child.getTypedArray() if child.getByteLength()
                 childs      : child.children.length or null
             }
 

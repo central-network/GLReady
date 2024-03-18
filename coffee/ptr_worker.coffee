@@ -37,12 +37,4 @@ init = ( buffer ) ->
                         ...position,
                         ...color
                     ], numIndex += numCmponents
-                    
-                draw.isUpdated = 1
-                mode.needUpload = 1
-
-            mode.isUpdated = 1
-            mode.needUpload = 1
-            
-            console.log mode
-
+              
