@@ -127,7 +127,8 @@
                     .3, 1, -22
                 ]
             );
-
+            
+            o32.position = [10]
             o32.color = [ .1, 1, 0, .5 ];
 
             let o33 = Object3.from(
@@ -159,9 +160,8 @@
             o32.add(o3);
             o32.add(o33);
 
-            for ( let child of o32 ) {
-                console.log( performance.now(), child  )
-            }
+            //for ( let child of o32 )
+            //    console.log( performance.now(), child  )
 
 
         </script>

@@ -1,4 +1,44 @@
-var BYTES_PER_POINTER, INDEX_BUF, INDEX_FPS, INDEX_HIT, INDEX_LINKEDNODE, INDEX_NOW, INDEX_PARENT_PTR, INDEX_PROTOCLASS, INDEX_PTR, KEYED, KEYEX, LE, LENGTH_OF_POINTER, NONE, OBJECTS, OFFSET_BYTELENGTH, OFFSET_BYTEOFFSET, OFFSET_LINKEDNODE, OFFSET_PARENT_PTR, OFFSET_PROTOCLASS, OFFSET_PTRCLASS_0, OFFSET_PTRCLASS_1, OFFSET_PTRCLASS_2, OFFSET_PTRCLASS_3, OFFSET_PTRCLASS_4, OFFSET_RESVERVEDS, POINTERS_BYTELENGTH, POINTERS_BYTEOFFSET, POINTER_PROTOTYPE, Pointer, SYM_LOOP, buf, dump, dvw, fill, hist, i32, ival, malloc, palloc, proxy, u32;
+
+/*
+    jsScript	JavaScript
+    is	            ===
+    isnt	        !==
+    not	            !
+    and	            &&
+    or	            ||
+    true, yes, on	true
+    false, no, off 	false
+    @, this	        this
+    a in b	        [].indexOf.call(b, a) >= 0
+    a of b	        a in b
+    for a from b	for (a of b)
+    a ** b	        a ** b
+    a // b	        Math.floor(a / b)
+    a %% b	        (a % b + b) % b
+
+    <imporssible>   to ->
+    [
+        first,      <
+        chars...,   impossible
+        close       >
+    ] = tag.split("")
+
+ |- if  this.studyingEconomics
+ |___   buy()  while supply > demand
+    |   sell() until supply > demand
+    |
+    |
+    '-> if (this.studyingEconomics) {
+            while (supply > demand) {
+                buy();
+            }
+            while (!(supply > demand)) {
+                sell();
+            }
+        }
+
+ */
+var BYTES_PER_POINTER, INDEX_BUF, INDEX_FPS, INDEX_HIT, INDEX_LINKEDNODE, INDEX_NOW, INDEX_PARENT_PTR, INDEX_PROTOCLASS, INDEX_PTR, KEYED, KEYEX, LE, LENGTH_OF_POINTER, NONE, OBJECTS, OFFSET_BYTELENGTH, OFFSET_BYTEOFFSET, OFFSET_LINKEDNODE, OFFSET_PARENT_PTR, OFFSET_PROTOCLASS, OFFSET_PTRCLASS_0, OFFSET_PTRCLASS_1, OFFSET_PTRCLASS_2, OFFSET_PTRCLASS_3, OFFSET_PTRCLASS_4, OFFSET_RESVERVEDS, POINTERS_BYTELENGTH, POINTERS_BYTEOFFSET, POINTER_PROTOTYPE, SYM_LOOP, buf, dump, dvw, fill, hist, i32, ival, malloc, palloc, proxy, u32;
 
 import "./ptr_self.js";
 
@@ -191,7 +231,7 @@ Object.define(DataView.prototype, {
     }
   },
   delObject: {
-    value: function(offset) {
+    value: function(offset/*: number */) {
       OBJECTS.splice(offset, 1);
       return 0;
     }
@@ -521,7 +561,10 @@ Object.define(Color4.prototype, {
         }
         a /= 0xff;
         this.setRed(r / 0xff).setGreen(g / 0xff).setBlue(b / 0xff).setAlpha(a);
-      } else if ((r && r <= 1) || (g && g <= 1) || (b && b <= 1)) {
+      } else {
+
+      }
+      if (((0 <= r && r <= 1)) || ((0 <= g && g <= 1)) || ((0 <= b && b <= 1))) {
         if (isNaN(a)) {
           a = 1;
         }
@@ -720,7 +763,7 @@ OFFSET_PTRCLASS_4 = 4 * 10;
 
 POINTER_PROTOTYPE = [, ];
 
-export default Pointer = class Pointer extends Number {
+export var Pointer = class Pointer extends Number {
   static setBuffer(buf, max = 1e20) {
     var T, f32, ƒ;
     if (!arguments.length) { //? this blocks worker
@@ -762,11 +805,14 @@ export default Pointer = class Pointer extends Number {
   }
 
   constructor(ptr = palloc(BYTES_PER_POINTER)) {
-    var byteLength;
+    var byteLength, proto;
     super(ptr);
     if (arguments.length) {
       if (this.constructor === Pointer) {
-        Object.setPrototypeOf(this, POINTER_PROTOTYPE[this.getProtoClass()].prototype);
+        if (!(proto = POINTER_PROTOTYPE[this.getProtoClass()])) {
+          throw ["PROTOCLASS_NOT_FOUND", this];
+        }
+        Object.setPrototypeOf(this, proto.prototype);
       }
     } else {
       byteLength = this.constructor.byteLength;
@@ -777,7 +823,7 @@ export default Pointer = class Pointer extends Number {
     }
   }
 
-  static from(arrayLike) {
+  static from() {
     var arr, ptr;
     arr = [...arguments].flat();
     ptr = this.malloc(this.byteLength + this.BYTES_PER_ELEMENT * arr.length);
@@ -866,7 +912,13 @@ export default Pointer = class Pointer extends Number {
     return this.getTypedArray().subarray(...arguments);
   }
 
+  slice() {
+    return this.getTypedArray().slice(...arguments);
+  }
+
 };
+
+export var Matrix4 = class Matrix4 extends Pointer {};
 
 export var WorkerPointer = class WorkerPointer extends Pointer {};
 
@@ -944,9 +996,6 @@ Object.define(Pointer.prototype, {
       parent = this * 1;
       finish = Atomics.load(u32, INDEX_PTR);
       [offset = POINTERS_BYTEOFFSET, stride = OFFSET_PARENT_PTR] = arguments;
-      console.log(this.constructor.name, {
-        stride: stride
-      });
       offset += stride;
       while (finish > (offset += BYTES_PER_POINTER)) {
         if (!(parent - dvw.getUint32(offset, LE))) {
@@ -1129,7 +1178,8 @@ Object.define(Pointer.prototype, {
   },
   setResvUint32: {
     value: function() {
-      return dvw.setUint32(this + OFFSET_RESVERVEDS + arguments[0] * 4, arguments[1], LE);
+      dvw.setUint32(this + OFFSET_RESVERVEDS + arguments[0] * 4, arguments[1], LE);
+      return arguments[1];
     }
   },
   addResvUint32: {
@@ -1345,6 +1395,232 @@ Object.define(Pointer.prototype, {
   }
 });
 
+Object.define(Matrix4.registerClass(), {
+  byteLength: {
+    value: 4 * 16
+  },
+  typedArray: {
+    value: Float32Array
+  },
+  identity: {
+    value: Float32Array.of(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1)
+  },
+  multiply: {
+    value: function() {
+      var a, a00, a01, a02, a03, a10, a11, a12, a13, a20, a21, a22, a23, a30, a31, a32, a33, b, b00, b01, b02, b03, b10, b11, b12, b13, b20, b21, b22, b23, b30, b31, b32, b33;
+      [a, b] = arguments;
+      a00 = a[0 * 4 + 0];
+      a01 = a[0 * 4 + 1];
+      a02 = a[0 * 4 + 2];
+      a03 = a[0 * 4 + 3];
+      a10 = a[1 * 4 + 0];
+      a11 = a[1 * 4 + 1];
+      a12 = a[1 * 4 + 2];
+      a13 = a[1 * 4 + 3];
+      a20 = a[2 * 4 + 0];
+      a21 = a[2 * 4 + 1];
+      a22 = a[2 * 4 + 2];
+      a23 = a[2 * 4 + 3];
+      a30 = a[3 * 4 + 0];
+      a31 = a[3 * 4 + 1];
+      a32 = a[3 * 4 + 2];
+      a33 = a[3 * 4 + 3];
+      b00 = b[0 * 4 + 0];
+      b01 = b[0 * 4 + 1];
+      b02 = b[0 * 4 + 2];
+      b03 = b[0 * 4 + 3];
+      b10 = b[1 * 4 + 0];
+      b11 = b[1 * 4 + 1];
+      b12 = b[1 * 4 + 2];
+      b13 = b[1 * 4 + 3];
+      b20 = b[2 * 4 + 0];
+      b21 = b[2 * 4 + 1];
+      b22 = b[2 * 4 + 2];
+      b23 = b[2 * 4 + 3];
+      b30 = b[3 * 4 + 0];
+      b31 = b[3 * 4 + 1];
+      b32 = b[3 * 4 + 2];
+      b33 = b[3 * 4 + 3];
+      return Float32Array.of(b00 * a00 + b01 * a10 + b02 * a20 + b03 * a30, b00 * a01 + b01 * a11 + b02 * a21 + b03 * a31, b00 * a02 + b01 * a12 + b02 * a22 + b03 * a32, b00 * a03 + b01 * a13 + b02 * a23 + b03 * a33, b10 * a00 + b11 * a10 + b12 * a20 + b13 * a30, b10 * a01 + b11 * a11 + b12 * a21 + b13 * a31, b10 * a02 + b11 * a12 + b12 * a22 + b13 * a32, b10 * a03 + b11 * a13 + b12 * a23 + b13 * a33, b20 * a00 + b21 * a10 + b22 * a20 + b23 * a30, b20 * a01 + b21 * a11 + b22 * a21 + b23 * a31, b20 * a02 + b21 * a12 + b22 * a22 + b23 * a32, b20 * a03 + b21 * a13 + b22 * a23 + b23 * a33, b30 * a00 + b31 * a10 + b32 * a20 + b33 * a30, b30 * a01 + b31 * a11 + b32 * a21 + b33 * a31, b30 * a02 + b31 * a12 + b32 * a22 + b33 * a32, b30 * a03 + b31 * a13 + b32 * a23 + b33 * a33);
+    }
+  },
+  xRotation: {
+    value: function() {
+      var c, s;
+      c = Math.cos(arguments[0] || 0);
+      s = Math.sin(arguments[0] || 0);
+      return Float32Array.of(1, 0, 0, 0, 0, c, s, 0, 0, -s, c, 0, 0, 0, 0, 1);
+    }
+  },
+  yRotation: {
+    value: function() {
+      var c, s;
+      c = Math.cos(arguments[0] || 0);
+      s = Math.sin(arguments[0] || 0);
+      return Float32Array.of(c, 0, -s, 0, 0, 1, 0, 0, s, 0, c, 0, 0, 0, 0, 1);
+    }
+  },
+  zRotation: {
+    value: function() {
+      var c, s;
+      c = Math.cos(arguments[0] || 0);
+      s = Math.sin(arguments[0] || 0);
+      return Float32Array.of(c, s, 0, 0, -s, c, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
+    }
+  },
+  translation: {
+    value: function() {
+      var dx, dy, dz;
+      [dx = 0, dy = 0, dz = 0] = arguments[1] ? arguments : arguments[0];
+      return Float32Array.of(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, dx, dy, dz, 1);
+    }
+  },
+  xTranslation: {
+    value: function() {
+      return Float32Array.of(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, arguments[0] || 0, 0, 0, 1);
+    }
+  },
+  yTranslation: {
+    value: function() {
+      return Float32Array.of(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, arguments[0] || 0, 0, 1);
+    }
+  },
+  zTranslation: {
+    value: function() {
+      return Float32Array.of(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, arguments[0] || 0, 1);
+    }
+  },
+  scalation: {
+    value: function() {
+      var sx, sy, sz;
+      [sx, sy, sz] = arguments[1] ? arguments : arguments[0].slice ? arguments[0] : [arguments[0], arguments[0], arguments[0]];
+      return Float32Array.of(sx, 0, 0, 0, 0, sy, 0, 0, 0, 0, sz, 0, 0, 0, 0, 1);
+    }
+  },
+  xScale: {
+    value: function() {
+      return Float32Array.of(arguments[0] || 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
+    }
+  },
+  yScale: {
+    value: function() {
+      return Float32Array.of(1, 0, 0, 0, 0, arguments[0] || 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
+    }
+  },
+  zScale: {
+    value: function() {
+      return Float32Array.of(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, arguments[0] || 0, 0, 0, 0, 0, 1);
+    }
+  }
+});
+
+Object.define(Matrix4.prototype, {
+  getIsUpdated: {
+    value: function() {
+      return this.getResvUint32(0);
+    }
+  },
+  setIsUpdated: {
+    value: function() {
+      return this.setResvUint32(0, arguments[0]);
+    }
+  }
+});
+
+Object.define(Matrix4.prototype, {
+  rotateX: {
+    value: function() {
+      return this.multiply(this.slice(), Matrix4.xRotation(arguments[0]));
+    }
+  },
+  rotateY: {
+    value: function() {
+      return this.multiply(this.slice(), Matrix4.yRotation(arguments[0]));
+    }
+  },
+  rotateZ: {
+    value: function() {
+      return this.multiply(this.slice(), Matrix4.zRotation(arguments[0]));
+    }
+  },
+  translateX: {
+    value: function() {
+      return this.multiply(this.slice(), Matrix4.xTranslation(arguments[0]));
+    }
+  },
+  translateY: {
+    value: function() {
+      return this.multiply(this.slice(), Matrix4.yTranslation(arguments[0]));
+    }
+  },
+  translateZ: {
+    value: function() {
+      return this.multiply(this.slice(), Matrix4.zTranslation(arguments[0]));
+    }
+  },
+  scaleX: {
+    value: function() {
+      return this.multiply(this.slice(), Matrix4.xScale(arguments[0]));
+    }
+  },
+  scaleY: {
+    value: function() {
+      return this.multiply(this.slice(), Matrix4.yScale(arguments[0]));
+    }
+  },
+  scaleZ: {
+    value: function() {
+      return this.multiply(this.slice(), Matrix4.zScale(arguments[0]));
+    }
+  }
+});
+
+Object.define(Matrix4.prototype, {
+  reset: {
+    value: function() {
+      return this.set(Matrix4.identity);
+    }
+  },
+  multiply: {
+    value: function() {
+      return this.set(Matrix4.multiply(this.slice(), arguments[0]));
+    }
+  },
+  translate: {
+    value: function() {
+      return this.multiply(Matrix4.translation(...arguments));
+    }
+  },
+  scale: {
+    value: function() {
+      return this.multiply(Matrix4.scalation(...arguments));
+    }
+  },
+  rotate: {
+    value: function() {
+      var rx, ry, rz;
+      [rx, ry, rz] = arguments[1] ? arguments : arguments[0];
+      if (rx) {
+        this.xRotate(rx);
+      }
+      if (ry) {
+        this.yRotate(ry);
+      }
+      if (rz) {
+        this.yRotate(rz);
+      }
+      return this;
+    }
+  }
+});
+
+Object.define(Matrix4.prototype, {
+  isUpdated: {
+    get: Matrix4.prototype.getIsUpdated,
+    set: Matrix4.prototype.setIsUpdated
+  }
+});
+
 Object.define(WorkerPointer.registerClass(), {
   byteLength: {
     value: 4 * 64
@@ -1484,3 +1760,5 @@ if (typeof window !== "undefined" && window !== null) {
     return console.table(dumpArray);
   };
 }
+
+export default Pointer;

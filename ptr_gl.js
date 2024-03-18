@@ -1,13 +1,12 @@
 var DEPTH_N_COLOR_BIT, KEYEXTEND_CLEARMASK, KEYEXTEND_OBJECT3D, LINES, LINE_LOOP, LINE_STRIP, OFFSET_ASPECT_RATIO, OFFSET_ATTACH_STATUS, OFFSET_ATTR_OFFSET, OFFSET_ATTR_STRIDE, OFFSET_BIND_TARGET, OFFSET_BLEND_ACTIVE, OFFSET_BLEND_EQUATE, OFFSET_BLEND_FUNC, OFFSET_BLEND_INARG, OFFSET_BLEND_OUTARG, OFFSET_CHAR_LENGTH, OFFSET_CLEAR_COLOR, OFFSET_CLEAR_DEPTH, OFFSET_CLEAR_MASK, OFFSET_CULL_ENABLED, OFFSET_CULL_FACE, OFFSET_DEPTH_ACTIVE, OFFSET_DEPTH_FUNC, OFFSET_DEPTH_TEST, OFFSET_DRAGGING, OFFSET_DRAW_ACTIVE, OFFSET_DX, OFFSET_DY, OFFSET_FRONTFACE, OFFSET_HEIGHT, OFFSET_INUSE_STATUS, OFFSET_ISNORMALIZE, OFFSET_IS_ATTACHED, OFFSET_IS_COMPILED, OFFSET_IS_UPLOADED, OFFSET_JUMPING, OFFSET_KEY_ALT, OFFSET_KEY_CTRL, OFFSET_KEY_LOCATED, OFFSET_KEY_META, OFFSET_KEY_SHIFT, OFFSET_LEFT, OFFSET_LINKED_STATUS, OFFSET_LOCATION_AT, OFFSET_LOOKING, OFFSET_MOVE_BACK, OFFSET_MOVE_DOWN, OFFSET_MOVE_FWD, OFFSET_MOVE_LEFT, OFFSET_MOVE_RIGHT, OFFSET_MOVE_UP, OFFSET_NAME_LENGTH, OFFSET_NAME_TARRAY, OFFSET_NCOMPONENTS, OFFSET_O3_COLOR_4D, OFFSET_O3_POSITION, OFFSET_O3_ROTATION, OFFSET_O3_SCALE_3D, OFFSET_PIXEL_RATIO, OFFSET_PTR_BUTTON, OFFSET_PTR_CLICK, OFFSET_PTR_DCLICK, OFFSET_ROTATING, OFFSET_RX, OFFSET_RY, OFFSET_SHADER_TYPE, OFFSET_SHIFT_RATIO, OFFSET_SOURCE_TEXT, OFFSET_SX, OFFSET_SY, OFFSET_SZ, OFFSET_TIME, OFFSET_TOP, OFFSET_TYPE_GLCODE, OFFSET_UX_ENABLED, OFFSET_VX, OFFSET_VY, OFFSET_VZ, OFFSET_WALKING, OFFSET_WIDTH, OFFSET_X, OFFSET_Y, OFFSET_ZOOMING, POINTS, TRIANGLES, TRIANGLE_FAN, TRIANGLE_STRIP;
 
-import Pointer from "./ptr.js";
-
 import {
+  Pointer,
   Vertex,
   Angle3,
   Scale3,
   Color4,
-  OffsetPointer
+  Matrix4
 } from "./ptr.js";
 
 OFFSET_DRAW_ACTIVE = 4 * 0;
@@ -155,6 +154,14 @@ export var GL = (function() {
       return context;
     }
 
+    fork() {
+      //? Or if you know that the parent function 
+      //* doesn’t require arguments, 
+      //! just call super():
+      return super.fork();
+    }
+
+    //: return super.fork();
     getGLBuffer() {
       return this.getAllBuffers().at(0).getGLBuffer();
     }
@@ -831,7 +838,7 @@ Object.define(GL.prototype, {
   glBuffer: {
     get: GL.prototype.getGLBuffer
   },
-  allBuffers: {
+  buffers: {
     get: GL.prototype.getAllBuffers
   },
   allShaders: {
@@ -2238,6 +2245,30 @@ Object.define(Draw.prototype, {
   }
 });
 
+Object.symbol(Mode.prototype, {
+  iterate: {
+    value: function() {
+      var draw, ptri;
+      draw = this;
+      ptri = 0.00;
+      return {
+        next: function() {
+          if (!(ptri = draw.getNextChild(ptri))) {
+            return {
+              done: true,
+              value: draw
+            };
+          }
+          return {
+            done: false,
+            value: ptri
+          };
+        }
+      };
+    }
+  }
+});
+
 Object.define(Mode.registerClass(), {
   byteLength: {
     value: 4 * 0
@@ -2640,7 +2671,7 @@ Object.symbol(Buffer.prototype, {
       ptri = 0.00;
       return {
         next: function() {
-          if (!(ptri = mode.getNextChild(ptri, 16))) {
+          if (!(ptri = mode.getNextChild(ptri))) {
             return {
               done: true,
               value: mode
@@ -2661,7 +2692,7 @@ Object.define(Buffer.registerClass().prototype, {
     get: Buffer.prototype.keyBindTarget,
     set: Buffer.prototype.setBindTarget
   },
-  status: {
+  bound: {
     get: Buffer.prototype.getBindStatus,
     set: Buffer.prototype.setBindStatus
   }
@@ -2770,7 +2801,27 @@ Object.define(Object3.prototype, {
   },
   getMatrix: {
     value: function() {
-      return Float32Array.of(...this.getPosition(), 1, ...this.getRotation(), 1, ...this.getScale(), 1, 1, 1, 1, 1);
+      var mat4, ptri;
+      if (!(ptri = this.getResvUint32(0))) {
+        ptri = this.setResvUint32(0, mat4 = new Matrix4());
+        mat4.setLinkedNode(this);
+        this.runTransforms(mat4);
+      } else {
+        mat4 = new Matrix4(ptri);
+      }
+      return mat4;
+    }
+  },
+  runTransforms: {
+    value: function() {
+      var mat4;
+      mat4 = arguments[0] || this.getMatrix();
+      mat4.setIsUpdated(true);
+      mat4.reset();
+      mat4.translate(this.getPosition());
+      mat4.rotate(this.getRotation());
+      mat4.scale(this.getScale());
+      return mat4;
     }
   }
 });

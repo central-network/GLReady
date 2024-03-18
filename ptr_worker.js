@@ -16,7 +16,7 @@ addEventListener("message", function({data}) {
 });
 
 init = function(buffer) {
-  var gl, i, len, mode, ref, results;
+  var draw, gl, i, len, mode, ref, results;
   if (!buffer) {
     return;
   }
@@ -24,19 +24,28 @@ init = function(buffer) {
   worker = new Pointer(self.name);
   forker = worker.getParentPtrP();
   log(gl = forker);
-  ref = gl.getAllBuffers();
+  ref = gl.buffers;
   results = [];
   for (i = 0, len = ref.length; i < len; i++) {
     buffer = ref[i];
-    results.push((function() {
-      var j, len1, results1;
-      results1 = [];
-      for (j = 0, len1 = buffer.length; j < len1; j++) {
-        mode = buffer[j];
-        results1.push(console.log(mode));
-      }
-      return results1;
-    })());
+    if (buffer.bound) {
+      results.push((function() {
+        var results1;
+        results1 = [];
+        for (mode of buffer) {
+          results1.push((function() {
+            var results2;
+            results2 = [];
+            for (draw of mode) {
+              //console.log "mode:", mode * 1, "\t  draw:", draw * 1, "\t", [mode, draw], "\ttype:", draw.type
+              results2.push(console.log(draw.object3.matrix));
+            }
+            return results2;
+          })());
+        }
+        return results1;
+      })());
+    }
   }
   return results;
 };

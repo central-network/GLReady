@@ -1,5 +1,4 @@
-import Pointer from "./ptr.coffee"
-import { Vertex, Angle3, Scale3, Color4, OffsetPointer } from "./ptr.coffee"
+import { Pointer, Vertex, Angle3, Scale3, Color4, Matrix4 } from "./ptr.coffee"
 
 OFFSET_DRAW_ACTIVE  = 4 * 0
 OFFSET_CULL_ENABLED = 4 * 0 + 1
@@ -95,6 +94,14 @@ export class GL      extends Pointer
         context = arguments[0].getContext "webgl2"
         context . viewport left, top, width, height
         context
+
+    fork            : ->
+        #? Or if you know that the parent function 
+        #* doesn’t require arguments, 
+        #! just call super():
+        
+        super()
+        #: return super.fork();
 
     getGLBuffer     : -> @getAllBuffers().at(0).getGLBuffer()
         
@@ -429,7 +436,7 @@ Object.define GL::,
 
     glBuffer        : get : GL::getGLBuffer
 
-    allBuffers      : get : GL::getAllBuffers 
+    buffers         : get : GL::getAllBuffers 
 
     allShaders      : get : GL::getAllShaders
 
@@ -1017,7 +1024,7 @@ export class Attribute  extends ShaderKey
             key.setNameString   name
             key.setComponents   key.constructor.components
             key.setTypeGLCode   WebGL2RenderingContext.FLOAT
-            key.setNormalize    no
+            key.setNormalize    off
             key.setOffset       offset
 
             offset += key.getComponents() * 4
@@ -1222,6 +1229,15 @@ Object.define Draw::,
     color               : get   : Draw::getColor
 
     matrix              : get   : Draw::getMatrix
+
+Object.symbol Mode::,
+
+    iterate             : value : ->
+        draw = this ; ptri = 0.00
+        next : ->
+            unless ptri = draw . getNextChild ptri
+                return done : on , value : draw
+            return done : no , value : ptri
     
 Object.define Mode.registerClass(),
 
@@ -1229,7 +1245,7 @@ Object.define Mode.registerClass(),
 
     typedArray          : value : Uint32Array
 
-Object.hidden Mode,
+Object.hidden Mode  ,
 
     "array", "byteLength", "byteOffset", "headers", 
     "length", "link", "protoClass"
@@ -1457,7 +1473,7 @@ export class Buffer extends Pointer
     
     setModeOffset       : -> @setResvUint32 1 , arguments[0] 
 
-Object.hidden Buffer,
+Object.hidden Buffer  ,
 
     "headers", "protoClass", "length",  
     "array", "byteOffset", "byteLength", 
@@ -1465,17 +1481,17 @@ Object.hidden Buffer,
 Object.symbol Buffer::,
 
     iterate             : value : ->
-        mode = @ ; ptri = 0.00
+        mode = this ; ptri = 0.00
         next : ->
-            unless ptri = mode . getNextChild ptri , 16
-                return done : yes , value : mode
+            unless ptri = mode . getNextChild ptri
+                return done : on , value : mode
             return done : no , value : ptri
 
 Object.define Buffer.registerClass()::,
 
     type                : get : Buffer::keyBindTarget   , set : Buffer::setBindTarget 
 
-    status              : get : Buffer::getBindStatus   , set : Buffer::setBindStatus
+    bound               : get : Buffer::getBindStatus   , set : Buffer::setBindStatus
 
 OFFSET_O3_COLOR_4D      = 4 * 0
 
@@ -1485,13 +1501,13 @@ OFFSET_O3_ROTATION      = 4 * 8
 
 OFFSET_O3_SCALE_3D      = 4 * 12
 
-Object.define Object3 . registerClass(),
+Object.define Object3  . registerClass(),
 
     byteLength          : value : 4 * 12
 
     typedArray          : value : Float32Array
 
-Object.hidden Object3 , 
+Object.hidden Object3  , 
 
     "array", "byteLength", "byteOffset", 
     "headers", "length", "link", "protoClass"
@@ -1502,7 +1518,7 @@ Object.symbol Object3::,
 
         obj3 = @ ; ptri = 0.00 ; next : ->
             unless ptri = obj3 . getNextChild ptri
-                return done : yes , value : obj3
+                return done : on , value : obj3
             return done : no , value : ptri
 
 Object.define Object3::,
@@ -1521,24 +1537,40 @@ Object.define Object3::,
     
     getColor            : value : -> new Color4 @getByteOffset OFFSET_O3_COLOR_4D
 
-    setPosition         : value : -> @getPosition().set ...arguments
+    setPosition         : value : -> @getPosition().set arguments...
     
-    setRotation         : value : -> @getRotation().set ...arguments
+    setRotation         : value : -> @getRotation().set arguments...
     
-    setScale            : value : ->    @getScale().set ...arguments
+    setScale            : value : ->    @getScale().set arguments...
     
-    setColor            : value : ->    @getColor().set ...arguments
+    setColor            : value : ->    @getColor().set arguments...
 
     getMatrix           : value : ->
-        Float32Array.of(
-            ...@getPosition(), 1,
-            ...@getRotation(), 1,
-            ...@getScale()   , 1,
-            1, 1, 1, 1,
-        )
+
+        unless ptri = @getResvUint32 0
+
+            ptri = @setResvUint32 0 , mat4 = new Matrix4()
+            mat4 . setLinkedNode( this )
+            this . runTransforms( mat4 )
+
+        else mat4 = new Matrix4 ptri
+
+        mat4
+
+    runTransforms       : value : ->
+
+        mat4 = arguments[0] or @getMatrix()
+
+        mat4 . setIsUpdated yes
+        mat4 . reset()
+        mat4 . translate @getPosition()
+        mat4 . rotate @getRotation()
+        mat4 . scale @getScale()
+
+        mat4
 
 Object.define Object3::,
-
+    
     vertices            : get : Object3::getVertices   , set : Object3::setVertexArray
 
     position            : get : Object3::getPosition   , set : Object3::setPosition

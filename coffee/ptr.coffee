@@ -4,6 +4,47 @@ LE = ! new Uint8Array( Float32Array.of( 1 ).buffer )[ 0 ]
 OBJECTS = [,]
 SYM_LOOP = Symbol.iterator
 
+###
+    CoffeeScript	JavaScript
+    is	            ===
+    isnt	        !==
+    not	            !
+    and	            &&
+    or	            ||
+    true, yes, on	true
+    false, no, off 	false
+    @, this	        this
+    a in b	        [].indexOf.call(b, a) >= 0
+    a of b	        a in b
+    for a from b	for (a of b)
+    a ** b	        a ** b
+    a // b	        Math.floor(a / b)
+    a %% b	        (a % b + b) % b
+
+    <imporssible>   to ->
+    [
+        first,      <
+        chars...,   impossible
+        close       >
+    ] = tag.split("")
+
+
+ |- if  this.studyingEconomics
+ |___   buy()  while supply > demand
+    |   sell() until supply > demand
+    |
+    |
+    '-> if (this.studyingEconomics) {
+            while (supply > demand) {
+                buy();
+            }
+            while (!(supply > demand)) {
+                sell();
+            }
+        }
+
+###
+
 buf = u32 = i32 = dvw =
 palloc = malloc = false
 
@@ -68,7 +109,7 @@ Object.defineProperty Object, "symbol", value : ->
 Object.defineProperty Object, "hidden", value : ->
 
     try [ proto , ...props ] = [ ...arguments ]
-    finally desc = configurable : yes
+    finally desc = configurable : on
     for prop in props
         { get , set } = Object.getOwnPropertyDescriptor(
             Object.getPrototypeOf( proto:: ) , prop
@@ -99,7 +140,7 @@ Object.define DataView::,
             @setUint32 offset, i, LE
         OBJECTS[ i ]
 
-    delObject : value : ( offset ) ->
+    delObject : value : ( offset ###: number ### ) ->
         OBJECTS.splice offset, 1 ; 0
 
     getObject : value : ( offset ) ->
@@ -128,7 +169,7 @@ export class Scale3 extends Vector
 
 export class Color4 extends Number
 
-export class Color4Number extends Number
+export class Color4Number  extends Number
 
 export class OffsetPointer extends Number
 
@@ -301,7 +342,8 @@ Object.define Color4::,
             a = 0xff if isNaN a ; a /= 0xff 
             @setRed(r / 0xff).setGreen(g / 0xff).setBlue(b / 0xff).setAlpha( a )
 
-        else if (r and r <= 1) or (g and g <= 1) or (b and b <= 1)
+        else
+        if ( 0 <= r <= 1 ) or ( 0 <= g <= 1 ) or ( 0 <= b <= 1 )
             a = 1 if isNaN a
             @setRed(r).setGreen(g).setBlue(b).setAlpha(a)
 
@@ -426,9 +468,7 @@ OFFSET_PTRCLASS_4   = 4 * 10
 
 POINTER_PROTOTYPE   = [,]
 
-
-
-export default class Pointer extends Number
+export class Pointer        extends Number
 
     @setBuffer  : ( buf, max = 1e20 ) ->
 
@@ -470,8 +510,11 @@ export default class Pointer extends Number
 
         if  arguments.length
             if  this.constructor is Pointer
-                Object.setPrototypeOf this,
-                    POINTER_PROTOTYPE[ @getProtoClass() ]::
+
+                unless proto = POINTER_PROTOTYPE[ @getProtoClass() ]
+                    throw [ "PROTOCLASS_NOT_FOUND", this ]
+
+                Object.setPrototypeOf this, proto::
         else
             byteLength = @constructor.byteLength
             
@@ -481,8 +524,8 @@ export default class Pointer extends Number
                 
             this.init()
 
-    @from       : ( arrayLike ) ->
-        arr = [ ...arguments ].flat() 
+    @from       : ->
+        arr = [ arguments... ].flat() 
         ptr = @malloc( @byteLength + @BYTES_PER_ELEMENT * arr.length )
         ptr .subarray( @byteLength / @BYTES_PER_ELEMENT ) . set arr
         ptr
@@ -554,16 +597,20 @@ export default class Pointer extends Number
 
     add         : -> arguments[ 0 ].setParentPtri this
         
-    set         : -> @getTypedArray().set( ...arguments ) ; this
+    set         : -> @getTypedArray().set arguments... ; this
 
-    subarray    : -> @getTypedArray().subarray( ...arguments )
+    subarray    : -> @getTypedArray().subarray arguments...
 
-export class WorkerPointer extends Pointer
+    slice       : -> @getTypedArray().slice arguments...
+
+export class Matrix4        extends Pointer
+
+export class WorkerPointer  extends Pointer
 
 Object.symbol Pointer::,
 
     iterate             : value : ->
-        
+
         obj = this
         min = @getByteOffset()
         len = @getByteLength()
@@ -606,8 +653,6 @@ Object.define Pointer::,
         [   offset = POINTERS_BYTEOFFSET,
             stride = OFFSET_PARENT_PTR ] = arguments
 
-        console.log @constructor.name, stride:stride
-
         offset += stride
 
         while finish > offset += BYTES_PER_POINTER
@@ -619,7 +664,7 @@ Object.define Pointer::,
     getHeader       : value : -> dvw.getUint32 this + arguments[0] * 4, LE    
 
     getTypedArray   : value : -> new this.constructor.typedArray @buffer, @getByteOffset(), @getTypedLength()
-
+    
     getTypedLength  : value : -> @getByteLength() / @constructor.typedArray . BYTES_PER_ELEMENT
 
     findAllLinks    : value : -> @findAllChilds OFFSET_LINKEDNODE
@@ -688,7 +733,7 @@ Object.define Pointer::,
     
     getResvUint32   : value : -> dvw.getUint32 this + OFFSET_RESVERVEDS + arguments[0] * 4, LE
     
-    setResvUint32   : value : -> dvw.setUint32 this + OFFSET_RESVERVEDS + arguments[0] * 4, arguments[1], LE
+    setResvUint32   : value : -> dvw.setUint32 this + OFFSET_RESVERVEDS + arguments[0] * 4, arguments[1], LE ; arguments[ 1 ]
     
     addResvUint32   : value : -> dvw.setUint32 this + OFFSET_RESVERVEDS + arguments[0] * 4, arguments[1] + o = @getResvUint32( arguments[0] ), LE ; o
     
@@ -797,23 +842,226 @@ Object.define Pointer::,
 
 Object.define Pointer::,
 
-    length          : get : Pointer::getTypedLength
+    length          : get   : Pointer::getTypedLength
 
-    array           : get : Pointer::getTypedArray
+    array           : get   : Pointer::getTypedArray
 
-    children        : get : Pointer::findAllChilds
+    children        : get   : Pointer::findAllChilds
 
-    headers         : get : Pointer::getAllHeaders , set : Pointer::setAllHeaders
+    headers         : get   : Pointer::getAllHeaders , set : Pointer::setAllHeaders
 
-    byteOffset      : get : Pointer::getByteOffset , set : Pointer::setByteOffset
+    byteOffset      : get   : Pointer::getByteOffset , set : Pointer::setByteOffset
     
-    byteLength      : get : Pointer::getByteLength , set : Pointer::setByteLength
+    byteLength      : get   : Pointer::getByteLength , set : Pointer::setByteLength
     
-    protoClass      : get : Pointer::getProtoClass , set : Pointer::setProtoClass
+    protoClass      : get   : Pointer::getProtoClass , set : Pointer::setProtoClass
 
-    link            : get : Pointer::getLinkedNode , set : Pointer::setLinkedNode
+    link            : get   : Pointer::getLinkedNode , set : Pointer::setLinkedNode
     
-    parent          : get : Pointer::getParentPtrP , set : Pointer::setParentPtri
+    parent          : get   : Pointer::getParentPtrP , set : Pointer::setParentPtri
+
+Object.define Matrix4.registerClass(),
+
+    byteLength      : value : 4 * 16
+
+    typedArray      : value : Float32Array
+
+    identity        : value : Float32Array.of(
+        1,  0,  0,  0,
+        0,  1,  0,  0,
+        0,  0,  1,  0,
+        0,  0,  0,  1        
+    )
+
+    multiply        : value : ->
+        [ a, b ] = arguments
+
+        a00 = a[0 * 4 + 0]; a01 = a[0 * 4 + 1]; a02 = a[0 * 4 + 2]; a03 = a[0 * 4 + 3]
+        a10 = a[1 * 4 + 0]; a11 = a[1 * 4 + 1]; a12 = a[1 * 4 + 2]; a13 = a[1 * 4 + 3]
+        a20 = a[2 * 4 + 0]; a21 = a[2 * 4 + 1]; a22 = a[2 * 4 + 2]; a23 = a[2 * 4 + 3] 
+        a30 = a[3 * 4 + 0]; a31 = a[3 * 4 + 1]; a32 = a[3 * 4 + 2]; a33 = a[3 * 4 + 3]
+
+        b00 = b[0 * 4 + 0]; b01 = b[0 * 4 + 1]; b02 = b[0 * 4 + 2]; b03 = b[0 * 4 + 3] 
+        b10 = b[1 * 4 + 0]; b11 = b[1 * 4 + 1]; b12 = b[1 * 4 + 2]; b13 = b[1 * 4 + 3] 
+        b20 = b[2 * 4 + 0]; b21 = b[2 * 4 + 1]; b22 = b[2 * 4 + 2]; b23 = b[2 * 4 + 3] 
+        b30 = b[3 * 4 + 0]; b31 = b[3 * 4 + 1]; b32 = b[3 * 4 + 2]; b33 = b[3 * 4 + 3]
+        
+        Float32Array.of(
+            b00 * a00 + b01 * a10 + b02 * a20 + b03 * a30,
+            b00 * a01 + b01 * a11 + b02 * a21 + b03 * a31,
+            b00 * a02 + b01 * a12 + b02 * a22 + b03 * a32,
+            b00 * a03 + b01 * a13 + b02 * a23 + b03 * a33,
+            b10 * a00 + b11 * a10 + b12 * a20 + b13 * a30,
+            b10 * a01 + b11 * a11 + b12 * a21 + b13 * a31,
+            b10 * a02 + b11 * a12 + b12 * a22 + b13 * a32,
+            b10 * a03 + b11 * a13 + b12 * a23 + b13 * a33,
+            b20 * a00 + b21 * a10 + b22 * a20 + b23 * a30,
+            b20 * a01 + b21 * a11 + b22 * a21 + b23 * a31,
+            b20 * a02 + b21 * a12 + b22 * a22 + b23 * a32,
+            b20 * a03 + b21 * a13 + b22 * a23 + b23 * a33,
+            b30 * a00 + b31 * a10 + b32 * a20 + b33 * a30,
+            b30 * a01 + b31 * a11 + b32 * a21 + b33 * a31,
+            b30 * a02 + b31 * a12 + b32 * a22 + b33 * a32,
+            b30 * a03 + b31 * a13 + b32 * a23 + b33 * a33,
+        )
+
+    xRotation       : value : ->
+
+        c = Math.cos arguments[0] or 0
+        s = Math.sin arguments[0] or 0
+
+        Float32Array.of(
+             1,  0,  0,  0,
+             0,  c,  s,  0,
+             0, -s,  c,  0,
+             0,  0,  0,  1,
+        )
+
+    yRotation       : value : ->
+        c = Math.cos arguments[0] or 0
+        s = Math.sin arguments[0] or 0
+        
+        Float32Array.of(
+             c,  0, -s,  0,
+             0,  1,  0,  0,
+             s,  0,  c,  0,
+             0,  0,  0,  1,
+        )
+
+    zRotation       : value : ->
+        c = Math.cos arguments[0] or 0
+        s = Math.sin arguments[0] or 0
+        
+        Float32Array.of(
+             c,  s,  0,  0,
+            -s,  c,  0,  0,
+             0,  0,  1,  0,
+             0,  0,  0,  1,
+        )   
+
+    translation     : value : ->
+        [ dx = 0, dy = 0, dz = 0 ] =
+            if arguments[1] then arguments
+            else arguments[0]
+
+        Float32Array.of(
+            1,  0,  0,  0,
+            0,  1,  0,  0,
+            0,  0,  1,  0,
+           dx, dy, dz,  1,
+        )
+
+    xTranslation    : value : ->
+        Float32Array.of(
+             1,  0,  0,  0,
+             0,  1,  0,  0,
+             0,  0,  1,  0,
+             arguments[0] or 0,  0,  0,  1,
+        )
+
+    yTranslation    : value : ->
+        Float32Array.of(
+             1,  0,  0,  0,
+             0,  1,  0,  0,
+             0,  0,  1,  0,
+             0, arguments[0] or 0,  0,  1,
+        )
+
+    zTranslation    : value : ->
+        Float32Array.of(
+             1,  0,  0,  0,
+             0,  1,  0,  0,
+             0,  0,  1,  0,
+             0,  0, arguments[0] or 0,  1,
+        )
+
+    scalation       : value : ->
+        [ sx, sy, sz ] =
+            if arguments[1] then arguments
+            else if arguments[0] . slice then arguments[0]
+            else [ arguments[0] , arguments[0] , arguments[0] ]
+
+        Float32Array.of(
+            sx, 0,  0,  0,
+            0, sy,  0,  0,
+            0,  0, sz,  0,
+            0,  0,  0,  1,
+        )
+
+    xScale          : value : ->
+        Float32Array.of(
+            arguments[0] or 0,  0,  0,  0,
+            0,  1,  0,  0,
+            0,  0,  1,  0,
+            0,  0,  0,  1
+        )
+
+    yScale          : value : ->
+        Float32Array.of(
+            1,  0,  0,  0,
+            0, arguments[0] or 0,  0,  0,
+            0,  0,  1,  0,
+            0,  0,  0,  1
+        )        
+
+    zScale          : value : ->
+        Float32Array.of(
+            1,  0,  0,  0,
+            0,  1,  0,  0,
+            0,  0, arguments[0] or 0,  0,
+            0,  0,  0,  1
+        )
+
+Object.define Matrix4::,
+
+    getIsUpdated    : value : -> @getResvUint32 0
+    
+    setIsUpdated    : value : -> @setResvUint32 0, arguments[0]
+
+Object.define Matrix4::,
+
+    rotateX         : value : -> @multiply @slice(), Matrix4.xRotation arguments[0]
+
+    rotateY         : value : -> @multiply @slice(), Matrix4.yRotation arguments[0]
+
+    rotateZ         : value : -> @multiply @slice(), Matrix4.zRotation arguments[0]
+
+    translateX      : value : -> @multiply @slice(), Matrix4.xTranslation arguments[0]
+    
+    translateY      : value : -> @multiply @slice(), Matrix4.yTranslation arguments[0]
+
+    translateZ      : value : -> @multiply @slice(), Matrix4.zTranslation arguments[0]
+
+    scaleX          : value : -> @multiply @slice(), Matrix4.xScale arguments[0]
+    
+    scaleY          : value : -> @multiply @slice(), Matrix4.yScale arguments[0]
+
+    scaleZ          : value : -> @multiply @slice(), Matrix4.zScale arguments[0]
+
+Object.define Matrix4::,
+
+    reset           : value : -> @set Matrix4.identity
+
+    multiply        : value : -> @set Matrix4.multiply @slice(), arguments[0]
+
+    translate       : value : -> @multiply Matrix4.translation arguments...
+
+    scale           : value : -> @multiply Matrix4.scalation arguments...
+
+    rotate          : value : ->
+        [ rx, ry, rz ] =
+            if arguments[1] then arguments
+            else arguments[0]
+
+        this . xRotate rx if rx
+        this . yRotate ry if ry
+        this . yRotate rz if rz
+
+        this
+
+Object.define Matrix4::,
+
+    isUpdated       : get   : Matrix4::getIsUpdated , set   : Matrix4::setIsUpdated
 
 Object.define WorkerPointer.registerClass(),
     
@@ -850,10 +1098,9 @@ Object.define WorkerPointer::,
         get : WorkerPointer::getOnlineState,
         set : WorkerPointer::setOnlineState
 
-Pointer.setBuffer() if window?
+if window? then Pointer.setBuffer()
 
-
-if  window?
+if window?
 
     ival = 0
 
@@ -925,3 +1172,4 @@ if  window?
         console.table hist
         console.table dumpArray
 
+export default Pointer

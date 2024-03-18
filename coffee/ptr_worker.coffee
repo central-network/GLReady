@@ -7,7 +7,7 @@ forker = null
 addEventListener "message", ({ data }) ->
     #log "triggering worker init"
     init data
-, once : yes
+, once : on
 
 init = ( buffer ) ->
     return unless buffer
@@ -17,7 +17,9 @@ init = ( buffer ) ->
     forker = worker.getParentPtrP()
 
     log gl = forker
-    
-    for buffer in gl.getAllBuffers()
-        for mode in buffer
-            console.log mode
+
+    for buffer in gl.buffers when buffer.bound 
+        for mode from buffer then for draw from mode
+            #console.log "mode:", mode * 1, "\t  draw:", draw * 1, "\t", [mode, draw], "\ttype:", draw.type
+            console.log draw.object3.matrix
+
