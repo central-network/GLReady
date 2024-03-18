@@ -76,13 +76,13 @@
             gl.glClearDepth     = 1.1;
             gl.glDepthTest      = WebGL2RenderingContext.DEPTH_TEST;
             gl.glDepthFunc      = WebGL2RenderingContext.LEQUAL;
-            gl.glClearColor     = [ 15, 18, 26 ]
+            gl.clearColor       = [ 15, 18, 228, 255 ]
             gl.glBlendFunc      = WebGL2RenderingContext.BLEND;
             gl.glBlendEquation  = WebGL2RenderingContext.FUNC_ADD;
             gl.glBlendInArg     = WebGL2RenderingContext.SRC_COLOR;
             gl.glBlendOutArg    = WebGL2RenderingContext.DST_COLOR;
             gl.glBindTarget     = WebGL2RenderingContext.ARRAY_BUFFER;
-            gl.glClearMask      =
+            gl.clearMask        =
                 WebGL2RenderingContext.DEPTH_BUFFER_BIT |
                 WebGL2RenderingContext.COLOR_BUFFER_BIT ;
 
@@ -96,7 +96,7 @@
 
                 void main() {
                     gl_Position  =  u_Camera * vec4(a_Vertex, 1.0);
-                    gl_PointSize =  10.0;
+                    gl_PointSize =  20.0;
                     v_Color      =  a_Color;
                 }
             `;
@@ -119,7 +119,7 @@
                 .3, 1, 22
             ]);
 
-            o3.color = [ 1, 0, 0, .1 ];
+            o3.color = [ 0, 0, 1, 1 ];
 
             let o32 = Object3.from(
                 [
@@ -129,7 +129,7 @@
             );
             
             o32.position = [10]
-            o32.color = [ .1, 1, 0, .5 ];
+            o32.color = [ 0, 0, 1, 1 ];
 
             let o33 = Object3.from(
                 [
@@ -142,7 +142,7 @@
             );
 
             o33.position = [22, 144, -.124]
-            o33.color = [ .1, 1, .2, .5 ];
+            o33.color = [ 0, 0, 1, 1 ];
 
 
             buff.drawPoints( o3 )
@@ -156,16 +156,18 @@
             gl.add( o32 )
             gl.add( o33 )
 
-
             o32.add(o3);
             o32.add(o33);
 
 
             setTimeout(function (){
+                gl.clear()
+
                 for ( let mode of buff ) {
                     for ( let draw of mode ) {
                         draw.upload()
                     }
+                    mode.draw()
                 }
             }, 100)
 

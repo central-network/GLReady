@@ -162,6 +162,11 @@ export var GL = (function() {
     }
 
     //: return super.fork();
+    clear() {
+      this.gl.clearColor(...this.clearColor);
+      return this.gl.clear(this.clearMask);
+    }
+
     getGLBuffer() {
       return this.getAllBuffers().at(0).getGLBuffer();
     }
@@ -905,7 +910,7 @@ Object.define(GL.prototype, {
     get: GL.prototype.keyDepthFunc,
     set: GL.prototype.setDepthFunc
   },
-  glClearMask: {
+  clearMask: {
     get: GL.prototype.keyClearMask,
     set: GL.prototype.setClearMask
   },
@@ -917,7 +922,7 @@ Object.define(GL.prototype, {
     get: GL.prototype.getClearDepth,
     set: GL.prototype.setClearDepth
   },
-  glClearColor: {
+  clearColor: {
     get: GL.prototype.getClearColor,
     set: GL.prototype.setClearColor
   },
@@ -2339,6 +2344,11 @@ Object.define(Mode.prototype, {
       draw.setModeEnd(draw.getModeBegin() + length);
       return draw;
     }
+  },
+  draw: {
+    value: function() {
+      return this.gl.drawArrays(this.mode, this.first, this.count);
+    }
   }
 });
 
@@ -2459,10 +2469,13 @@ Object.define(Mode.prototype, {
 });
 
 Object.define(Mode.prototype, {
+  gl: {
+    get: Mode.prototype.getGL
+  },
   objects: {
     get: Mode.prototype.findObjects
   },
-  type: {
+  mode: {
     get: Mode.prototype.keyTypeGLCode,
     set: Mode.prototype.setTypeGLCode
   },

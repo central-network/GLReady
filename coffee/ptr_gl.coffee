@@ -103,6 +103,10 @@ export class GL      extends Pointer
         super()
         #: return super.fork();
 
+    clear           : ->
+        @gl.clearColor @clearColor...
+        @gl.clear @clearMask
+
     getGLBuffer     : -> @getAllBuffers().at(0).getGLBuffer()
         
     getGLError      : -> @getLinkedNode().getError()
@@ -472,13 +476,13 @@ Object.define GL::,
 
     glDepthFunc     : get : GL::keyDepthFunc    , set : GL::setDepthFunc
     
-    glClearMask     : get : GL::keyClearMask    , set : GL::setClearMask
+    clearMask       : get : GL::keyClearMask    , set : GL::setClearMask
     
     glBindTarget    : get : GL::keyBindTarget   , set : GL::setBindTarget
     
     glClearDepth    : get : GL::getClearDepth   , set : GL::setClearDepth
     
-    glClearColor    : get : GL::getClearColor   , set : GL::setClearColor
+    clearColor      : get : GL::getClearColor   , set : GL::setClearColor
     
     pxWidth         : get : GL::getWidth        , set : GL::setWidth
     
@@ -1296,6 +1300,8 @@ Object.define Mode::,
 
         draw
 
+    draw                : value : -> @gl.drawArrays @mode, @first, @count
+
 Object.define Mode::,
 
     getGL               : value : -> @getParentPtrP().getGL()
@@ -1344,9 +1350,11 @@ Object.define Mode::,
 
 Object.define Mode::,
 
+    gl                  : get   : Mode::getGL
+
     objects             : get   : Mode::findObjects
 
-    type                : get   : Mode::keyTypeGLCode , set   : Mode::setTypeGLCode
+    mode                : get   : Mode::keyTypeGLCode , set   : Mode::setTypeGLCode
 
     first               : get   : Mode::getFirstIndex , set   : Mode::setFirstIndex
     
