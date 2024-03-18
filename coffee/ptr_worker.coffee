@@ -19,13 +19,30 @@ init = ( buffer ) ->
     log gl = forker
 
     for buffer in gl.buffers when buffer.bound 
-        for mode from buffer then for draw from mode
-            #console.log "mode:", mode * 1, "\t  draw:", draw * 1, "\t", [mode, draw], "\ttype:", draw.type
-            
-            draw.object3.matrix
+        for mode from buffer
 
-            while vec3 = draw.object3.nextVertex()
-                mat4 = Matrix4.translation vec3
-                f32m = draw.object3.matrix.apply mat4
-                console.log f32m.subarray 12, 15
+            numCmponents = mode.numCmponents
+
+            for draw from mode
+
+                color = draw.object3.color
+                matrix = draw.object3.matrix
+                attribs = draw.attributes
+                numIndex = -numCmponents
+
+                while vertex = draw.object3.nextVertex()
+                    position = matrix.apply vertex
+
+                    attribs.set [
+                        ...position,
+                        ...color
+                    ], numIndex += numCmponents
+                    
+                draw.isUpdated = 1
+                mode.needUpload = 1
+
+            mode.isUpdated = 1
+            mode.needUpload = 1
+            
+            console.log mode
 

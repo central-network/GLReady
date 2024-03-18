@@ -1565,7 +1565,6 @@ Object.define Object3::,
             . rotate @getRotation()
             . scale @getScale()
 
-
     nextVertex          : value : ->
         next = @addResvUint32 2, 1
         max = @getVertexCount()

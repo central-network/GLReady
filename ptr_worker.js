@@ -19,7 +19,7 @@ addEventListener("message", function({data}) {
 });
 
 init = function(buffer) {
-  var draw, f32m, gl, i, len, mat4, mode, ref, results, vec3;
+  var attribs, color, draw, gl, i, len, matrix, mode, numCmponents, numIndex, position, ref, results, vertex;
   if (!buffer) {
     return;
   }
@@ -36,25 +36,22 @@ init = function(buffer) {
         var results1;
         results1 = [];
         for (mode of buffer) {
-          results1.push((function() {
-            var results2;
-            results2 = [];
-            for (draw of mode) {
-              //console.log "mode:", mode * 1, "\t  draw:", draw * 1, "\t", [mode, draw], "\ttype:", draw.type
-              draw.object3.matrix;
-              results2.push((function() {
-                var results3;
-                results3 = [];
-                while (vec3 = draw.object3.nextVertex()) {
-                  mat4 = Matrix4.translation(vec3);
-                  f32m = draw.object3.matrix.apply(mat4);
-                  results3.push(console.log(f32m.subarray(12, 15)));
-                }
-                return results3;
-              })());
+          numCmponents = mode.numCmponents;
+          for (draw of mode) {
+            color = draw.object3.color;
+            matrix = draw.object3.matrix;
+            attribs = draw.attributes;
+            numIndex = -numCmponents;
+            while (vertex = draw.object3.nextVertex()) {
+              position = matrix.apply(vertex);
+              attribs.set([...position, ...color], numIndex += numCmponents);
             }
-            return results2;
-          })());
+            draw.isUpdated = 1;
+            mode.needUpload = 1;
+          }
+          mode.isUpdated = 1;
+          mode.needUpload = 1;
+          results1.push(console.log(mode));
         }
         return results1;
       })());

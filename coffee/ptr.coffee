@@ -1042,7 +1042,9 @@ Object.define Matrix4::,
 
     reset           : value : -> @set Matrix4.identity
 
-    apply           : value : -> arguments[0].set Matrix4.multiply arguments[0], @slice() ; arguments[0]
+    apply           : value : ->
+        mat4 = Matrix4.translation arguments[0]
+        Matrix4.multiply( mat4, @slice() ).subarray 12, 15
 
     multiply        : value : -> @set Matrix4.multiply @slice(), arguments[0]
 

@@ -1584,8 +1584,9 @@ Object.define(Matrix4.prototype, {
   },
   apply: {
     value: function() {
-      arguments[0].set(Matrix4.multiply(arguments[0], this.slice()));
-      return arguments[0];
+      var mat4;
+      mat4 = Matrix4.translation(arguments[0]);
+      return Matrix4.multiply(mat4, this.slice()).subarray(12, 15);
     }
   },
   multiply: {
