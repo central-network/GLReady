@@ -161,11 +161,11 @@
 
 
             setTimeout(function (){
+                
                 gl.clear()
 
-                for ( let mode of buff )
-                    for ( let draw of mode )
-                        draw.upload()   
+                for ( let mode of buff ) for ( let draw of mode )
+                    draw.upload()   
 
                 for ( let attr of program.attributes )
                     attr.enable()
