@@ -1266,7 +1266,7 @@ Object.define Mode.registerClass(),
 Object.hidden Mode  ,
 
     "array", "byteLength", "byteOffset", "headers", 
-    "length", "link", "protoClass"
+    "length", "protoClass"
 
 Object.define Mode::,
 
@@ -1304,7 +1304,7 @@ Object.define Mode::,
 
 Object.define Mode::,
 
-    getGL               : value : -> @getParentPtrP().getGL()
+    getGL               : value : -> @parent.getGL()# todo fix worker  
 
     findObjects         : value : -> @findAllChilds().flatMap (v) -> v.object3
 

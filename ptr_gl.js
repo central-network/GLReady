@@ -2313,7 +2313,7 @@ Object.define(Mode.registerClass(), {
   }
 });
 
-Object.hidden(Mode, "array", "byteLength", "byteOffset", "headers", "length", "link", "protoClass");
+Object.hidden(Mode, "array", "byteLength", "byteOffset", "headers", "length", "protoClass");
 
 Object.define(Mode.prototype, {
   is: {
@@ -2355,7 +2355,7 @@ Object.define(Mode.prototype, {
 Object.define(Mode.prototype, {
   getGL: {
     value: function() {
-      return this.getParentPtrP().getGL();
+      return this.parent.getGL(); // todo fix worker  
     }
   },
   findObjects: {
