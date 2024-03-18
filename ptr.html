@@ -149,16 +149,11 @@
             buff.drawTriangles( o3 )
             buff.drawTriangles( o32 )
             buff.drawTriangles( o33 )
-
-            let draw = buff.drawLines( o32 )
-
-            gl.add( o3 )
-            gl.add( o32 )
-            gl.add( o33 )
+            buff.drawLines( o32 )
+            
 
             o32.add(o3);
             o32.add(o33);
-
 
             setTimeout(function (){
                 
