@@ -1,4 +1,4 @@
-import Pointer from "./ptr.js"
+import { Pointer, Matrix4 } from "./ptr.js"
 import "./ptr_gl.js"
 
 worker = null
@@ -21,5 +21,11 @@ init = ( buffer ) ->
     for buffer in gl.buffers when buffer.bound 
         for mode from buffer then for draw from mode
             #console.log "mode:", mode * 1, "\t  draw:", draw * 1, "\t", [mode, draw], "\ttype:", draw.type
-            console.log draw.object3.matrix
+            
+            draw.object3.matrix
+
+            while vec3 = draw.object3.nextVertex()
+                mat4 = Matrix4.translation vec3
+                f32m = draw.object3.matrix.apply mat4
+                console.log f32m.subarray 12, 15
 

@@ -1525,7 +1525,7 @@ Object.define Object3::,
 
     getDraws            : value : -> @findAllLinks().filter (v) -> v instanceof Draw
 
-    getVertices         : value : -> @subarray( @constructor.LENGTH_OF_POINTER)
+    getVertices         : value : -> @subarray( @constructor.LENGTH_OF_POINTER )
 
     setVertices         : value : -> @set(      @constructor.LENGTH_OF_POINTER, arguments[ 0 ])
 
@@ -1545,29 +1545,35 @@ Object.define Object3::,
     
     setColor            : value : ->    @getColor().set arguments...
 
+    getVertexCount      : value : -> @getResvUint32( 1 ) or @setVertexCount()
+    
+    setVertexCount      : value : -> @setResvUint32( 1, arguments[0] or @getVertices().length / 3 )
+
     getMatrix           : value : ->
 
-        unless ptri = @getResvUint32 0
+        if  ptri = @getResvUint32 0
+            return new Matrix4 ptri
 
-            ptri = @setResvUint32 0 , mat4 = new Matrix4()
-            mat4 . setLinkedNode( this )
-            this . runTransforms( mat4 )
-
-        else mat4 = new Matrix4 ptri
-
-        mat4
-
-    runTransforms       : value : ->
-
-        mat4 = arguments[0] or @getMatrix()
-
-        mat4 . setIsUpdated yes
-        mat4 . reset()
-        mat4 . translate @getPosition()
-        mat4 . rotate @getRotation()
-        mat4 . scale @getScale()
+        this
+            . setResvUint32 0 , mat4 = new Matrix4()
+            . setLinkedNode this
 
         mat4
+            . setIsUpdated yes
+            . reset()
+            . translate @getPosition()
+            . rotate @getRotation()
+            . scale @getScale()
+
+
+    nextVertex          : value : ->
+        next = @addResvUint32 2, 1
+        max = @getVertexCount()
+        return @setResvUint32 2, 0 if next >= max
+
+        begin = next * 3
+        end = begin + 3
+        return @vertices.subarray begin, end
 
 Object.define Object3::,
     

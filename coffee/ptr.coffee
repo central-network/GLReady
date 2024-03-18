@@ -1016,7 +1016,7 @@ Object.define Matrix4::,
 
     getIsUpdated    : value : -> @getResvUint32 0
     
-    setIsUpdated    : value : -> @setResvUint32 0, arguments[0]
+    setIsUpdated    : value : -> @setResvUint32 0, arguments[0] ; this
 
 Object.define Matrix4::,
 
@@ -1041,6 +1041,8 @@ Object.define Matrix4::,
 Object.define Matrix4::,
 
     reset           : value : -> @set Matrix4.identity
+
+    apply           : value : -> arguments[0].set Matrix4.multiply arguments[0], @slice() ; arguments[0]
 
     multiply        : value : -> @set Matrix4.multiply @slice(), arguments[0]
 

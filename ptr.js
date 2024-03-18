@@ -1522,7 +1522,8 @@ Object.define(Matrix4.prototype, {
   },
   setIsUpdated: {
     value: function() {
-      return this.setResvUint32(0, arguments[0]);
+      this.setResvUint32(0, arguments[0]);
+      return this;
     }
   }
 });
@@ -1579,6 +1580,12 @@ Object.define(Matrix4.prototype, {
   reset: {
     value: function() {
       return this.set(Matrix4.identity);
+    }
+  },
+  apply: {
+    value: function() {
+      arguments[0].set(Matrix4.multiply(arguments[0], this.slice()));
+      return arguments[0];
     }
   },
   multiply: {

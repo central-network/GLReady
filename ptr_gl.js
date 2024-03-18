@@ -2799,29 +2799,37 @@ Object.define(Object3.prototype, {
       return this.getColor().set(...arguments);
     }
   },
+  getVertexCount: {
+    value: function() {
+      return this.getResvUint32(1) || this.setVertexCount();
+    }
+  },
+  setVertexCount: {
+    value: function() {
+      return this.setResvUint32(1, arguments[0] || this.getVertices().length / 3);
+    }
+  },
   getMatrix: {
     value: function() {
       var mat4, ptri;
-      if (!(ptri = this.getResvUint32(0))) {
-        ptri = this.setResvUint32(0, mat4 = new Matrix4());
-        mat4.setLinkedNode(this);
-        this.runTransforms(mat4);
-      } else {
-        mat4 = new Matrix4(ptri);
+      if (ptri = this.getResvUint32(0)) {
+        return new Matrix4(ptri);
       }
-      return mat4;
+      this.setResvUint32(0, mat4 = new Matrix4()).setLinkedNode(this);
+      return mat4.setIsUpdated(true).reset().translate(this.getPosition()).rotate(this.getRotation()).scale(this.getScale());
     }
   },
-  runTransforms: {
+  nextVertex: {
     value: function() {
-      var mat4;
-      mat4 = arguments[0] || this.getMatrix();
-      mat4.setIsUpdated(true);
-      mat4.reset();
-      mat4.translate(this.getPosition());
-      mat4.rotate(this.getRotation());
-      mat4.scale(this.getScale());
-      return mat4;
+      var begin, end, max, next;
+      next = this.addResvUint32(2, 1);
+      max = this.getVertexCount();
+      if (next >= max) {
+        return this.setResvUint32(2, 0);
+      }
+      begin = next * 3;
+      end = begin + 3;
+      return this.vertices.subarray(begin, end);
     }
   }
 });

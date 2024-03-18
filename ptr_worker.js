@@ -1,6 +1,9 @@
 var forker, init, worker;
 
-import Pointer from "./ptr.js";
+import {
+  Pointer,
+  Matrix4
+} from "./ptr.js";
 
 import "./ptr_gl.js";
 
@@ -16,7 +19,7 @@ addEventListener("message", function({data}) {
 });
 
 init = function(buffer) {
-  var draw, gl, i, len, mode, ref, results;
+  var draw, f32m, gl, i, len, mat4, mode, ref, results, vec3;
   if (!buffer) {
     return;
   }
@@ -38,7 +41,17 @@ init = function(buffer) {
             results2 = [];
             for (draw of mode) {
               //console.log "mode:", mode * 1, "\t  draw:", draw * 1, "\t", [mode, draw], "\ttype:", draw.type
-              results2.push(console.log(draw.object3.matrix));
+              draw.object3.matrix;
+              results2.push((function() {
+                var results3;
+                results3 = [];
+                while (vec3 = draw.object3.nextVertex()) {
+                  mat4 = Matrix4.translation(vec3);
+                  f32m = draw.object3.matrix.apply(mat4);
+                  results3.push(console.log(f32m.subarray(12, 15)));
+                }
+                return results3;
+              })());
             }
             return results2;
           })());
