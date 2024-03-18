@@ -2124,6 +2124,21 @@ Object.define(Draw.registerClass(), {
 Object.hidden(Draw, "parent", "link", "array", "headers", "protoClass", "length", "children", "byteOffset", "byteLength");
 
 Object.define(Draw.prototype, {
+  getGL: {
+    value: function() {
+      return this.ptrParentNode().getGL();
+    }
+  },
+  getTarget: {
+    value: function() {
+      return this.ptrParentNode().ptrParentNode().getBindTarget();
+    }
+  },
+  getSrcData: {
+    value: function() {
+      return this.ptrParentNode().ptrParentNode().getTypedArray();
+    }
+  },
   keyTypeGLCode: {
     value: function() {
       return this.ptrParentNode().keyTypeGLCode();
@@ -2204,10 +2219,25 @@ Object.define(Draw.prototype, {
     value: function() {
       return this.ptrLinkedNode().getMatrix();
     }
+  },
+  upload: {
+    value: function() {
+      this.gl.bufferSubData(this.target, this.dstOffset, this.srcData, this.start, this.count);
+      return this;
+    }
   }
 });
 
 Object.define(Draw.prototype, {
+  gl: {
+    get: Draw.prototype.getGL
+  },
+  target: {
+    get: Draw.prototype.getTarget
+  },
+  srcData: {
+    get: Draw.prototype.getSrcData
+  },
   object3: {
     get: Draw.prototype.ptrLinkedNode,
     set: Draw.prototype.setLinkedPtri
@@ -2476,6 +2506,7 @@ export var Buffer = (function() {
         return this;
       }
       this.getGL().bindBuffer(this.getBindTarget(), this.getGLBuffer());
+      this.getGL().bufferData(this.getBindTarget(), this.getTypedArray(), this.getUsage() || this.setUsage(this.STATIC_DRAW));
       this.setBindStatus(1);
       return this;
     }
@@ -2597,7 +2628,8 @@ export var Buffer = (function() {
     }
 
     setBindStatus() {
-      return this.setResvUint16(0, arguments[0]);
+      this.setResvUint16(0, arguments[0]);
+      return this;
     }
 
     keyBindTarget() {
@@ -2609,19 +2641,34 @@ export var Buffer = (function() {
     }
 
     setBindTarget() {
-      return this.setResvUint16(1, arguments[0]);
+      this.setResvUint16(1, arguments[0]);
+      return arguments[0];
+    }
+
+    keyUsage() {
+      return this.keyResvUint16(2);
+    }
+
+    getUsage() {
+      return this.getResvUint16(2);
+    }
+
+    setUsage() {
+      this.setResvUint16(2, arguments[0]);
+      return arguments[0];
     }
 
     getModeOffset() {
-      return this.getResvUint32(1);
+      return this.getResvUint32(2);
     }
 
     addModeOffset() {
-      return this.addResvUint32(1, arguments[0]);
+      return this.addResvUint32(2, arguments[0]);
     }
 
     setModeOffset() {
-      return this.setResvUint32(1, arguments[0]);
+      this.setResvUint32(2, arguments[0]);
+      return arguments[0];
     }
 
   };
@@ -2631,11 +2678,41 @@ export var Buffer = (function() {
   Buffer.typedArray = Float32Array;
 
   Object.define(Buffer.prototype, {
+    STATIC_DRAW: {
+      value: WebGLRenderingContext.STATIC_DRAW
+    },
+    DYNAMIC_DRAW: {
+      value: WebGLRenderingContext.DYNAMIC_DRAW
+    },
+    STREAM_DRAW: {
+      value: WebGLRenderingContext.STREAM_DRAW
+    },
+    STATIC_READ: {
+      value: WebGL2RenderingContext.STATIC_READ
+    },
+    DYNAMIC_READ: {
+      value: WebGL2RenderingContext.DYNAMIC_READ
+    },
+    STREAM_READ: {
+      value: WebGL2RenderingContext.STREAM_READ
+    },
+    STATIC_COPY: {
+      value: WebGL2RenderingContext.STATIC_COPY
+    },
+    DYNAMIC_COPY: {
+      value: WebGL2RenderingContext.DYNAMIC_COPY
+    },
+    STREAM_COPY: {
+      value: WebGL2RenderingContext.STREAM_COPY
+    }
+  });
+
+  Object.define(Buffer.prototype, {
     ARRAY_BUFFER: {
-      value: WebGL2RenderingContext.ARRAY_BUFFER
+      value: WebGLRenderingContext.ARRAY_BUFFER
     },
     ELEMENT_BUFFER: {
-      value: WebGL2RenderingContext.ELEMENT_ARRAY_BUFFER
+      value: WebGLRenderingContext.ELEMENT_ARRAY_BUFFER
     },
     COPY_READ: {
       value: WebGL2RenderingContext.COPY_READ_BUFFER
@@ -2688,13 +2765,20 @@ Object.symbol(Buffer.prototype, {
 });
 
 Object.define(Buffer.registerClass().prototype, {
-  type: {
+  target: {
     get: Buffer.prototype.keyBindTarget,
     set: Buffer.prototype.setBindTarget
   },
   bound: {
     get: Buffer.prototype.getBindStatus,
     set: Buffer.prototype.setBindStatus
+  },
+  usage: {
+    get: Buffer.prototype.keyUsage,
+    set: Buffer.prototype.setUsage
+  },
+  attributes: {
+    get: Buffer.prototype.getTypedArray
   }
 });
 

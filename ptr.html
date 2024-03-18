@@ -160,8 +160,15 @@
             o32.add(o3);
             o32.add(o33);
 
-            //for ( let child of o32 )
-            //    console.log( performance.now(), child  )
+
+            setTimeout(function (){
+                for ( let mode of buff ) {
+                    for ( let draw of mode ) {
+                        draw.upload()
+                    }
+                }
+            }, 100)
+
 
 
         </script>

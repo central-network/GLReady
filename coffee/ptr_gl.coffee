@@ -1176,6 +1176,12 @@ Object.hidden Draw,
 
 Object.define Draw::,
 
+    getGL               : value : -> @ptrParentNode().getGL()
+
+    getTarget           : value : -> @ptrParentNode().ptrParentNode().getBindTarget()
+
+    getSrcData          : value : -> @ptrParentNode().ptrParentNode().getTypedArray()
+
     keyTypeGLCode       : value : -> @ptrParentNode().keyTypeGLCode()
 
     getDstOffset        : value : -> @getResvUint32 0
@@ -1208,7 +1214,15 @@ Object.define Draw::,
 
     getMatrix           : value : -> @ptrLinkedNode().getMatrix()
 
+    upload              : value : -> @gl.bufferSubData @target, @dstOffset, @srcData, @start, @count ; this
+
 Object.define Draw::,
+
+    gl                  : get   : Draw::getGL
+
+    target              : get   : Draw::getTarget
+
+    srcData             : get   : Draw::getSrcData
 
     object3             : get   : Draw::ptrLinkedNode   , set   : Draw::setLinkedPtri
 
@@ -1352,9 +1366,29 @@ export class Buffer extends Pointer
 
     Object.define this::,
 
-        ARRAY_BUFFER    : value : WebGL2RenderingContext.ARRAY_BUFFER
+        STATIC_DRAW     : value : WebGLRenderingContext.STATIC_DRAW
 
-        ELEMENT_BUFFER  : value : WebGL2RenderingContext.ELEMENT_ARRAY_BUFFER
+        DYNAMIC_DRAW    : value : WebGLRenderingContext.DYNAMIC_DRAW
+        
+        STREAM_DRAW     : value : WebGLRenderingContext.STREAM_DRAW
+
+        STATIC_READ     : value : WebGL2RenderingContext.STATIC_READ
+
+        DYNAMIC_READ    : value : WebGL2RenderingContext.DYNAMIC_READ
+        
+        STREAM_READ     : value : WebGL2RenderingContext.STREAM_READ
+        
+        STATIC_COPY     : value : WebGL2RenderingContext.STATIC_COPY
+        
+        DYNAMIC_COPY    : value : WebGL2RenderingContext.DYNAMIC_COPY
+
+        STREAM_COPY     : value : WebGL2RenderingContext.STREAM_COPY
+
+    Object.define this::,
+
+        ARRAY_BUFFER    : value : WebGLRenderingContext.ARRAY_BUFFER
+
+        ELEMENT_BUFFER  : value : WebGLRenderingContext.ELEMENT_ARRAY_BUFFER
 
         COPY_READ       : value : WebGL2RenderingContext.COPY_READ_BUFFER
 
@@ -1377,6 +1411,7 @@ export class Buffer extends Pointer
     bind                : ->
         return this if @getBindStatus()
         @getGL().bindBuffer @getBindTarget() , @getGLBuffer()
+        @getGL().bufferData @getBindTarget() , @getTypedArray() , @getUsage() or @setUsage @STATIC_DRAW
         @setBindStatus 1 ; this
 
     load                : ->
@@ -1459,19 +1494,25 @@ export class Buffer extends Pointer
 
     getBindStatus       : -> @getResvUint16 0
 
-    setBindStatus       : -> @setResvUint16 0 , arguments[0]
+    setBindStatus       : -> @setResvUint16 0 , arguments[0] ; this
 
     keyBindTarget       : -> @keyResvUint16 1
 
     getBindTarget       : -> @getResvUint16 1
 
-    setBindTarget       : -> @setResvUint16 1 , arguments[0]
+    setBindTarget       : -> @setResvUint16 1 , arguments[0] ; arguments[0]
 
-    getModeOffset       : -> @getResvUint32 1
+    keyUsage            : -> @keyResvUint16 2
 
-    addModeOffset       : -> @addResvUint32 1 , arguments[0] 
+    getUsage            : -> @getResvUint16 2
+
+    setUsage            : -> @setResvUint16 2 , arguments[0] ; arguments[0]
+
+    getModeOffset       : -> @getResvUint32 2
+
+    addModeOffset       : -> @addResvUint32 2 , arguments[0] 
     
-    setModeOffset       : -> @setResvUint32 1 , arguments[0] 
+    setModeOffset       : -> @setResvUint32 2 , arguments[0] ; arguments[0] 
 
 Object.hidden Buffer  ,
 
@@ -1489,9 +1530,13 @@ Object.symbol Buffer::,
 
 Object.define Buffer.registerClass()::,
 
-    type                : get : Buffer::keyBindTarget   , set : Buffer::setBindTarget 
+    target              : get : Buffer::keyBindTarget   , set : Buffer::setBindTarget 
 
     bound               : get : Buffer::getBindStatus   , set : Buffer::setBindStatus
+
+    usage               : get : Buffer::keyUsage        , set : Buffer::setUsage
+
+    attributes          : get : Buffer::getTypedArray
 
 OFFSET_O3_COLOR_4D      = 4 * 0
 
