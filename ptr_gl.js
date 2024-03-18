@@ -2347,6 +2347,12 @@ Object.define(Mode.prototype, {
   },
   draw: {
     value: function() {
+      var attr, j, len, ref;
+      ref = this.program.attributes;
+      for (j = 0, len = ref.length; j < len; j++) {
+        attr = ref[j];
+        attr.link();
+      }
       return this.gl.drawArrays(this.mode, this.first, this.count);
     }
   }
@@ -2356,6 +2362,16 @@ Object.define(Mode.prototype, {
   getGL: {
     value: function() {
       return this.parent.getGL(); // todo fix worker  
+    }
+  },
+  getBuffer: {
+    value: function() {
+      return this.parent;
+    }
+  },
+  getProgram: {
+    value: function() {
+      return this.buffer.parent.program;
     }
   },
   findObjects: {
@@ -2471,6 +2487,12 @@ Object.define(Mode.prototype, {
 Object.define(Mode.prototype, {
   gl: {
     get: Mode.prototype.getGL
+  },
+  buffer: {
+    get: Mode.prototype.getBuffer
+  },
+  program: {
+    get: Mode.prototype.getProgram
   },
   objects: {
     get: Mode.prototype.findObjects

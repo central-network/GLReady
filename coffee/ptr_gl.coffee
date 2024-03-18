@@ -1300,11 +1300,17 @@ Object.define Mode::,
 
         draw
 
-    draw                : value : -> @gl.drawArrays @mode, @first, @count
+    draw                : value : ->
+        do attr.link for attr in @program . attributes
+        @gl.drawArrays @mode , @first , @count
 
 Object.define Mode::,
 
     getGL               : value : -> @parent.getGL()# todo fix worker  
+
+    getBuffer           : value : -> @parent
+
+    getProgram          : value : -> @buffer.parent.program
 
     findObjects         : value : -> @findAllChilds().flatMap (v) -> v.object3
 
@@ -1351,6 +1357,10 @@ Object.define Mode::,
 Object.define Mode::,
 
     gl                  : get   : Mode::getGL
+
+    buffer              : get   : Mode::getBuffer
+
+    program             : get   : Mode::getProgram
 
     objects             : get   : Mode::findObjects
 
