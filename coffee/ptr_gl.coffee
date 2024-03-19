@@ -424,141 +424,141 @@ Object.symbol GL,
 
 Object.define GL::,
 
-    gl              : get : GL::getLinkedNode
+    gl              : get   : GL::getLinkedNode
 
-    glError         : get : GL::getGLError
+    glError         : get   : GL::getGLError
 
-    program         : get : GL::getProgram
+    program         : get   : GL::getProgram
 
-    programVertex   : get : GL::getVertShader
+    programVertex   : get   : GL::getVertShader
 
-    programFragment : get : GL::getFragShader
+    programFragment : get   : GL::getFragShader
 
-    programAttribs  : get : GL::getAttributes
+    programAttribs  : get   : GL::getAttributes
 
-    glBuffer        : get : GL::getGLBuffer
+    glBuffer        : get   : GL::getGLBuffer
 
-    buffers         : get : GL::getAllBuffers 
+    buffers         : get   : GL::getAllBuffers 
 
-    allShaders      : get : GL::getAllShaders
+    allShaders      : get   : GL::getAllShaders
 
-    allPrograms     : get : GL::getAllPrograms
+    allPrograms     : get   : GL::getAllPrograms
 
-    allVariables    : get : GL::getAllVariables
+    allVariables    : get   : GL::getAllVariables
 
-    allUniforms     : get : GL::getUniforms
+    allUniforms     : get   : GL::getUniforms
 
-    nodeBuffer      : get : GL::getArrayBuffer
+    nodeBuffer      : get   : GL::getArrayBuffer
 
-    canvas          : get : GL::getCanvasNode   , set : GL::setCanvasNode
+    canvas          : get   : GL::getCanvasNode   , set : GL::setCanvasNode
 
-    glActive        : get : GL::getDrawActive   , set : GL::setDrawActive
+    glActive        : get   : GL::getDrawActive   , set : GL::setDrawActive
             
-    glCullEnabled   : get : GL::getCullEnabled  , set : GL::setCullEnabled
+    glCullEnabled   : get   : GL::getCullEnabled  , set : GL::setCullEnabled
 
-    glCullFace      : get : GL::keyCullFace     , set : GL::setCullFace
+    glCullFace      : get   : GL::keyCullFace     , set : GL::setCullFace
     
-    glFrontFace     : get : GL::keyFrontFace    , set : GL::setFrontFace
+    glFrontFace     : get   : GL::keyFrontFace    , set : GL::setFrontFace
     
-    glBlendEnabled  : get : GL::getBlendActive  , set : GL::setBlendActive
+    glBlendEnabled  : get   : GL::getBlendActive  , set : GL::setBlendActive
     
-    glBlendEquation : get : GL::keyBlendEquate  , set : GL::setBlendEquate
+    glBlendEquation : get   : GL::keyBlendEquate  , set : GL::setBlendEquate
     
-    glBlendFunc     : get : GL::keyBlendFunc    , set : GL::setBlendFunc
+    glBlendFunc     : get   : GL::keyBlendFunc    , set : GL::setBlendFunc
     
-    glBlendInArg    : get : GL::keyBlendInArg   , set : GL::setBlendInArg
+    glBlendInArg    : get   : GL::keyBlendInArg   , set : GL::setBlendInArg
 
-    glBlendOutArg   : get : GL::keyBlendOutArg  , set : GL::setBlendOutArg
+    glBlendOutArg   : get   : GL::keyBlendOutArg  , set : GL::setBlendOutArg
     
-    glDepthEnabled  : get : GL::getDepthActive  , set : GL::setDepthActive
+    glDepthEnabled  : get   : GL::getDepthActive  , set : GL::setDepthActive
     
-    glDepthTest     : get : GL::keyDepthTest    , set : GL::setDepthTest
+    glDepthTest     : get   : GL::keyDepthTest    , set : GL::setDepthTest
 
-    glDepthFunc     : get : GL::keyDepthFunc    , set : GL::setDepthFunc
+    glDepthFunc     : get   : GL::keyDepthFunc    , set : GL::setDepthFunc
     
-    clearMask       : get : GL::keyClearMask    , set : GL::setClearMask
+    clearMask       : get   : GL::keyClearMask    , set : GL::setClearMask
     
-    glBindTarget    : get : GL::keyBindTarget   , set : GL::setBindTarget
+    glBindTarget    : get   : GL::keyBindTarget   , set : GL::setBindTarget
     
-    glClearDepth    : get : GL::getClearDepth   , set : GL::setClearDepth
+    glClearDepth    : get   : GL::getClearDepth   , set : GL::setClearDepth
     
-    clearColor      : get : GL::getClearColor   , set : GL::setClearColor
+    clearColor      : get   : GL::getClearColor   , set : GL::setClearColor
     
-    pxWidth         : get : GL::getWidth        , set : GL::setWidth
+    pxWidth         : get   : GL::getWidth        , set : GL::setWidth
     
-    pxHeight        : get : GL::getHeight       , set : GL::setHeight
+    pxHeight        : get   : GL::getHeight       , set : GL::setHeight
     
-    pxLeft          : get : GL::getLeft         , set : GL::setLeft
+    pxLeft          : get   : GL::getLeft         , set : GL::setLeft
     
-    pxTop           : get : GL::getTop          , set : GL::setTop
+    pxTop           : get   : GL::getTop          , set : GL::setTop
 
-    ratioPixel      : get : GL::getPixelRatio   , set : GL::setPixelRatio
+    ratioPixel      : get   : GL::getPixelRatio   , set : GL::setPixelRatio
     
-    ratioAspect     : get : GL::getAspectRatio  , set : GL::setAspectRatio
+    ratioAspect     : get   : GL::getAspectRatio  , set : GL::setAspectRatio
     
-    ratioShift      : get : GL::getShiftRatio   , set : GL::setShiftRatio
+    ratioShift      : get   : GL::getShiftRatio   , set : GL::setShiftRatio
     
-    uxActive        : get : GL::getUXEnabled    , set : GL::setUXEnabled
+    uxActive        : get   : GL::getUXEnabled    , set : GL::setUXEnabled
 
-    uxMoveWalking   : get : GL::getWalking      , set : GL::setWalking
+    uxMoveWalking   : get   : GL::getWalking      , set : GL::setWalking
     
-    uxMoveJumping   : get : GL::getJumping      , set : GL::setJumping
+    uxMoveJumping   : get   : GL::getJumping      , set : GL::setJumping
 
-    uxKeyShift      : get : GL::getKeyShift     , set : GL::setKeyShift
+    uxKeyShift      : get   : GL::getKeyShift     , set : GL::setKeyShift
     
-    uxKeyAlt        : get : GL::getKeyAlt       , set : GL::setKeyAlt
+    uxKeyAlt        : get   : GL::getKeyAlt       , set : GL::setKeyAlt
 
-    uxKeyMeta       : get : GL::getKeyMeta      , set : GL::setKeyMeta
+    uxKeyMeta       : get   : GL::getKeyMeta      , set : GL::setKeyMeta
 
-    uxKeyCtrl       : get : GL::getKeyCtrl      , set : GL::setKeyCtrl
+    uxKeyCtrl       : get   : GL::getKeyCtrl      , set : GL::setKeyCtrl
     
-    uxPtrClick      : get : GL::getPtrClick     , set : GL::setPtrClick
+    uxPtrClick      : get   : GL::getPtrClick     , set : GL::setPtrClick
     
-    uxPtrDblClick   : get : GL::getPtrDblClick  , set : GL::setPtrDblClick
+    uxPtrDblClick   : get   : GL::getPtrDblClick  , set : GL::setPtrDblClick
 
-    uxPtrLooking    : get : GL::getLooking      , set : GL::setLooking
+    uxPtrLooking    : get   : GL::getLooking      , set : GL::setLooking
 
-    uxPtrZooming    : get : GL::getZooming      , set : GL::setZooming
+    uxPtrZooming    : get   : GL::getZooming      , set : GL::setZooming
 
-    uxPtrDragging   : get : GL::getDragging     , set : GL::setDragging
+    uxPtrDragging   : get   : GL::getDragging     , set : GL::setDragging
 
-    uxPtrRotating   : get : GL::getRotating     , set : GL::setRotating
+    uxPtrRotating   : get   : GL::getRotating     , set : GL::setRotating
 
-    uxMoveFwd       : get : GL::getMoveFwd      , set : GL::setMoveFwd
+    uxMoveFwd       : get   : GL::getMoveFwd      , set : GL::setMoveFwd
     
-    uxMoveBack      : get : GL::getMoveBack     , set : GL::setMoveBack
+    uxMoveBack      : get   : GL::getMoveBack     , set : GL::setMoveBack
     
-    uxMoveLeft      : get : GL::getMoveLeft     , set : GL::setMoveLeft
+    uxMoveLeft      : get   : GL::getMoveLeft     , set : GL::setMoveLeft
     
-    uxMoveRight     : get : GL::getMoveRight    , set : GL::setMoveRight
+    uxMoveRight     : get   : GL::getMoveRight    , set : GL::setMoveRight
     
-    uxMoveUp        : get : GL::getMoveUp       , set : GL::setMoveUp
+    uxMoveUp        : get   : GL::getMoveUp       , set : GL::setMoveUp
     
-    uxMoveDown      : get : GL::getMoveDown     , set : GL::setMoveDown
+    uxMoveDown      : get   : GL::getMoveDown     , set : GL::setMoveDown
 
-    x               : get : GL::getX            , set : GL::setX
+    x               : get   : GL::getX            , set : GL::setX
 
-    xDelta          : get : GL::getXDelta       , set : GL::setXDelta
+    xDelta          : get   : GL::getXDelta       , set : GL::setXDelta
 
-    xRotate         : get : GL::getXRotate      , set : GL::setXRotate
+    xRotate         : get   : GL::getXRotate      , set : GL::setXRotate
 
-    xScale          : get : GL::getXScale       , set : GL::setXScale
+    xScale          : get   : GL::getXScale       , set : GL::setXScale
 
-    xVector         : get : GL::getXVector      , set : GL::setXVector
+    xVector         : get   : GL::getXVector      , set : GL::setXVector
 
-    y               : get : GL::getY            , set : GL::setY
+    y               : get   : GL::getY            , set : GL::setY
 
-    yDelta          : get : GL::getYDelta       , set : GL::setYDelta
+    yDelta          : get   : GL::getYDelta       , set : GL::setYDelta
 
-    yRotate         : get : GL::getYRotate      , set : GL::setYRotate
+    yRotate         : get   : GL::getYRotate      , set : GL::setYRotate
 
-    yScale          : get : GL::getYScale       , set : GL::setYScale
+    yScale          : get   : GL::getYScale       , set : GL::setYScale
 
-    yVector         : get : GL::getYVector      , set : GL::setYVector
+    yVector         : get   : GL::getYVector      , set : GL::setYVector
 
-    zScale          : get : GL::getZScale       , set : GL::setZScale
+    zScale          : get   : GL::getZScale       , set : GL::setZScale
 
-    zVector         : get : GL::getZVector      , set : GL::setZVector
+    zVector         : get   : GL::getZVector      , set : GL::setZVector
 
 export default GL.registerClass()
 
@@ -675,39 +675,39 @@ export class Program extends Pointer
 
     Object.define Program.registerClass()::,
 
-        gl              : get : Program::getParentPtrO
+        gl              : get   : Program::getParentPtrO
 
-        glLinkStatus    : get : Program::getGLLinkStatus
+        glLinkStatus    : get   : Program::getGLLinkStatus
 
-        glShaders       : get : Program::getGLShaders
+        glShaders       : get   : Program::getGLShaders
 
-        glInfoLog       : get : Program::getGLInfoLog
+        glInfoLog       : get   : Program::getGLInfoLog
 
-        glIsProgram     : get : Program::getGLIsProgram
+        glIsProgram     : get   : Program::getGLIsProgram
 
-        glVertShader    : get : Program::getGLVertShader
+        glVertShader    : get   : Program::getGLVertShader
         
-        glFragShader    : get : Program::getGLFragShader
+        glFragShader    : get   : Program::getGLFragShader
 
-        glProgram       : get : Program::getGLProgram
+        glProgram       : get   : Program::getGLProgram
         
-        shaders         : get : Program::getAllShaders
+        shaders         : get   : Program::getAllShaders
 
-        isLinked        : get : Program::getLinkedStatus , set : Program::setLinkedNode
+        isLinked        : get   : Program::getLinkedStatus , set : Program::setLinkedNode
         
-        isIsUse         : get : Program::getInUseStatus  , set : Program::setInUseStatus
+        isIsUse         : get   : Program::getInUseStatus  , set : Program::setInUseStatus
         
-        isAttached      : get : Program::getAttachStatus , set : Program::setAttachStatus
+        isAttached      : get   : Program::getAttachStatus , set : Program::setAttachStatus
 
-        vertShader      : get : Program::getVertShader   , set : Program::setVertShader
+        vertShader      : get   : Program::getVertShader   , set : Program::setVertShader
         
-        fragShader      : get : Program::getFragShader   , set : Program::setFragShader
+        fragShader      : get   : Program::getFragShader   , set : Program::setFragShader
 
-        attributes      : get : Program::getAttributes
+        attributes      : get   : Program::getAttributes
 
-        uniforms        : get : Program::getUniforms
+        uniforms        : get   : Program::getUniforms
 
-        variables       : get : Program::getAllVariables
+        variables       : get   : Program::getAllVariables
 
 OFFSET_SHADER_TYPE      = 4 * 0
 
@@ -1000,23 +1000,23 @@ export class ShaderKey  extends Pointer
 
 Object.define ShaderKey.registerClass()::,
 
-    gl                  : get : ShaderKey::getGL
+    gl                  : get   : ShaderKey::getGL
 
-    glProgram           : get : ShaderKey::getGLProgram
+    glProgram           : get   : ShaderKey::getGLProgram
 
-    glShader            : get : ShaderKey::getGLShader
+    glShader            : get   : ShaderKey::getGLShader
     
-    program             : get : ShaderKey::getProgram
+    program             : get   : ShaderKey::getProgram
 
-    shader              : get : ShaderKey::getShader
+    shader              : get   : ShaderKey::getShader
 
-    name                : get : ShaderKey::getNameString    , set : ShaderKey::setNameString
+    name                : get   : ShaderKey::getNameString    , set : ShaderKey::setNameString
     
-    components          : get : ShaderKey::getComponents    , set : ShaderKey::setComponents
+    components          : get   : ShaderKey::getComponents    , set : ShaderKey::setComponents
 
-    type                : get : ShaderKey::keyTypeGLCode    , set : ShaderKey::setTypeGLCode
+    type                : get   : ShaderKey::keyTypeGLCode    , set : ShaderKey::setTypeGLCode
 
-    needsUpload         : get : ShaderKey::getNeedsUpload   , set : ShaderKey::setNeedsUpload
+    needsUpload         : get   : ShaderKey::getNeedsUpload   , set : ShaderKey::setNeedsUpload
 
 OFFSET_LOCATION_AT      = 4 * 0
 
@@ -1063,6 +1063,7 @@ export class Attribute  extends ShaderKey
         [ keys  , offset ] = [ [], 0 ]
 
         source.split(/attribute/g).slice( 1 ).map ( line ) =>
+            
             [ , type, name ] = line.split(/\;/g)[0].split /\s+/g
             
             keys.push key =     new Attribute[ type ]
@@ -1141,15 +1142,15 @@ export class Attribute  extends ShaderKey
 
 Object.define Attribute::,
 
-    glLocation          : get : Attribute::getGLLocation
+    glLocation          : get   : Attribute::getGLLocation
 
-    location            : get : Attribute::getLocation      , set : Attribute::setLocation
+    location            : get   : Attribute::getLocation      , set : Attribute::setLocation
 
-    stride              : get : Attribute::getStride        , set : Attribute::setStride
+    stride              : get   : Attribute::getStride        , set : Attribute::setStride
 
-    offset              : get : Attribute::getOffset        , set : Attribute::setOffset
+    offset              : get   : Attribute::getOffset        , set : Attribute::setOffset
 
-    normalize           : get : Attribute::getNormalize     , set : Attribute::setNormalize
+    normalize           : get   : Attribute::getNormalize     , set : Attribute::setNormalize
 
 Object.protos Attribute
 
@@ -1157,7 +1158,7 @@ Object.protos Attribute
     
     .forEach            -> Object.define (Key = arguments[0]):: ,
     
-        value           : get : Key::getValue , set : Key::setValue
+        value           : get   : Key::getValue , set : Key::setValue
 
 export class Uniform    extends ShaderKey
 
@@ -1215,19 +1216,16 @@ export class Uniform    extends ShaderKey
 
     getGLLocation       : ->
         return @getLinkedNode() if @getKeyLocated()
-        return unless gl = @getGL()
-        return unless program = @getGLProgram()
-        return unless location = gl.getUniformLocation program, @getNameString()
-
-        
-        
+        return unless gl        = @getGL()
+        return unless program   = @getGLProgram()
+        return unless location  = gl.getUniformLocation program, @getNameString()
         @setKeyLocated 1 ; @setLinkedNode location ; location
 
 Object.define Uniform::,
 
-    glLocation          : get : Uniform::getGLLocation
+    glLocation          : get   : Uniform::getGLLocation
 
-    location            : get : Uniform::getGLLocation
+    location            : get   : Uniform::getGLLocation
 
 
 Object.protos Uniform
@@ -1236,7 +1234,7 @@ Object.protos Uniform
     
     .forEach            -> Object.define (Key = arguments[0]):: ,
     
-        value           : get : Key::getValue , set : Key::setValue
+        value           : get   : Key::getValue , set   : Key::setValue
 
 KEYEXTEND_OBJECT3D      =
     [ WebGL2RenderingContext        .POINTS ] : new (class           POINTS extends Number) WebGL2RenderingContext        .POINTS
@@ -1629,13 +1627,13 @@ Object.symbol Buffer::,
 
 Object.define Buffer.registerClass()::,
 
-    target              : get : Buffer::keyBindTarget   , set : Buffer::setBindTarget 
+    target              : get   : Buffer::keyBindTarget   , set : Buffer::setBindTarget 
 
-    bound               : get : Buffer::getBindStatus   , set : Buffer::setBindStatus
+    bound               : get   : Buffer::getBindStatus   , set : Buffer::setBindStatus
 
-    usage               : get : Buffer::keyUsage        , set : Buffer::setUsage
+    usage               : get   : Buffer::keyUsage        , set : Buffer::setUsage
 
-    attributes          : get : Buffer::getTypedArray
+    attributes          : get   : Buffer::getTypedArray
 
 OFFSET_O3_COLOR_4D      = 4 * 0
 
@@ -1720,16 +1718,16 @@ Object.define Object3::,
 
 Object.define Object3::,
     
-    vertices            : get : Object3::getVertices   , set : Object3::setVertexArray
+    vertices            : get   : Object3::getVertices   , set : Object3::setVertexArray
 
-    position            : get : Object3::getPosition   , set : Object3::setPosition
+    position            : get   : Object3::getPosition   , set : Object3::setPosition
     
-    rotation            : get : Object3::getRotation   , set : Object3::setRotation
+    rotation            : get   : Object3::getRotation   , set : Object3::setRotation
     
-    scale               : get : Object3::getScale      , set : Object3::setScale
+    scale               : get   : Object3::getScale      , set : Object3::setScale
     
-    color               : get : Object3::getColor      , set : Object3::setColor
+    color               : get   : Object3::getColor      , set : Object3::setColor
     
-    draws               : get : Object3::getDraws
+    draws               : get   : Object3::getDraws
 
-    matrix              : get : Object3::getMatrix
+    matrix              : get   : Object3::getMatrix
