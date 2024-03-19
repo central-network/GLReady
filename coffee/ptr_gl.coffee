@@ -1,74 +1,129 @@
-import {
-    Pointer, Vertex, Angle3,
-    Scale3, Color4, Matrix4
-} from "./ptr.coffee"
+import                  {
+    Pointer, Vertex, Angle3,    
+    Scale3, Color4, Matrix4 } from "./ptr.coffee"
 
 OFFSET_DRAW_ACTIVE      = 4 * 0
+
 OFFSET_CULL_ENABLED     = 4 * 0 + 1
+
 OFFSET_BLEND_ACTIVE     = 4 * 0 + 2
+
 OFFSET_DEPTH_ACTIVE     = 4 * 0 + 3
+
 OFFSET_CULL_FACE        = 4 *  1
+
 OFFSET_FRONTFACE        = 4 *  1 + 2
+
 OFFSET_DEPTH_FUNC       = 4 *  2
+
 OFFSET_CLEAR_MASK       = 4 *  2 + 2
+
 OFFSET_CLEAR_DEPTH      = 4 *  3
+
 OFFSET_CLEAR_COLOR      = 4 *  4
+
 OFFSET_BIND_TARGET      = 4 *  8
+
 OFFSET_BLEND_EQUATE     = 4 *  8 + 2
+
 OFFSET_BLEND_INARG      = 4 *  9
+
 OFFSET_BLEND_OUTARG     = 4 *  9 + 2
+
 OFFSET_BLEND_FUNC       = 4 * 10
+
 OFFSET_DEPTH_TEST       = 4 * 10 + 2
+
 OFFSET_WALKING          = 4 * 11
+
 OFFSET_JUMPING          = 4 * 11 + 1
+
 OFFSET_KEY_SHIFT        = 4 * 11 + 2
+
 OFFSET_KEY_ALT          = 4 * 11 + 3
+
 OFFSET_KEY_CTRL         = 4 * 12
+
 OFFSET_KEY_META         = 4 * 12 + 1
+
 OFFSET_MOVE_FWD         = 4 * 12 + 2
+
 OFFSET_MOVE_BACK        = 4 * 12 + 3
+
 OFFSET_MOVE_LEFT        = 4 * 13
+
 OFFSET_MOVE_RIGHT       = 4 * 13 + 1
+
 OFFSET_MOVE_UP          = 4 * 13 + 2
+
 OFFSET_MOVE_DOWN        = 4 * 13 + 3
+
 OFFSET_LOOKING          = 4 * 14
+
 OFFSET_ZOOMING          = 4 * 14 + 1
+
 OFFSET_PTR_DCLICK       = 4 * 14 + 2
+
 OFFSET_PTR_CLICK        = 4 * 14 + 3
+
 OFFSET_PTR_BUTTON       = 4 * 15
+
 OFFSET_ROTATING         = 4 * 16
+
 OFFSET_DRAGGING         = 4 * 16 + 1
+
 OFFSET_UX_ENABLED       = 4 * 16 + 2
+
 OFFSET_X                = 4 * 21
+
 OFFSET_Y                = 4 * 22
+
 OFFSET_DX               = 4 * 23
+
 OFFSET_DY               = 4 * 24
+
 OFFSET_RX               = 4 * 25
+
 OFFSET_RY               = 4 * 26
+
 OFFSET_SX               = 4 * 27
+
 OFFSET_SY               = 4 * 28
+
 OFFSET_SZ               = 4 * 29
+
 OFFSET_VX               = 4 * 30
+
 OFFSET_VY               = 4 * 31
+
 OFFSET_VZ               = 4 * 32
+
 OFFSET_SHIFT_RATIO      = 4 * 33
+
 OFFSET_TIME             = 4 * 34
+
 OFFSET_WIDTH            = 4 * 40
+
 OFFSET_HEIGHT           = 4 * 41
+
 OFFSET_LEFT             = 4 * 42
+
 OFFSET_TOP              = 4 * 43
+
 OFFSET_PIXEL_RATIO      = 4 * 44
+
 OFFSET_ASPECT_RATIO     = 4 * 45
+
 KEYEXTEND_CLEARMASK     =
     [ 16640 ] : new (class DEPTH_N_COLOR_BIT extends Number) 16640
 
-export class Object3    extends Pointer
+export class            Object3    extends Pointer
 
-export class Draw       extends Pointer
+export class            Draw       extends Pointer
 
-export class Mode       extends Pointer
+export class            Mode       extends Pointer
 
-export class GL         extends Pointer
+export class            GL         extends Pointer
 
     @byteLength     = 4 * 48
 
@@ -565,7 +620,7 @@ OFFSET_LINKED_STATUS    = 1 + 1
 
 OFFSET_ATTACH_STATUS    = 1 + 2
 
-export class Program    extends Pointer
+export class            Program     extends Pointer
 
         @byteLength     : 4 * 8
 
@@ -718,7 +773,7 @@ OFFSET_CHAR_LENGTH      = 4 * 1 + 2
 
 OFFSET_SOURCE_TEXT      = 4 * 2
 
-export class Shader     extends Pointer
+export class            Shader      extends Pointer
 
     @byteLength         : 256 * 256
 
@@ -940,7 +995,7 @@ OFFSET_NAME_LENGTH      = 4 * 3 + 2
 
 OFFSET_NAME_TARRAY      = 4 * 4
 
-export class ShaderKey  extends Pointer
+export class            ShaderKey   extends Pointer
 
     @byteLength         : 4 * 8
 
@@ -1023,7 +1078,7 @@ OFFSET_ATTR_STRIDE      = 4 * 0 + 2
 
 OFFSET_ATTR_OFFSET      = 4 * 0 + 3
 
-export class Attribute  extends ShaderKey
+export class            Attribute   extends ShaderKey
 
     Object.define       Attribute.registerClass(),
         
@@ -1157,7 +1212,7 @@ Object.protos           Attribute
     
         value           : get   : Key::getValue , set : Key::setValue
 
-export class Uniform    extends ShaderKey
+export class            Uniform     extends ShaderKey
 
     Object.define       Uniform.registerClass(),
         
@@ -1338,7 +1393,7 @@ Object.define           Mode.registerClass(),
 
     typedArray          : value : Uint32Array
 
-Object.hidden           Mode  ,
+Object.hidden           Mode,
 
     "array", "byteLength", "byteOffset", "headers", 
     "length", "protoClass"
@@ -1451,7 +1506,7 @@ Object.define           Mode::,
 
     attributes          : get   : Mode::getAttributes , set   : Mode::setAttributes
 
-export class Buffer     extends Pointer
+export class            Buffer extends Pointer
 
     @byteLength         : 4 * 256 * 256
 
