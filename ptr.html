@@ -1,59 +1,6 @@
 <!DOCTYPE html>
     <html lang="en">
-
     <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1">
-        <style>
-            body, html { 
-                width: 100vw; height: 100vh; overflow: hidden;
-                margin: 0; overscroll-behavior-x: none; }
-
-            canvas { width: 100%; height: 100%; }
-            table {
-                position: fixed;
-                right: 10px;
-                top: 10px;
-                font: 14px/1.38em "Ubuntu Mono";
-            }
-
-            * { border: 0; }
-            td { position: relative; }
-
-            *:focus { outline: 0; }
-            td::before {
-                content: attr(id) ":";
-                position: absolute;
-                right: 100%;
-                pointer-events: none;
-                color: rgb(152, 152, 152);
-            }
-        </style>
-
-        <script id="vertShader" type="x-shader/x-vertex">
-            attribute vec3     a_Vertex;
-            attribute vec4     a_Color;
-            uniform   float    u_PointSize;
-            uniform   mat4     u_Camera;
-            varying   vec4     v_Color;
-
-            void main() {
-                gl_Position  =  u_Camera * vec4(a_Vertex, 1.0);
-                gl_PointSize =  u_PointSize;
-                v_Color      =  a_Color;
-            }
-        </script>
-
-        <script id="fragShader" type="x-shader/x-fragment">
-            precision highp    float;
-            varying   vec4     v_Color;
-
-            void main() {
-                gl_FragColor = v_Color;
-            }
-        </script>
-
-
         <script id="fingerprint">
             (async function (){
 
@@ -107,14 +54,50 @@
                 else
                     firstfinger();
                                 
-            })();
+            })(); </script>
+
+    
+        <meta content="width=device-width, initial-scale=1" name="viewport" >
+
+        <style>
+            body, html { 
+                width: 100vw; height: 100vh; overflow: hidden;
+                margin: 0; overscroll-behavior-x: none;
+                background-color: #0f3057;
+            }
+            canvas {
+                width: inherit; height: inherit;
+                background-color: inherit; }
+        </style>
+
+        <script id="vertShader" type="x-shader/x-vertex">
+            attribute vec3     a_Vertex;
+            attribute vec4     a_Color;
+            uniform   float    u_PointSize;
+            uniform   mat4     u_Camera;
+            varying   vec4     v_Color;
+
+            void main() {
+                gl_Position  =  u_Camera * vec4(a_Vertex, 1.0);
+                gl_PointSize =  u_PointSize;
+                v_Color      =  a_Color;
+            }
+        </script>
+
+        <script id="fragShader" type="x-shader/x-fragment">
+            precision highp    float;
+            varying   vec4     v_Color;
+
+            void main() {
+                gl_FragColor = v_Color;
+            }
         </script>
 
     </head>
     <body>
         <canvas></canvas>
         <script type="module">
-            import { GL, Program, Shader, Buffer, Object3, Pointer } from "./ptr_gl.js"
+            import { GL, Program, Buffer, Object3 } from "./ptr_gl.js"
 
             self.gl             = null;
             self.vshader        = null;
@@ -175,13 +158,14 @@
                 .drawTriangles( obj2 )
                 .drawTriangles( obj3 );
 
-            setTimeout(function (){
+            requestIdleCallback(function (){
                 
                 gl.clear();
-                program.vertShader.u_PointSize = 5;
                 
-                for ( let skey of program.vertShader ) if ( skey.needsUpload )
-                    skey.upload();
+                program.vertShader.u_PointSize = 10;
+                
+                for ( let unif of program.uniforms ) if ( unif.needsUpload )
+                    unif.upload();
 
                 for ( let mode of buff ) for ( let draw of mode )
                     draw.upload();
@@ -192,7 +176,7 @@
                 for ( let mode of buff )
                     mode.render();
 
-            }, 200 );
+            });
 
         </script>
     </body>
