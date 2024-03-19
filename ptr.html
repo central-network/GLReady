@@ -175,14 +175,13 @@
                 .drawTriangles( obj2 )
                 .drawTriangles( obj3 );
 
-
             setTimeout(function (){
                 
                 gl.clear();
-                program.vertShader.u_PointSize = 3;
+                program.vertShader.u_PointSize = 5;
                 
-                for ( let skey of program.vertShader )
-                    if ( skey.needsUpload ) skey.upload();
+                for ( let skey of program.vertShader ) if ( skey.needsUpload )
+                    skey.upload();
 
                 for ( let mode of buff ) for ( let draw of mode )
                     draw.upload();
