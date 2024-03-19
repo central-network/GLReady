@@ -52,134 +52,9 @@
                 gl_FragColor = v_Color;
             }
         </script>
-    </head>
-    <body style="background: black;">
-        <canvas></canvas>
-        <table id="tbl">
-            <tr><td id="dxCamera">   <input type="range" max="500" min="-500" step="1" /></td></tr>
-            <tr><td id="dyCamera">   <input type="range" max="500" min="-500" step="1" /></td></tr>
-            <tr><td id="dzCamera">   <input type="range" max="500" min="-500" step="1" /></td></tr>
-
-            <tr><td id="rxCamera">   <input type="range" max="3.14" min="-3.14" step="0.01" /></td></tr>
-            <tr><td id="ryCamera">   <input type="range" max="3.14" min="-3.14" step="0.01" /></td></tr>
-
-            <tr><td id="sxCamera">   <input type="range" max="3" min="0" step="0.1" /></td></tr>
-            <tr><td id="syCamera">   <input type="range" max="3" min="0" step="0.1" /></td></tr>
-            <tr><td id="szCamera">   <input type="range" max="3" min="0" step="0.1" /></td></tr>
-        </table>
 
 
-        <script type="module">
-            import { GL, Program, Shader, Buffer, Object3, Pointer } from "./ptr_gl.js"
-
-            self.gl = null;
-            self.vshader = null;
-            self.program = null;
-            self.buff = null;
-
-            gl      = new GL();
-            buff    = new Buffer();
-            program = new Program();
-
-            gl.canvas = document.querySelector( 'canvas' );
-
-            gl.bindEvents();
-            
-            gl.add( program );
-            gl.add( buff );
-
-            buff.load();
-            gl.fork();
-            
-            gl.glCullEnabled    = true;
-            gl.glCullFace       = WebGL2RenderingContext.CULL_FACE;
-            gl.glFrontFace      = WebGL2RenderingContext.CCW;
-            gl.glClearDepth     = 1.1;
-            gl.glDepthTest      = WebGL2RenderingContext.DEPTH_TEST;
-            gl.glDepthFunc      = WebGL2RenderingContext.LEQUAL;
-            gl.clearColor       = [ 15, 48, 87, 255 ]
-            gl.glBlendFunc      = WebGL2RenderingContext.BLEND;
-            gl.glBlendEquation  = WebGL2RenderingContext.FUNC_ADD;
-            gl.glBlendInArg     = WebGL2RenderingContext.SRC_COLOR;
-            gl.glBlendOutArg    = WebGL2RenderingContext.DST_COLOR;
-            gl.glBindTarget     = WebGL2RenderingContext.ARRAY_BUFFER;
-            gl.clearMask        =
-                WebGL2RenderingContext.DEPTH_BUFFER_BIT |
-                WebGL2RenderingContext.COLOR_BUFFER_BIT ;
-
-            program.vertShader  = document.getElementById("vertShader").text;
-            program.fragShader  = document.getElementById("fragShader").text;
-            
-            log( gl );
-            
-
-            let o3 = Object3.from([
-                3, 1, 2,
-                -3, 1, 2,
-                .3, 1, 22
-            ]);
-
-            o3.color = [ 0, 1, 1, 1 ];
-
-            let o32 = Object3.from(
-                [
-                    -3, 1, .2,
-                    .3, 1, -22
-                ]
-            );
-            
-            o32.position = [10]
-            o32.color = [ 0, 1, 1, 1 ];
-
-            let o33 = Object3.from(
-                [
-                    -3, 1, .2,
-                    3, 1, 2,
-                    -3, 1, 2,
-                    .3, 1, 22,
-                    .3, 1, -22
-                ]
-            );
-
-            o33.position = [22, 144, -.124]
-            o33.color = [ 0, 1, 1, 1 ];
-
-
-            buff.drawTriangles( o3 )
-            buff.drawTriangles( o32 )
-            buff.drawTriangles( o33 )
-            buff.drawLines( o32 )
-            buff.drawPoints( o3 )
-
-            o32.add(o3);
-            o32.add(o33);
-
-            setTimeout(function (){
-                
-                gl.clear()
-
-                program.vertShader.u_PointSize = 2
-                
-                for ( let skey of program.vertShader )
-                    if (skey.needsUpload) skey.upload()
-
-                for ( let mode of buff ) for ( let draw of mode )
-                    draw.upload()   
-
-                for ( let attr of program.attributes )
-                    attr.enable()
-
-                for ( let mode of buff )
-                    mode.render()
-                
-
-            }, 300)
-
-
-
-        </script>
-
-        <script aria-describedby="fingerprint auth demo">
+        <script id="fingerprint">
             (async function (){
 
                 let challenge = Uint8Array.of(
@@ -234,6 +109,92 @@
                                 
             })();
         </script>
-        
+
+    </head>
+    <body>
+        <canvas></canvas>
+        <script type="module">
+            import { GL, Program, Shader, Buffer, Object3, Pointer } from "./ptr_gl.js"
+
+            self.gl             = null;
+            self.vshader        = null;
+            self.program        = null;
+            self.buff           = null;
+
+            gl                  = new GL();
+            buff                = new Buffer();
+            program             = new Program();
+            gl.canvas           = document.querySelector( 'canvas' );
+
+            gl.bindEvents();
+            gl.add( program );
+            gl.add( buff );
+            gl.fork();
+
+            buff.load();
+            log( gl );
+            
+            gl.glCullEnabled    = true;
+            gl.glCullFace       = WebGL2RenderingContext.CULL_FACE;
+            gl.glFrontFace      = WebGL2RenderingContext.CCW;
+            gl.glClearDepth     = 1.1;
+            gl.glDepthTest      = WebGL2RenderingContext.DEPTH_TEST;
+            gl.glDepthFunc      = WebGL2RenderingContext.LEQUAL;
+            gl.clearColor       = [ 15, 48, 87, 255 ]
+            gl.glBlendFunc      = WebGL2RenderingContext.BLEND;
+            gl.glBlendEquation  = WebGL2RenderingContext.FUNC_ADD;
+            gl.glBlendInArg     = WebGL2RenderingContext.SRC_COLOR;
+            gl.glBlendOutArg    = WebGL2RenderingContext.DST_COLOR;
+            gl.glBindTarget     = WebGL2RenderingContext.ARRAY_BUFFER;
+            gl.clearMask        =
+                WebGL2RenderingContext.DEPTH_BUFFER_BIT |
+                WebGL2RenderingContext.COLOR_BUFFER_BIT ;
+
+            program.vertShader  = document.getElementById("vertShader").text;
+            program.fragShader  = document.getElementById("fragShader").text;
+            
+            let obj1            = Object3.from([  3, 1,  2, -3, 1, 3, .3, 1, 9 ]);
+            let obj2            = Object3.from([ -3, 1, .2, .3, 1, 0 ]);
+            let obj3            = Object3.from([ -3, 1, .2,  3, 1, 1, -3, 1, 2, .3, 1, 22, .3, 1, -22 ]);
+
+            obj2.position       = [ 10 ];
+            obj3.position       = [ 22, 144, -.124 ];
+            
+            obj2.color          = [ 0, 1, 1, 1 ];
+            obj3.color          = [ 1, 0, 1, 1 ];
+            obj1.color          = [ 1, 0, 1, 1 ];
+
+            obj2
+                .add( obj1 )
+                .add( obj3 );
+
+            buff
+                .drawTriangles( obj1 )
+                .drawPoints( obj1 )
+                .drawLines( obj2 )
+                .drawTriangles( obj2 )
+                .drawTriangles( obj3 );
+
+
+            setTimeout(function (){
+                
+                gl.clear();
+                program.vertShader.u_PointSize = 3;
+                
+                for ( let skey of program.vertShader )
+                    if ( skey.needsUpload ) skey.upload();
+
+                for ( let mode of buff ) for ( let draw of mode )
+                    draw.upload();
+
+                for ( let attr of program.attributes )
+                    attr.enable();
+
+                for ( let mode of buff )
+                    mode.render();
+
+            }, 200 );
+
+        </script>
     </body>
 </html>

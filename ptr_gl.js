@@ -2717,7 +2717,8 @@ export var Buffer = (function() {
     }
 
     drawArrays() {
-      return this.getMode(arguments[1]).malloc(arguments[0]);
+      this.getMode(arguments[1]).malloc(arguments[0]);
+      return this;
     }
 
     drawLines() {

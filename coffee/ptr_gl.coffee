@@ -1546,7 +1546,7 @@ export class Buffer extends Pointer
         return this . mode type
 
     drawArrays          : ->
-        @getMode((( arguments[1] ))).malloc arguments[0]
+        @getMode((( arguments[1] ))).malloc arguments[0] ; this
 
     drawLines           : ->
         @drawArrays arguments[0], WebGL2RenderingContext.LINES
