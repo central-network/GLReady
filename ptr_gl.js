@@ -2948,11 +2948,11 @@ Object.define(Buffer.prototype, {
 
 OFFSET_O3_COLOR_4D = 4 * 0;
 
-OFFSET_O3_POSITION = 4 * 4;
+OFFSET_O3_POSITION = 4 * 1 * 4;
 
-OFFSET_O3_ROTATION = 4 * 8;
+OFFSET_O3_ROTATION = 4 * 2 * 4;
 
-OFFSET_O3_SCALE_3D = 4 * 12;
+OFFSET_O3_SCALE_3D = 4 * 3 * 4;
 
 Object.define(Object3.registerClass(), {
   byteLength: {
