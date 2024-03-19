@@ -114,8 +114,61 @@ OFFSET_PIXEL_RATIO      = 4 * 44
 
 OFFSET_ASPECT_RATIO     = 4 * 45
 
+OFFSET_INUSE_STATUS     = 1
+
+OFFSET_LINKED_STATUS    = 1 + 1
+
+OFFSET_ATTACH_STATUS    = 1 + 2
+
+OFFSET_SHADER_TYPE      = 4 * 0
+
+OFFSET_IS_UPLOADED      = 4 * 0 + 2
+
+OFFSET_IS_COMPILED      = 4 * 0 + 3
+
+OFFSET_IS_ATTACHED      = 4 * 1
+
+OFFSET_CHAR_LENGTH      = 4 * 1 + 2
+
+OFFSET_SOURCE_TEXT      = 4 * 2
+
+OFFSET_TYPE_GLCODE      = 4 * 2
+
+OFFSET_NCOMPONENTS      = 4 * 2 + 2
+
+OFFSET_KEY_LOCATED      = 4 * 2 + 3
+
+OFFSET_NAME_LENGTH      = 4 * 3 + 2
+
+OFFSET_NAME_TARRAY      = 4 * 4
+
+OFFSET_LOCATION_AT      = 4 * 0
+
+OFFSET_ISNORMALIZE      = 4 * 0 + 1
+
+OFFSET_ATTR_STRIDE      = 4 * 0 + 2
+
+OFFSET_ATTR_OFFSET      = 4 * 0 + 3
+
+OFFSET_O3_COLOR_4D      = 4 * 0
+
+OFFSET_O3_POSITION      = 4 * 1 * 4
+
+OFFSET_O3_ROTATION      = 4 * 2 * 4
+
+OFFSET_O3_SCALE_3D      = 4 * 3 * 4
+
 KEYEXTEND_CLEARMASK     =
     [ 16640 ] : new (class DEPTH_N_COLOR_BIT extends Number) 16640
+
+KEYEXTEND_OBJECT3D      =
+    [ WebGL2RenderingContext        .POINTS ] : new (class           POINTS extends Number) WebGL2RenderingContext        .POINTS
+    [ WebGL2RenderingContext         .LINES ] : new (class            LINES extends Number) WebGL2RenderingContext         .LINES
+    [ WebGL2RenderingContext     .LINE_LOOP ] : new (class        LINE_LOOP extends Number) WebGL2RenderingContext     .LINE_LOOP
+    [ WebGL2RenderingContext    .LINE_STRIP ] : new (class       LINE_STRIP extends Number) WebGL2RenderingContext    .LINE_STRIP
+    [ WebGL2RenderingContext     .TRIANGLES ] : new (class        TRIANGLES extends Number) WebGL2RenderingContext     .TRIANGLES
+    [ WebGL2RenderingContext  .TRIANGLE_FAN ] : new (class     TRIANGLE_FAN extends Number) WebGL2RenderingContext  .TRIANGLE_FAN
+    [ WebGL2RenderingContext.TRIANGLE_STRIP ] : new (class   TRIANGLE_STRIP extends Number) WebGL2RenderingContext.TRIANGLE_STRIP
 
 export class            Object3    extends Pointer
 
@@ -612,14 +665,6 @@ Object.define           GL::,
 
     zVector         : get   : GL::getZVector      , set : GL::setZVector
 
-export                  default GL
-
-OFFSET_INUSE_STATUS     = 1
-
-OFFSET_LINKED_STATUS    = 1 + 1
-
-OFFSET_ATTACH_STATUS    = 1 + 2
-
 export class            Program     extends Pointer
 
         @byteLength     : 4 * 8
@@ -760,18 +805,6 @@ export class            Program     extends Pointer
         uniforms        : get   : Program::getUniforms
 
         variables       : get   : Program::getAllVariables
-
-OFFSET_SHADER_TYPE      = 4 * 0
-
-OFFSET_IS_UPLOADED      = 4 * 0 + 2
-
-OFFSET_IS_COMPILED      = 4 * 0 + 3
-
-OFFSET_IS_ATTACHED      = 4 * 1
-
-OFFSET_CHAR_LENGTH      = 4 * 1 + 2
-
-OFFSET_SOURCE_TEXT      = 4 * 2
 
 export class            Shader      extends Pointer
 
@@ -985,16 +1018,6 @@ Object.symbol           Shader::,
                 return done : on , value : shader
             return done : no , value : ptri
 
-OFFSET_TYPE_GLCODE      = 4 * 2
-
-OFFSET_NCOMPONENTS      = 4 * 2 + 2
-
-OFFSET_KEY_LOCATED      = 4 * 2 + 3
-
-OFFSET_NAME_LENGTH      = 4 * 3 + 2
-
-OFFSET_NAME_TARRAY      = 4 * 4
-
 export class            ShaderKey   extends Pointer
 
     @byteLength         : 4 * 8
@@ -1069,14 +1092,6 @@ Object.define           ShaderKey.registerClass()::,
     type                : get   : ShaderKey::keyTypeGLCode    , set : ShaderKey::setTypeGLCode
 
     needsUpload         : get   : ShaderKey::getNeedsUpload   , set : ShaderKey::setNeedsUpload
-
-OFFSET_LOCATION_AT      = 4 * 0
-
-OFFSET_ISNORMALIZE      = 4 * 0 + 1
-
-OFFSET_ATTR_STRIDE      = 4 * 0 + 2
-
-OFFSET_ATTR_OFFSET      = 4 * 0 + 3
 
 export class            Attribute   extends ShaderKey
 
@@ -1286,15 +1301,6 @@ Object.protos           Uniform
     .forEach            -> Object.define (Key = arguments[0]):: ,
     
         value           : get   : Key::getValue , set   : Key::setValue
-
-KEYEXTEND_OBJECT3D      =
-    [ WebGL2RenderingContext        .POINTS ] : new (class           POINTS extends Number) WebGL2RenderingContext        .POINTS
-    [ WebGL2RenderingContext         .LINES ] : new (class            LINES extends Number) WebGL2RenderingContext         .LINES
-    [ WebGL2RenderingContext     .LINE_LOOP ] : new (class        LINE_LOOP extends Number) WebGL2RenderingContext     .LINE_LOOP
-    [ WebGL2RenderingContext    .LINE_STRIP ] : new (class       LINE_STRIP extends Number) WebGL2RenderingContext    .LINE_STRIP
-    [ WebGL2RenderingContext     .TRIANGLES ] : new (class        TRIANGLES extends Number) WebGL2RenderingContext     .TRIANGLES
-    [ WebGL2RenderingContext  .TRIANGLE_FAN ] : new (class     TRIANGLE_FAN extends Number) WebGL2RenderingContext  .TRIANGLE_FAN
-    [ WebGL2RenderingContext.TRIANGLE_STRIP ] : new (class   TRIANGLE_STRIP extends Number) WebGL2RenderingContext.TRIANGLE_STRIP
 
 Object.define           Draw.registerClass(),
 
@@ -1686,14 +1692,6 @@ Object.define           Buffer::,
 
     attributes          : get   : Buffer::getTypedArray
 
-OFFSET_O3_COLOR_4D      = 4 * 0
-
-OFFSET_O3_POSITION      = 4 * 1 * 4
-
-OFFSET_O3_ROTATION      = 4 * 2 * 4
-
-OFFSET_O3_SCALE_3D      = 4 * 3 * 4
-
 Object.define           Object3.registerClass(),
 
     byteLength          : value : 4 * 12
@@ -1782,3 +1780,5 @@ Object.define           Object3::,
     draws               : get   : Object3::getDraws
 
     matrix              : get   : Object3::getMatrix
+
+export                  default GL

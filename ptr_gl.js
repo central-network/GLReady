@@ -121,8 +121,62 @@ OFFSET_PIXEL_RATIO = 4 * 44;
 
 OFFSET_ASPECT_RATIO = 4 * 45;
 
+OFFSET_INUSE_STATUS = 1;
+
+OFFSET_LINKED_STATUS = 1 + 1;
+
+OFFSET_ATTACH_STATUS = 1 + 2;
+
+OFFSET_SHADER_TYPE = 4 * 0;
+
+OFFSET_IS_UPLOADED = 4 * 0 + 2;
+
+OFFSET_IS_COMPILED = 4 * 0 + 3;
+
+OFFSET_IS_ATTACHED = 4 * 1;
+
+OFFSET_CHAR_LENGTH = 4 * 1 + 2;
+
+OFFSET_SOURCE_TEXT = 4 * 2;
+
+OFFSET_TYPE_GLCODE = 4 * 2;
+
+OFFSET_NCOMPONENTS = 4 * 2 + 2;
+
+OFFSET_KEY_LOCATED = 4 * 2 + 3;
+
+OFFSET_NAME_LENGTH = 4 * 3 + 2;
+
+OFFSET_NAME_TARRAY = 4 * 4;
+
+OFFSET_LOCATION_AT = 4 * 0;
+
+OFFSET_ISNORMALIZE = 4 * 0 + 1;
+
+OFFSET_ATTR_STRIDE = 4 * 0 + 2;
+
+OFFSET_ATTR_OFFSET = 4 * 0 + 3;
+
+OFFSET_O3_COLOR_4D = 4 * 0;
+
+OFFSET_O3_POSITION = 4 * 1 * 4;
+
+OFFSET_O3_ROTATION = 4 * 2 * 4;
+
+OFFSET_O3_SCALE_3D = 4 * 3 * 4;
+
 KEYEXTEND_CLEARMASK = {
   [16640]: new (DEPTH_N_COLOR_BIT = class DEPTH_N_COLOR_BIT extends Number {})(16640)
+};
+
+KEYEXTEND_OBJECT3D = {
+  [WebGL2RenderingContext.POINTS]: new (POINTS = class POINTS extends Number {})(WebGL2RenderingContext.POINTS),
+  [WebGL2RenderingContext.LINES]: new (LINES = class LINES extends Number {})(WebGL2RenderingContext.LINES),
+  [WebGL2RenderingContext.LINE_LOOP]: new (LINE_LOOP = class LINE_LOOP extends Number {})(WebGL2RenderingContext.LINE_LOOP),
+  [WebGL2RenderingContext.LINE_STRIP]: new (LINE_STRIP = class LINE_STRIP extends Number {})(WebGL2RenderingContext.LINE_STRIP),
+  [WebGL2RenderingContext.TRIANGLES]: new (TRIANGLES = class TRIANGLES extends Number {})(WebGL2RenderingContext.TRIANGLES),
+  [WebGL2RenderingContext.TRIANGLE_FAN]: new (TRIANGLE_FAN = class TRIANGLE_FAN extends Number {})(WebGL2RenderingContext.TRIANGLE_FAN),
+  [WebGL2RenderingContext.TRIANGLE_STRIP]: new (TRIANGLE_STRIP = class TRIANGLE_STRIP extends Number {})(WebGL2RenderingContext.TRIANGLE_STRIP)
 };
 
 export var Object3 = class Object3 extends Pointer {};
@@ -1076,14 +1130,6 @@ Object.define(GL.prototype, {
   }
 });
 
-export default GL;
-
-OFFSET_INUSE_STATUS = 1;
-
-OFFSET_LINKED_STATUS = 1 + 1;
-
-OFFSET_ATTACH_STATUS = 1 + 2;
-
 export var Program = (function() {
   class Program extends Pointer {
     link() {
@@ -1328,18 +1374,6 @@ Object.define(Program.registerClass().prototype, {
     get: Program.prototype.getAllVariables
   }
 });
-
-OFFSET_SHADER_TYPE = 4 * 0;
-
-OFFSET_IS_UPLOADED = 4 * 0 + 2;
-
-OFFSET_IS_COMPILED = 4 * 0 + 3;
-
-OFFSET_IS_ATTACHED = 4 * 1;
-
-OFFSET_CHAR_LENGTH = 4 * 1 + 2;
-
-OFFSET_SOURCE_TEXT = 4 * 2;
 
 export var Shader = (function() {
   class Shader extends Pointer {
@@ -1721,16 +1755,6 @@ Object.symbol(Shader.prototype, {
   }
 });
 
-OFFSET_TYPE_GLCODE = 4 * 2;
-
-OFFSET_NCOMPONENTS = 4 * 2 + 2;
-
-OFFSET_KEY_LOCATED = 4 * 2 + 3;
-
-OFFSET_NAME_LENGTH = 4 * 3 + 2;
-
-OFFSET_NAME_TARRAY = 4 * 4;
-
 export var ShaderKey = (function() {
   class ShaderKey extends Pointer {
     is() {
@@ -1865,14 +1889,6 @@ Object.define(ShaderKey.registerClass().prototype, {
     set: ShaderKey.prototype.setNeedsUpload
   }
 });
-
-OFFSET_LOCATION_AT = 4 * 0;
-
-OFFSET_ISNORMALIZE = 4 * 0 + 1;
-
-OFFSET_ATTR_STRIDE = 4 * 0 + 2;
-
-OFFSET_ATTR_OFFSET = 4 * 0 + 3;
 
 export var Attribute = (function() {
   var float, mat4, vec3, vec4;
@@ -2239,16 +2255,6 @@ Object.protos(Uniform).filter(function() {
     }
   });
 });
-
-KEYEXTEND_OBJECT3D = {
-  [WebGL2RenderingContext.POINTS]: new (POINTS = class POINTS extends Number {})(WebGL2RenderingContext.POINTS),
-  [WebGL2RenderingContext.LINES]: new (LINES = class LINES extends Number {})(WebGL2RenderingContext.LINES),
-  [WebGL2RenderingContext.LINE_LOOP]: new (LINE_LOOP = class LINE_LOOP extends Number {})(WebGL2RenderingContext.LINE_LOOP),
-  [WebGL2RenderingContext.LINE_STRIP]: new (LINE_STRIP = class LINE_STRIP extends Number {})(WebGL2RenderingContext.LINE_STRIP),
-  [WebGL2RenderingContext.TRIANGLES]: new (TRIANGLES = class TRIANGLES extends Number {})(WebGL2RenderingContext.TRIANGLES),
-  [WebGL2RenderingContext.TRIANGLE_FAN]: new (TRIANGLE_FAN = class TRIANGLE_FAN extends Number {})(WebGL2RenderingContext.TRIANGLE_FAN),
-  [WebGL2RenderingContext.TRIANGLE_STRIP]: new (TRIANGLE_STRIP = class TRIANGLE_STRIP extends Number {})(WebGL2RenderingContext.TRIANGLE_STRIP)
-};
 
 Object.define(Draw.registerClass(), {
   byteLength: {
@@ -2946,14 +2952,6 @@ Object.define(Buffer.prototype, {
   }
 });
 
-OFFSET_O3_COLOR_4D = 4 * 0;
-
-OFFSET_O3_POSITION = 4 * 1 * 4;
-
-OFFSET_O3_ROTATION = 4 * 2 * 4;
-
-OFFSET_O3_SCALE_3D = 4 * 3 * 4;
-
 Object.define(Object3.registerClass(), {
   byteLength: {
     value: 4 * 12
@@ -3110,3 +3108,5 @@ Object.define(Object3.prototype, {
     get: Object3.prototype.getMatrix
   }
 });
+
+export default GL;
