@@ -170,13 +170,13 @@ KEYEXTEND_OBJECT3D      =
     [ WebGL2RenderingContext  .TRIANGLE_FAN ] : new (class     TRIANGLE_FAN extends Number) WebGL2RenderingContext  .TRIANGLE_FAN
     [ WebGL2RenderingContext.TRIANGLE_STRIP ] : new (class   TRIANGLE_STRIP extends Number) WebGL2RenderingContext.TRIANGLE_STRIP
 
-export class            Object3     extends Pointer
+export class            Object3       extends Pointer
 
-export class            Draw        extends Pointer
+export class            Draw          extends Pointer
 
-export class            Mode        extends Pointer
+export class            Mode          extends Pointer
 
-export class            GL          extends Pointer
+export class            GL            extends Pointer
 
     @byteLength     = 4 * 48
 
@@ -521,7 +521,7 @@ export class            GL          extends Pointer
 
     setZVector      : -> @setFloat32 OFFSET_VZ             , arguments[0]
 
-export class            Program     extends Pointer
+export class            Program       extends Pointer
 
         @byteLength     : 4 * 8
 
@@ -662,7 +662,7 @@ export class            Program     extends Pointer
 
         variables       : get   : Program::getAllVariables
 
-export class            Shader      extends Pointer
+export class            Shader        extends Pointer
 
     @byteLength         : 256 * 256
 
@@ -833,7 +833,7 @@ export class            Shader      extends Pointer
 
     getUniforms         : -> @findAllChilds().filter (i) -> i instanceof Uniform
 
-export class            ShaderKey   extends Pointer
+export class            ShaderKey     extends Pointer
 
     @byteLength         : 4 * 8
 
@@ -888,7 +888,7 @@ export class            ShaderKey   extends Pointer
 
     setKeyLocated       : -> @setUint8  OFFSET_KEY_LOCATED , arguments[0] ; arguments[0]
 
-export class            Attribute   extends ShaderKey
+export class            Attribute     extends ShaderKey
 
     Object.define       Attribute.registerClass(),
         
@@ -1002,7 +1002,7 @@ export class            Attribute   extends ShaderKey
 
     setOffset           : -> @setUint8 OFFSET_ATTR_OFFSET , arguments[0]
 
-export class            Uniform     extends ShaderKey
+export class            Uniform       extends ShaderKey
 
     Object.define       Uniform.registerClass(),
         
@@ -1063,7 +1063,7 @@ export class            Uniform     extends ShaderKey
         return unless location  = gl.getUniformLocation program, @getNameString()
         @setKeyLocated 1 ; @setLinkedNode location ; location
 
-export class            Buffer      extends Pointer
+export class            Buffer        extends Pointer
 
     @byteLength         : 4 * 256 * 256
 
