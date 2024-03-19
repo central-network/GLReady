@@ -170,13 +170,13 @@ KEYEXTEND_OBJECT3D      =
     [ WebGL2RenderingContext  .TRIANGLE_FAN ] : new (class     TRIANGLE_FAN extends Number) WebGL2RenderingContext  .TRIANGLE_FAN
     [ WebGL2RenderingContext.TRIANGLE_STRIP ] : new (class   TRIANGLE_STRIP extends Number) WebGL2RenderingContext.TRIANGLE_STRIP
 
-export class            Object3    extends Pointer
+export class            Object3     extends Pointer
 
-export class            Draw       extends Pointer
+export class            Draw        extends Pointer
 
-export class            Mode       extends Pointer
+export class            Mode        extends Pointer
 
-export class            GL         extends Pointer
+export class            GL          extends Pointer
 
     @byteLength     = 4 * 48
 
@@ -521,150 +521,6 @@ export class            GL         extends Pointer
 
     setZVector      : -> @setFloat32 OFFSET_VZ             , arguments[0]
 
-Object.symbol           GL.registerClass(),
-
-    instance        : value : ->
-        
-        @isPrototypeOf Object.getPrototypeOf arguments[0]
-
-Object.define           GL::,
-
-    gl              : get   : GL::getLinkedNode
-
-    glError         : get   : GL::getGLError
-
-    program         : get   : GL::getProgram
-
-    programVertex   : get   : GL::getVertShader
-
-    programFragment : get   : GL::getFragShader
-
-    programAttribs  : get   : GL::getAttributes
-
-    glBuffer        : get   : GL::getGLBuffer
-
-    buffers         : get   : GL::getAllBuffers 
-
-    allShaders      : get   : GL::getAllShaders
-
-    allPrograms     : get   : GL::getAllPrograms
-
-    allVariables    : get   : GL::getAllVariables
-
-    allUniforms     : get   : GL::getUniforms
-
-    nodeBuffer      : get   : GL::getArrayBuffer
-
-    canvas          : get   : GL::getCanvasNode   , set : GL::setCanvasNode
-
-    glActive        : get   : GL::getDrawActive   , set : GL::setDrawActive
-            
-    glCullEnabled   : get   : GL::getCullEnabled  , set : GL::setCullEnabled
-
-    glCullFace      : get   : GL::keyCullFace     , set : GL::setCullFace
-    
-    glFrontFace     : get   : GL::keyFrontFace    , set : GL::setFrontFace
-    
-    glBlendEnabled  : get   : GL::getBlendActive  , set : GL::setBlendActive
-    
-    glBlendEquation : get   : GL::keyBlendEquate  , set : GL::setBlendEquate
-    
-    glBlendFunc     : get   : GL::keyBlendFunc    , set : GL::setBlendFunc
-    
-    glBlendInArg    : get   : GL::keyBlendInArg   , set : GL::setBlendInArg
-
-    glBlendOutArg   : get   : GL::keyBlendOutArg  , set : GL::setBlendOutArg
-    
-    glDepthEnabled  : get   : GL::getDepthActive  , set : GL::setDepthActive
-    
-    glDepthTest     : get   : GL::keyDepthTest    , set : GL::setDepthTest
-
-    glDepthFunc     : get   : GL::keyDepthFunc    , set : GL::setDepthFunc
-    
-    clearMask       : get   : GL::keyClearMask    , set : GL::setClearMask
-    
-    glBindTarget    : get   : GL::keyBindTarget   , set : GL::setBindTarget
-    
-    glClearDepth    : get   : GL::getClearDepth   , set : GL::setClearDepth
-    
-    clearColor      : get   : GL::getClearColor   , set : GL::setClearColor
-    
-    pxWidth         : get   : GL::getWidth        , set : GL::setWidth
-    
-    pxHeight        : get   : GL::getHeight       , set : GL::setHeight
-    
-    pxLeft          : get   : GL::getLeft         , set : GL::setLeft
-    
-    pxTop           : get   : GL::getTop          , set : GL::setTop
-
-    ratioPixel      : get   : GL::getPixelRatio   , set : GL::setPixelRatio
-    
-    ratioAspect     : get   : GL::getAspectRatio  , set : GL::setAspectRatio
-    
-    ratioShift      : get   : GL::getShiftRatio   , set : GL::setShiftRatio
-    
-    uxActive        : get   : GL::getUXEnabled    , set : GL::setUXEnabled
-
-    uxMoveWalking   : get   : GL::getWalking      , set : GL::setWalking
-    
-    uxMoveJumping   : get   : GL::getJumping      , set : GL::setJumping
-
-    uxKeyShift      : get   : GL::getKeyShift     , set : GL::setKeyShift
-    
-    uxKeyAlt        : get   : GL::getKeyAlt       , set : GL::setKeyAlt
-
-    uxKeyMeta       : get   : GL::getKeyMeta      , set : GL::setKeyMeta
-
-    uxKeyCtrl       : get   : GL::getKeyCtrl      , set : GL::setKeyCtrl
-    
-    uxPtrClick      : get   : GL::getPtrClick     , set : GL::setPtrClick
-    
-    uxPtrDblClick   : get   : GL::getPtrDblClick  , set : GL::setPtrDblClick
-
-    uxPtrLooking    : get   : GL::getLooking      , set : GL::setLooking
-
-    uxPtrZooming    : get   : GL::getZooming      , set : GL::setZooming
-
-    uxPtrDragging   : get   : GL::getDragging     , set : GL::setDragging
-
-    uxPtrRotating   : get   : GL::getRotating     , set : GL::setRotating
-
-    uxMoveFwd       : get   : GL::getMoveFwd      , set : GL::setMoveFwd
-    
-    uxMoveBack      : get   : GL::getMoveBack     , set : GL::setMoveBack
-    
-    uxMoveLeft      : get   : GL::getMoveLeft     , set : GL::setMoveLeft
-    
-    uxMoveRight     : get   : GL::getMoveRight    , set : GL::setMoveRight
-    
-    uxMoveUp        : get   : GL::getMoveUp       , set : GL::setMoveUp
-    
-    uxMoveDown      : get   : GL::getMoveDown     , set : GL::setMoveDown
-
-    x               : get   : GL::getX            , set : GL::setX
-
-    xDelta          : get   : GL::getXDelta       , set : GL::setXDelta
-
-    xRotate         : get   : GL::getXRotate      , set : GL::setXRotate
-
-    xScale          : get   : GL::getXScale       , set : GL::setXScale
-
-    xVector         : get   : GL::getXVector      , set : GL::setXVector
-
-    y               : get   : GL::getY            , set : GL::setY
-
-    yDelta          : get   : GL::getYDelta       , set : GL::setYDelta
-
-    yRotate         : get   : GL::getYRotate      , set : GL::setYRotate
-
-    yScale          : get   : GL::getYScale       , set : GL::setYScale
-
-    yVector         : get   : GL::getYVector      , set : GL::setYVector
-
-    zScale          : get   : GL::getZScale       , set : GL::setZScale
-
-    zVector         : get   : GL::getZVector      , set : GL::setZVector
-
 export class            Program     extends Pointer
 
         @byteLength     : 4 * 8
@@ -977,47 +833,6 @@ export class            Shader      extends Pointer
 
     getUniforms         : -> @findAllChilds().filter (i) -> i instanceof Uniform
 
-Object.define           Shader.registerClass()::,
-
-    gl              : get : Shader::getGL
-
-    glProgram       : get : Shader::getGLProgram
-
-    glSource        : get : Shader::getGLSource     , set : Shader::setGLSource
-
-    glShader        : get : Shader::getGLShader     , set : Shader::setGLShader
-
-    type            : get : Shader::keyShaderType   , set : Shader::setShaderType
-
-    source          : get : Shader::getSourceText   , set : Shader::setSourceText
-
-    charLength      : get : Shader::getCharLength   , set : Shader::setCharLength
-
-    isUploaded      : get : Shader::getIsUploaded   , set : Shader::setIsUploaded
-
-    isCompiled      : get : Shader::getIsCompiled   , set : Shader::setIsCompiled
-
-    isAttached      : get : Shader::getIsAttached   , set : Shader::setIsAttached
-
-    variables       : get : Shader::getAllVariables
-
-    uniforms        : get : Shader::getUniforms
-
-    attributes      : get : Shader::getAttributes  
-    
-    sumComponents   : get : -> @attributes.sumAttrib "components"
-    
-    stride          : get : -> @attributes[ 0 ].stride
-
-Object.symbol           Shader::,
-
-    iterate             : value : ->
-        shader = this ; ptri = 0.00
-        next : ->
-            unless ptri = shader . getNextChild ptri
-                return done : on , value : shader
-            return done : no , value : ptri
-
 export class            ShaderKey   extends Pointer
 
     @byteLength         : 4 * 8
@@ -1072,26 +887,6 @@ export class            ShaderKey   extends Pointer
     getKeyLocated       : -> @getUint8  OFFSET_KEY_LOCATED
 
     setKeyLocated       : -> @setUint8  OFFSET_KEY_LOCATED , arguments[0] ; arguments[0]
-
-Object.define           ShaderKey.registerClass()::,
-
-    gl                  : get   : ShaderKey::getGL
-
-    glProgram           : get   : ShaderKey::getGLProgram
-
-    glShader            : get   : ShaderKey::getGLShader
-    
-    program             : get   : ShaderKey::getProgram
-
-    shader              : get   : ShaderKey::getShader
-
-    name                : get   : ShaderKey::getNameString    , set : ShaderKey::setNameString
-    
-    components          : get   : ShaderKey::getComponents    , set : ShaderKey::setComponents
-
-    type                : get   : ShaderKey::keyTypeGLCode    , set : ShaderKey::setTypeGLCode
-
-    needsUpload         : get   : ShaderKey::getNeedsUpload   , set : ShaderKey::setNeedsUpload
 
 export class            Attribute   extends ShaderKey
 
@@ -1207,26 +1002,6 @@ export class            Attribute   extends ShaderKey
 
     setOffset           : -> @setUint8 OFFSET_ATTR_OFFSET , arguments[0]
 
-Object.define           Attribute::,
-
-    glLocation          : get   : Attribute::getGLLocation
-
-    location            : get   : Attribute::getLocation      , set : Attribute::setLocation
-
-    stride              : get   : Attribute::getStride        , set : Attribute::setStride
-
-    offset              : get   : Attribute::getOffset        , set : Attribute::setOffset
-
-    normalize           : get   : Attribute::getNormalize     , set : Attribute::setNormalize
-
-Object.protos           Attribute
-
-    .filter             -> Object.hasOwn arguments[0]:: , "getValue"
-    
-    .forEach            -> Object.define (Key = arguments[0]):: ,
-    
-        value           : get   : Key::getValue , set : Key::setValue
-
 export class            Uniform     extends ShaderKey
 
     Object.define       Uniform.registerClass(),
@@ -1288,231 +1063,7 @@ export class            Uniform     extends ShaderKey
         return unless location  = gl.getUniformLocation program, @getNameString()
         @setKeyLocated 1 ; @setLinkedNode location ; location
 
-Object.define           Uniform::,
-
-    glLocation          : get   : Uniform::getGLLocation
-
-    location            : get   : Uniform::getGLLocation
-
-Object.protos           Uniform
-
-    .filter             -> Object.hasOwn arguments[0]:: , "getValue"
-    
-    .forEach            -> Object.define (Key = arguments[0]):: ,
-    
-        value           : get   : Key::getValue , set   : Key::setValue
-
-Object.define           Draw.registerClass(),
-
-    byteLength          : value : 4 * 0
-
-    typedArray          : value : Uint32Array
-
-Object.hidden           Draw,
-
-    "parent", "link", "array",
-    "headers", "protoClass", "length",  
-    "children", "byteOffset", "byteLength", 
-
-Object.define           Draw::,
-
-    getGL               : value : -> @ptrParentNode().getGL()
-
-    getTarget           : value : -> @ptrParentNode().ptrParentNode().getBindTarget()
-
-    getSrcData          : value : -> @ptrParentNode().ptrParentNode().getTypedArray()
-
-    keyTypeGLCode       : value : -> @ptrParentNode().keyTypeGLCode()
-
-    getDstOffset        : value : -> @getResvUint32 0
-
-    setDstOffset        : value : -> @setResvUint32 0, arguments[0]
-
-    getModeBegin        : value : -> @getResvUint32 3
-    
-    setModeBegin        : value : -> @setResvUint32 3, arguments[0]
-
-    getModeEnd          : value : -> @getResvUint32 4
-    
-    setModeEnd          : value : -> @setResvUint32 4, arguments[0]
-
-    getStart            : value : -> @getResvUint32 1
-
-    setStart            : value : -> @setResvUint32 1, arguments[0]
-
-    getCount            : value : -> @getResvUint32 2
-
-    setCount            : value : -> @setResvUint32 2, arguments[0]
-
-    getAttributes       : value : -> @ptrParentNode().getAttributes().subarray( @getModeBegin(), @getModeEnd() )
-
-    setAttributes       : value : -> @getAttributes().set arguments[0] ; this
-
-    getVertices         : value : -> @ptrLinkedNode().getVertices()
-    
-    getColor            : value : -> @ptrLinkedNode().getColor()
-
-    getMatrix           : value : -> @ptrLinkedNode().getMatrix()
-
-    upload              : value : -> @gl.bufferSubData @target, @dstOffset, @srcData, @start, @count ; this
-
-Object.define           Draw::,
-
-    gl                  : get   : Draw::getGL
-
-    target              : get   : Draw::getTarget
-
-    srcData             : get   : Draw::getSrcData
-
-    object3             : get   : Draw::ptrLinkedNode   , set   : Draw::setLinkedPtri
-
-    mode                : get   : Draw::ptrParentNode   , set   : Draw::setParentPtri
-    
-    type                : get   : Draw::keyTypeGLCode
-
-    dstOffset           : get   : Draw::getDstOffset    , set   : Draw::setDstOffset
-    
-    start               : get   : Draw::getStart        , set   : Draw::setStart
-
-    count               : get   : Draw::getCount        , set   : Draw::setCount
-    
-    attributes          : get   : Draw::getAttributes
-
-    vertices            : get   : Draw::getVertices
-
-    color               : get   : Draw::getColor
-
-    matrix              : get   : Draw::getMatrix
-
-Object.symbol           Mode::,
-
-    iterate             : value : ->
-        draw = this ; ptri = 0.00
-        next : ->
-            unless ptri = draw . getNextChild ptri
-                return done : on , value : draw
-            return done : no , value : ptri
-    
-Object.define           Mode.registerClass(),
-
-    byteLength          : value : 4 * 0
-
-    typedArray          : value : Uint32Array
-
-Object.hidden           Mode,
-
-    "array", "byteLength", "byteOffset", "headers", 
-    "length", "protoClass"
-
-Object.define           Mode::,
-
-    is                  : value : ->
-        0 is @getTypeGLCode() - arguments[0]
-
-    malloc              : value : ->
-
-        obj3 = arguments[ 0 ]
-        vertices = obj3.getVertices()
-        components = @getComponents()
-
-        count = vertices.length / 3
-        length = count * components
-        byteLength = length * vertices.BYTES_PER_ELEMENT
-        mallocOffset = @addAllocBytes byteLength
-        destOffset = @getModeOffset() + mallocOffset
-
-        @addModeLength length 
-        @addDrawLength count
-
-        draw = new Draw()
-
-        draw . setParentPtri this
-        draw . setLinkedPtri obj3
-        draw . setDstOffset destOffset
-        draw . setStart destOffset / 4
-        draw . setCount length
-        draw . setModeBegin mallocOffset / 4
-        draw . setModeEnd draw.getModeBegin() + length
-
-        draw
-
-    render              : value : ->
-        @gl.drawArrays @mode , @first , @count
-        log "draw call  ->  #{@mode.constructor.name}"
-
-Object.define           Mode::,
-
-    getGL               : value : -> @parent.getGL()# todo fix worker  
-
-    getBuffer           : value : -> @parent
-
-    getProgram          : value : -> @buffer.parent.program
-
-    findObjects         : value : -> @findAllChilds().flatMap (v) -> v.object3
-
-    getComponents       : value : -> @getResvUint16 0
-
-    setComponents       : value : -> @setResvUint16 0, arguments[0]
-
-    keyTypeGLCode       : value : -> @keyResvUint16 1, KEYEXTEND_OBJECT3D
-
-    getTypeGLCode       : value : -> @getResvUint16 1
-
-    setTypeGLCode       : value : -> @setResvUint16 1, arguments[0]
-
-    getFirstIndex       : value : -> @getResvUint32 1
-
-    setFirstIndex       : value : -> @setResvUint32 1, arguments[0]
-
-    getModeLength       : value : -> @getResvUint32 2
-    
-    addModeLength       : value : -> @addResvUint32 2, arguments[0]
-
-    setModeLength       : value : -> @setResvUint32 2, arguments[0]
-
-    getDrawLength       : value : -> @getResvUint32 3
-
-    addDrawLength       : value : -> @addResvUint32 3, arguments[0]
-    
-    setDrawLength       : value : -> @setResvUint32 3, arguments[0]
-        
-    getAllocBytes       : value : -> @getResvUint32 4
-    
-    addAllocBytes       : value : -> @addResvUint32 4, arguments[0]
-
-    setAllocBytes       : value : -> @setResvUint32 4, arguments[0]
-
-    getModeOffset       : value : -> @getResvUint32 5
-
-    setModeOffset       : value : -> @setResvUint32 5, arguments[0]    
-    
-    getAttributes       : value : -> @getParentPtrP().getTArray @getModeOffset(), @getAllocBytes()
-
-    setAttributes       : value : -> @getAttributes().set arguments[0] ; this
-
-Object.define           Mode::,
-
-    gl                  : get   : Mode::getGL
-
-    buffer              : get   : Mode::getBuffer
-
-    program             : get   : Mode::getProgram
-
-    objects             : get   : Mode::findObjects
-
-    mode                : get   : Mode::keyTypeGLCode , set   : Mode::setTypeGLCode
-
-    first               : get   : Mode::getFirstIndex , set   : Mode::setFirstIndex
-    
-    count               : get   : Mode::getDrawLength , set   : Mode::setDrawLength
-    
-    offset              : get   : Mode::getModeOffset , set   : Mode::setModeOffset 
-    
-    numCmponents        : get   : Mode::getComponents , set   : Mode::setComponents
-
-    attributes          : get   : Mode::getAttributes , set   : Mode::setAttributes
-
-export class            Buffer extends Pointer
+export class            Buffer      extends Pointer
 
     @byteLength         : 4 * 256 * 256
 
@@ -1668,21 +1219,422 @@ export class            Buffer extends Pointer
     
     setModeOffset       : -> @setResvUint32 2 , arguments[0] ; arguments[0] 
 
-Object.hidden           Buffer.registerClass(),
+Object.symbol           GL          . registerClass(),
+
+    instance        : value : ->
+        
+        @isPrototypeOf Object.getPrototypeOf arguments[0]
+
+Object.define           Shader      . registerClass()::,
+
+    gl              : get : Shader::getGL
+
+    glProgram       : get : Shader::getGLProgram
+
+    glSource        : get : Shader::getGLSource     , set : Shader::setGLSource
+
+    glShader        : get : Shader::getGLShader     , set : Shader::setGLShader
+
+    type            : get : Shader::keyShaderType   , set : Shader::setShaderType
+
+    source          : get : Shader::getSourceText   , set : Shader::setSourceText
+
+    charLength      : get : Shader::getCharLength   , set : Shader::setCharLength
+
+    isUploaded      : get : Shader::getIsUploaded   , set : Shader::setIsUploaded
+
+    isCompiled      : get : Shader::getIsCompiled   , set : Shader::setIsCompiled
+
+    isAttached      : get : Shader::getIsAttached   , set : Shader::setIsAttached
+
+    variables       : get : Shader::getAllVariables
+
+    uniforms        : get : Shader::getUniforms
+
+    attributes      : get : Shader::getAttributes  
+    
+    sumComponents   : get : -> @attributes.sumAttrib "components"
+    
+    stride          : get : -> @attributes[ 0 ].stride
+
+Object.define           ShaderKey   . registerClass()::,
+
+    gl                  : get   : ShaderKey::getGL
+
+    glProgram           : get   : ShaderKey::getGLProgram
+
+    glShader            : get   : ShaderKey::getGLShader
+    
+    program             : get   : ShaderKey::getProgram
+
+    shader              : get   : ShaderKey::getShader
+
+    name                : get   : ShaderKey::getNameString    , set : ShaderKey::setNameString
+    
+    components          : get   : ShaderKey::getComponents    , set : ShaderKey::setComponents
+
+    type                : get   : ShaderKey::keyTypeGLCode    , set : ShaderKey::setTypeGLCode
+
+    needsUpload         : get   : ShaderKey::getNeedsUpload   , set : ShaderKey::setNeedsUpload
+
+Object.define           Draw        . registerClass(),
+
+    byteLength          : value : 4 * 0
+
+    typedArray          : value : Uint32Array
+
+Object.define           Mode        . registerClass(),
+
+    byteLength          : value : 4 * 0
+
+    typedArray          : value : Uint32Array
+
+Object.hidden           Buffer      . registerClass(),
 
     "headers", "protoClass", "length",  
     "array", "byteOffset", "byteLength", 
 
-Object.symbol           Buffer::,
+Object.define           Object3     . registerClass(),
 
-    iterate             : value : ->
-        mode = this ; ptri = 0.00
-        next : ->
-            unless ptri = mode . getNextChild ptri
-                return done : on , value : mode
-            return done : no , value : ptri
+    byteLength          : value : 4 * 12
 
-Object.define           Buffer::,
+    typedArray          : value : Float32Array
+
+Object.define           GL::        , 
+
+    gl              : get   : GL::getLinkedNode
+
+    glError         : get   : GL::getGLError
+
+    program         : get   : GL::getProgram
+
+    programVertex   : get   : GL::getVertShader
+
+    programFragment : get   : GL::getFragShader
+
+    programAttribs  : get   : GL::getAttributes
+
+    glBuffer        : get   : GL::getGLBuffer
+
+    buffers         : get   : GL::getAllBuffers 
+
+    allShaders      : get   : GL::getAllShaders
+
+    allPrograms     : get   : GL::getAllPrograms
+
+    allVariables    : get   : GL::getAllVariables
+
+    allUniforms     : get   : GL::getUniforms
+
+    nodeBuffer      : get   : GL::getArrayBuffer
+
+    canvas          : get   : GL::getCanvasNode   , set : GL::setCanvasNode
+
+    glActive        : get   : GL::getDrawActive   , set : GL::setDrawActive
+            
+    glCullEnabled   : get   : GL::getCullEnabled  , set : GL::setCullEnabled
+
+    glCullFace      : get   : GL::keyCullFace     , set : GL::setCullFace
+    
+    glFrontFace     : get   : GL::keyFrontFace    , set : GL::setFrontFace
+    
+    glBlendEnabled  : get   : GL::getBlendActive  , set : GL::setBlendActive
+    
+    glBlendEquation : get   : GL::keyBlendEquate  , set : GL::setBlendEquate
+    
+    glBlendFunc     : get   : GL::keyBlendFunc    , set : GL::setBlendFunc
+    
+    glBlendInArg    : get   : GL::keyBlendInArg   , set : GL::setBlendInArg
+
+    glBlendOutArg   : get   : GL::keyBlendOutArg  , set : GL::setBlendOutArg
+    
+    glDepthEnabled  : get   : GL::getDepthActive  , set : GL::setDepthActive
+    
+    glDepthTest     : get   : GL::keyDepthTest    , set : GL::setDepthTest
+
+    glDepthFunc     : get   : GL::keyDepthFunc    , set : GL::setDepthFunc
+    
+    clearMask       : get   : GL::keyClearMask    , set : GL::setClearMask
+    
+    glBindTarget    : get   : GL::keyBindTarget   , set : GL::setBindTarget
+    
+    glClearDepth    : get   : GL::getClearDepth   , set : GL::setClearDepth
+    
+    clearColor      : get   : GL::getClearColor   , set : GL::setClearColor
+    
+    pxWidth         : get   : GL::getWidth        , set : GL::setWidth
+    
+    pxHeight        : get   : GL::getHeight       , set : GL::setHeight
+    
+    pxLeft          : get   : GL::getLeft         , set : GL::setLeft
+    
+    pxTop           : get   : GL::getTop          , set : GL::setTop
+
+    ratioPixel      : get   : GL::getPixelRatio   , set : GL::setPixelRatio
+    
+    ratioAspect     : get   : GL::getAspectRatio  , set : GL::setAspectRatio
+    
+    ratioShift      : get   : GL::getShiftRatio   , set : GL::setShiftRatio
+    
+    uxActive        : get   : GL::getUXEnabled    , set : GL::setUXEnabled
+
+    uxMoveWalking   : get   : GL::getWalking      , set : GL::setWalking
+    
+    uxMoveJumping   : get   : GL::getJumping      , set : GL::setJumping
+
+    uxKeyShift      : get   : GL::getKeyShift     , set : GL::setKeyShift
+    
+    uxKeyAlt        : get   : GL::getKeyAlt       , set : GL::setKeyAlt
+
+    uxKeyMeta       : get   : GL::getKeyMeta      , set : GL::setKeyMeta
+
+    uxKeyCtrl       : get   : GL::getKeyCtrl      , set : GL::setKeyCtrl
+    
+    uxPtrClick      : get   : GL::getPtrClick     , set : GL::setPtrClick
+    
+    uxPtrDblClick   : get   : GL::getPtrDblClick  , set : GL::setPtrDblClick
+
+    uxPtrLooking    : get   : GL::getLooking      , set : GL::setLooking
+
+    uxPtrZooming    : get   : GL::getZooming      , set : GL::setZooming
+
+    uxPtrDragging   : get   : GL::getDragging     , set : GL::setDragging
+
+    uxPtrRotating   : get   : GL::getRotating     , set : GL::setRotating
+
+    uxMoveFwd       : get   : GL::getMoveFwd      , set : GL::setMoveFwd
+    
+    uxMoveBack      : get   : GL::getMoveBack     , set : GL::setMoveBack
+    
+    uxMoveLeft      : get   : GL::getMoveLeft     , set : GL::setMoveLeft
+    
+    uxMoveRight     : get   : GL::getMoveRight    , set : GL::setMoveRight
+    
+    uxMoveUp        : get   : GL::getMoveUp       , set : GL::setMoveUp
+    
+    uxMoveDown      : get   : GL::getMoveDown     , set : GL::setMoveDown
+
+    x               : get   : GL::getX            , set : GL::setX
+
+    xDelta          : get   : GL::getXDelta       , set : GL::setXDelta
+
+    xRotate         : get   : GL::getXRotate      , set : GL::setXRotate
+
+    xScale          : get   : GL::getXScale       , set : GL::setXScale
+
+    xVector         : get   : GL::getXVector      , set : GL::setXVector
+
+    y               : get   : GL::getY            , set : GL::setY
+
+    yDelta          : get   : GL::getYDelta       , set : GL::setYDelta
+
+    yRotate         : get   : GL::getYRotate      , set : GL::setYRotate
+
+    yScale          : get   : GL::getYScale       , set : GL::setYScale
+
+    yVector         : get   : GL::getYVector      , set : GL::setYVector
+
+    zScale          : get   : GL::getZScale       , set : GL::setZScale
+
+    zVector         : get   : GL::getZVector      , set : GL::setZVector
+
+Object.define           Attribute:: , 
+
+    glLocation          : get   : Attribute::getGLLocation
+
+    location            : get   : Attribute::getLocation      , set : Attribute::setLocation
+
+    stride              : get   : Attribute::getStride        , set : Attribute::setStride
+
+    offset              : get   : Attribute::getOffset        , set : Attribute::setOffset
+
+    normalize           : get   : Attribute::getNormalize     , set : Attribute::setNormalize
+
+Object.define           Uniform::   , 
+
+    glLocation          : get   : Uniform::getGLLocation
+
+    location            : get   : Uniform::getGLLocation
+
+Object.define           Draw::      , 
+
+    getGL               : value : -> @ptrParentNode().getGL()
+
+    getTarget           : value : -> @ptrParentNode().ptrParentNode().getBindTarget()
+
+    getSrcData          : value : -> @ptrParentNode().ptrParentNode().getTypedArray()
+
+    keyTypeGLCode       : value : -> @ptrParentNode().keyTypeGLCode()
+
+    getDstOffset        : value : -> @getResvUint32 0
+
+    setDstOffset        : value : -> @setResvUint32 0, arguments[0]
+
+    getModeBegin        : value : -> @getResvUint32 3
+    
+    setModeBegin        : value : -> @setResvUint32 3, arguments[0]
+
+    getModeEnd          : value : -> @getResvUint32 4
+    
+    setModeEnd          : value : -> @setResvUint32 4, arguments[0]
+
+    getStart            : value : -> @getResvUint32 1
+
+    setStart            : value : -> @setResvUint32 1, arguments[0]
+
+    getCount            : value : -> @getResvUint32 2
+
+    setCount            : value : -> @setResvUint32 2, arguments[0]
+
+    getAttributes       : value : -> @ptrParentNode().getAttributes().subarray( @getModeBegin(), @getModeEnd() )
+
+    setAttributes       : value : -> @getAttributes().set arguments[0] ; this
+
+    getVertices         : value : -> @ptrLinkedNode().getVertices()
+    
+    getColor            : value : -> @ptrLinkedNode().getColor()
+
+    getMatrix           : value : -> @ptrLinkedNode().getMatrix()
+
+    upload              : value : -> @gl.bufferSubData @target, @dstOffset, @srcData, @start, @count ; this
+
+Object.define           Draw::      , 
+
+    gl                  : get   : Draw::getGL
+
+    target              : get   : Draw::getTarget
+
+    srcData             : get   : Draw::getSrcData
+
+    object3             : get   : Draw::ptrLinkedNode   , set   : Draw::setLinkedPtri
+
+    mode                : get   : Draw::ptrParentNode   , set   : Draw::setParentPtri
+    
+    type                : get   : Draw::keyTypeGLCode
+
+    dstOffset           : get   : Draw::getDstOffset    , set   : Draw::setDstOffset
+    
+    start               : get   : Draw::getStart        , set   : Draw::setStart
+
+    count               : get   : Draw::getCount        , set   : Draw::setCount
+    
+    attributes          : get   : Draw::getAttributes
+
+    vertices            : get   : Draw::getVertices
+
+    color               : get   : Draw::getColor
+
+    matrix              : get   : Draw::getMatrix
+
+Object.define           Mode::      , 
+
+    is                  : value : ->
+        0 is @getTypeGLCode() - arguments[0]
+
+    malloc              : value : ->
+
+        obj3 = arguments[ 0 ]
+        vertices = obj3.getVertices()
+        components = @getComponents()
+
+        count = vertices.length / 3
+        length = count * components
+        byteLength = length * vertices.BYTES_PER_ELEMENT
+        mallocOffset = @addAllocBytes byteLength
+        destOffset = @getModeOffset() + mallocOffset
+
+        @addModeLength length 
+        @addDrawLength count
+
+        draw = new Draw()
+
+        draw . setParentPtri this
+        draw . setLinkedPtri obj3
+        draw . setDstOffset destOffset
+        draw . setStart destOffset / 4
+        draw . setCount length
+        draw . setModeBegin mallocOffset / 4
+        draw . setModeEnd draw.getModeBegin() + length
+
+        draw
+
+    render              : value : ->
+        @gl.drawArrays @mode , @first , @count
+        log "draw call  ->  #{@mode.constructor.name}"
+
+Object.define           Mode::      , 
+
+    getGL               : value : -> @parent.getGL()# todo fix worker  
+
+    getBuffer           : value : -> @parent
+
+    getProgram          : value : -> @buffer.parent.program
+
+    findObjects         : value : -> @findAllChilds().flatMap (v) -> v.object3
+
+    getComponents       : value : -> @getResvUint16 0
+
+    setComponents       : value : -> @setResvUint16 0, arguments[0]
+
+    keyTypeGLCode       : value : -> @keyResvUint16 1, KEYEXTEND_OBJECT3D
+
+    getTypeGLCode       : value : -> @getResvUint16 1
+
+    setTypeGLCode       : value : -> @setResvUint16 1, arguments[0]
+
+    getFirstIndex       : value : -> @getResvUint32 1
+
+    setFirstIndex       : value : -> @setResvUint32 1, arguments[0]
+
+    getModeLength       : value : -> @getResvUint32 2
+    
+    addModeLength       : value : -> @addResvUint32 2, arguments[0]
+
+    setModeLength       : value : -> @setResvUint32 2, arguments[0]
+
+    getDrawLength       : value : -> @getResvUint32 3
+
+    addDrawLength       : value : -> @addResvUint32 3, arguments[0]
+    
+    setDrawLength       : value : -> @setResvUint32 3, arguments[0]
+        
+    getAllocBytes       : value : -> @getResvUint32 4
+    
+    addAllocBytes       : value : -> @addResvUint32 4, arguments[0]
+
+    setAllocBytes       : value : -> @setResvUint32 4, arguments[0]
+
+    getModeOffset       : value : -> @getResvUint32 5
+
+    setModeOffset       : value : -> @setResvUint32 5, arguments[0]    
+    
+    getAttributes       : value : -> @getParentPtrP().getTArray @getModeOffset(), @getAllocBytes()
+
+    setAttributes       : value : -> @getAttributes().set arguments[0] ; this
+
+Object.define           Mode::      , 
+
+    gl                  : get   : Mode::getGL
+
+    buffer              : get   : Mode::getBuffer
+
+    program             : get   : Mode::getProgram
+
+    objects             : get   : Mode::findObjects
+
+    mode                : get   : Mode::keyTypeGLCode , set   : Mode::setTypeGLCode
+
+    first               : get   : Mode::getFirstIndex , set   : Mode::setFirstIndex
+    
+    count               : get   : Mode::getDrawLength , set   : Mode::setDrawLength
+    
+    offset              : get   : Mode::getModeOffset , set   : Mode::setModeOffset 
+    
+    numCmponents        : get   : Mode::getComponents , set   : Mode::setComponents
+
+    attributes          : get   : Mode::getAttributes , set   : Mode::setAttributes
+
+Object.define           Buffer::    , 
 
     target              : get   : Buffer::keyBindTarget   , set : Buffer::setBindTarget 
 
@@ -1692,27 +1644,7 @@ Object.define           Buffer::,
 
     attributes          : get   : Buffer::getTypedArray
 
-Object.define           Object3.registerClass(),
-
-    byteLength          : value : 4 * 12
-
-    typedArray          : value : Float32Array
-
-Object.hidden           Object3,
-
-    "array", "byteLength", "byteOffset", 
-    "headers", "length", "link", "protoClass"
-
-Object.symbol           Object3::,
-
-    iterate             : value : ->
-
-        obj3 = @ ; ptri = 0.00 ; next : ->
-            unless ptri = obj3 . getNextChild ptri
-                return done : on , value : obj3
-            return done : no , value : ptri
-
-Object.define           Object3::,
+Object.define           Object3::   , 
 
     getDraws            : value : -> @findAllLinks().filter (v) -> v instanceof Draw
 
@@ -1765,7 +1697,7 @@ Object.define           Object3::,
         end = begin + 3
         return @vertices.subarray begin, end
 
-Object.define           Object3::,
+Object.define           Object3::   , 
     
     vertices            : get   : Object3::getVertices   , set : Object3::setVertexArray
 
@@ -1780,5 +1712,73 @@ Object.define           Object3::,
     draws               : get   : Object3::getDraws
 
     matrix              : get   : Object3::getMatrix
+
+Object.symbol           Shader::    , 
+
+    iterate             : value : ->
+        shader = this ; ptri = 0.00
+        next : ->
+            unless ptri = shader . getNextChild ptri
+                return done : on , value : shader
+            return done : no , value : ptri
+
+Object.symbol           Mode::      , 
+
+    iterate             : value : ->
+        draw = this ; ptri = 0.00
+        next : ->
+            unless ptri = draw . getNextChild ptri
+                return done : on , value : draw
+            return done : no , value : ptri
+
+Object.symbol           Buffer::    , 
+
+    iterate             : value : ->
+        mode = this ; ptri = 0.00
+        next : ->
+            unless ptri = mode . getNextChild ptri
+                return done : on , value : mode
+            return done : no , value : ptri
+
+Object.symbol           Object3::   , 
+
+    iterate             : value : ->
+
+        obj3 = @ ; ptri = 0.00 ; next : ->
+            unless ptri = obj3 . getNextChild ptri
+                return done : on , value : obj3
+            return done : no , value : ptri
+
+Object.hidden           Draw        , 
+
+    "parent", "link", "array",
+    "headers", "protoClass", "length",  
+    "children", "byteOffset", "byteLength", 
+
+Object.hidden           Mode        , 
+
+    "array", "byteLength", "byteOffset", "headers", 
+    "length", "protoClass"
+
+Object.hidden           Object3     , 
+
+    "array", "byteLength", "byteOffset", 
+    "headers", "length", "link", "protoClass"
+
+Object.protos           Attribute     
+
+    .filter             -> Object.hasOwn arguments[0]:: , "getValue"
+    
+    .forEach            -> Object.define (Key = arguments[0]):: ,
+    
+        value           : get   : Key::getValue , set : Key::setValue
+
+Object.protos           Uniform       
+
+    .filter             -> Object.hasOwn arguments[0]:: , "getValue"
+    
+    .forEach            -> Object.define (Key = arguments[0]):: ,
+    
+        value           : get   : Key::getValue , set   : Key::setValue
 
 export                  default GL

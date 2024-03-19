@@ -860,276 +860,6 @@ export var GL = (function() {
 
 }).call(this);
 
-Object.symbol(GL.registerClass(), {
-  instance: {
-    value: function() {
-      return this.isPrototypeOf(Object.getPrototypeOf(arguments[0]));
-    }
-  }
-});
-
-Object.define(GL.prototype, {
-  gl: {
-    get: GL.prototype.getLinkedNode
-  },
-  glError: {
-    get: GL.prototype.getGLError
-  },
-  program: {
-    get: GL.prototype.getProgram
-  },
-  programVertex: {
-    get: GL.prototype.getVertShader
-  },
-  programFragment: {
-    get: GL.prototype.getFragShader
-  },
-  programAttribs: {
-    get: GL.prototype.getAttributes
-  },
-  glBuffer: {
-    get: GL.prototype.getGLBuffer
-  },
-  buffers: {
-    get: GL.prototype.getAllBuffers
-  },
-  allShaders: {
-    get: GL.prototype.getAllShaders
-  },
-  allPrograms: {
-    get: GL.prototype.getAllPrograms
-  },
-  allVariables: {
-    get: GL.prototype.getAllVariables
-  },
-  allUniforms: {
-    get: GL.prototype.getUniforms
-  },
-  nodeBuffer: {
-    get: GL.prototype.getArrayBuffer
-  },
-  canvas: {
-    get: GL.prototype.getCanvasNode,
-    set: GL.prototype.setCanvasNode
-  },
-  glActive: {
-    get: GL.prototype.getDrawActive,
-    set: GL.prototype.setDrawActive
-  },
-  glCullEnabled: {
-    get: GL.prototype.getCullEnabled,
-    set: GL.prototype.setCullEnabled
-  },
-  glCullFace: {
-    get: GL.prototype.keyCullFace,
-    set: GL.prototype.setCullFace
-  },
-  glFrontFace: {
-    get: GL.prototype.keyFrontFace,
-    set: GL.prototype.setFrontFace
-  },
-  glBlendEnabled: {
-    get: GL.prototype.getBlendActive,
-    set: GL.prototype.setBlendActive
-  },
-  glBlendEquation: {
-    get: GL.prototype.keyBlendEquate,
-    set: GL.prototype.setBlendEquate
-  },
-  glBlendFunc: {
-    get: GL.prototype.keyBlendFunc,
-    set: GL.prototype.setBlendFunc
-  },
-  glBlendInArg: {
-    get: GL.prototype.keyBlendInArg,
-    set: GL.prototype.setBlendInArg
-  },
-  glBlendOutArg: {
-    get: GL.prototype.keyBlendOutArg,
-    set: GL.prototype.setBlendOutArg
-  },
-  glDepthEnabled: {
-    get: GL.prototype.getDepthActive,
-    set: GL.prototype.setDepthActive
-  },
-  glDepthTest: {
-    get: GL.prototype.keyDepthTest,
-    set: GL.prototype.setDepthTest
-  },
-  glDepthFunc: {
-    get: GL.prototype.keyDepthFunc,
-    set: GL.prototype.setDepthFunc
-  },
-  clearMask: {
-    get: GL.prototype.keyClearMask,
-    set: GL.prototype.setClearMask
-  },
-  glBindTarget: {
-    get: GL.prototype.keyBindTarget,
-    set: GL.prototype.setBindTarget
-  },
-  glClearDepth: {
-    get: GL.prototype.getClearDepth,
-    set: GL.prototype.setClearDepth
-  },
-  clearColor: {
-    get: GL.prototype.getClearColor,
-    set: GL.prototype.setClearColor
-  },
-  pxWidth: {
-    get: GL.prototype.getWidth,
-    set: GL.prototype.setWidth
-  },
-  pxHeight: {
-    get: GL.prototype.getHeight,
-    set: GL.prototype.setHeight
-  },
-  pxLeft: {
-    get: GL.prototype.getLeft,
-    set: GL.prototype.setLeft
-  },
-  pxTop: {
-    get: GL.prototype.getTop,
-    set: GL.prototype.setTop
-  },
-  ratioPixel: {
-    get: GL.prototype.getPixelRatio,
-    set: GL.prototype.setPixelRatio
-  },
-  ratioAspect: {
-    get: GL.prototype.getAspectRatio,
-    set: GL.prototype.setAspectRatio
-  },
-  ratioShift: {
-    get: GL.prototype.getShiftRatio,
-    set: GL.prototype.setShiftRatio
-  },
-  uxActive: {
-    get: GL.prototype.getUXEnabled,
-    set: GL.prototype.setUXEnabled
-  },
-  uxMoveWalking: {
-    get: GL.prototype.getWalking,
-    set: GL.prototype.setWalking
-  },
-  uxMoveJumping: {
-    get: GL.prototype.getJumping,
-    set: GL.prototype.setJumping
-  },
-  uxKeyShift: {
-    get: GL.prototype.getKeyShift,
-    set: GL.prototype.setKeyShift
-  },
-  uxKeyAlt: {
-    get: GL.prototype.getKeyAlt,
-    set: GL.prototype.setKeyAlt
-  },
-  uxKeyMeta: {
-    get: GL.prototype.getKeyMeta,
-    set: GL.prototype.setKeyMeta
-  },
-  uxKeyCtrl: {
-    get: GL.prototype.getKeyCtrl,
-    set: GL.prototype.setKeyCtrl
-  },
-  uxPtrClick: {
-    get: GL.prototype.getPtrClick,
-    set: GL.prototype.setPtrClick
-  },
-  uxPtrDblClick: {
-    get: GL.prototype.getPtrDblClick,
-    set: GL.prototype.setPtrDblClick
-  },
-  uxPtrLooking: {
-    get: GL.prototype.getLooking,
-    set: GL.prototype.setLooking
-  },
-  uxPtrZooming: {
-    get: GL.prototype.getZooming,
-    set: GL.prototype.setZooming
-  },
-  uxPtrDragging: {
-    get: GL.prototype.getDragging,
-    set: GL.prototype.setDragging
-  },
-  uxPtrRotating: {
-    get: GL.prototype.getRotating,
-    set: GL.prototype.setRotating
-  },
-  uxMoveFwd: {
-    get: GL.prototype.getMoveFwd,
-    set: GL.prototype.setMoveFwd
-  },
-  uxMoveBack: {
-    get: GL.prototype.getMoveBack,
-    set: GL.prototype.setMoveBack
-  },
-  uxMoveLeft: {
-    get: GL.prototype.getMoveLeft,
-    set: GL.prototype.setMoveLeft
-  },
-  uxMoveRight: {
-    get: GL.prototype.getMoveRight,
-    set: GL.prototype.setMoveRight
-  },
-  uxMoveUp: {
-    get: GL.prototype.getMoveUp,
-    set: GL.prototype.setMoveUp
-  },
-  uxMoveDown: {
-    get: GL.prototype.getMoveDown,
-    set: GL.prototype.setMoveDown
-  },
-  x: {
-    get: GL.prototype.getX,
-    set: GL.prototype.setX
-  },
-  xDelta: {
-    get: GL.prototype.getXDelta,
-    set: GL.prototype.setXDelta
-  },
-  xRotate: {
-    get: GL.prototype.getXRotate,
-    set: GL.prototype.setXRotate
-  },
-  xScale: {
-    get: GL.prototype.getXScale,
-    set: GL.prototype.setXScale
-  },
-  xVector: {
-    get: GL.prototype.getXVector,
-    set: GL.prototype.setXVector
-  },
-  y: {
-    get: GL.prototype.getY,
-    set: GL.prototype.setY
-  },
-  yDelta: {
-    get: GL.prototype.getYDelta,
-    set: GL.prototype.setYDelta
-  },
-  yRotate: {
-    get: GL.prototype.getYRotate,
-    set: GL.prototype.setYRotate
-  },
-  yScale: {
-    get: GL.prototype.getYScale,
-    set: GL.prototype.setYScale
-  },
-  yVector: {
-    get: GL.prototype.getYVector,
-    set: GL.prototype.setYVector
-  },
-  zScale: {
-    get: GL.prototype.getZScale,
-    set: GL.prototype.setZScale
-  },
-  zVector: {
-    get: GL.prototype.getZVector,
-    set: GL.prototype.setZVector
-  }
-});
-
 export var Program = (function() {
   class Program extends Pointer {
     link() {
@@ -1671,90 +1401,6 @@ export var Shader = (function() {
 
 }).call(this);
 
-Object.define(Shader.registerClass().prototype, {
-  gl: {
-    get: Shader.prototype.getGL
-  },
-  glProgram: {
-    get: Shader.prototype.getGLProgram
-  },
-  glSource: {
-    get: Shader.prototype.getGLSource,
-    set: Shader.prototype.setGLSource
-  },
-  glShader: {
-    get: Shader.prototype.getGLShader,
-    set: Shader.prototype.setGLShader
-  },
-  type: {
-    get: Shader.prototype.keyShaderType,
-    set: Shader.prototype.setShaderType
-  },
-  source: {
-    get: Shader.prototype.getSourceText,
-    set: Shader.prototype.setSourceText
-  },
-  charLength: {
-    get: Shader.prototype.getCharLength,
-    set: Shader.prototype.setCharLength
-  },
-  isUploaded: {
-    get: Shader.prototype.getIsUploaded,
-    set: Shader.prototype.setIsUploaded
-  },
-  isCompiled: {
-    get: Shader.prototype.getIsCompiled,
-    set: Shader.prototype.setIsCompiled
-  },
-  isAttached: {
-    get: Shader.prototype.getIsAttached,
-    set: Shader.prototype.setIsAttached
-  },
-  variables: {
-    get: Shader.prototype.getAllVariables
-  },
-  uniforms: {
-    get: Shader.prototype.getUniforms
-  },
-  attributes: {
-    get: Shader.prototype.getAttributes
-  },
-  sumComponents: {
-    get: function() {
-      return this.attributes.sumAttrib("components");
-    }
-  },
-  stride: {
-    get: function() {
-      return this.attributes[0].stride;
-    }
-  }
-});
-
-Object.symbol(Shader.prototype, {
-  iterate: {
-    value: function() {
-      var ptri, shader;
-      shader = this;
-      ptri = 0.00;
-      return {
-        next: function() {
-          if (!(ptri = shader.getNextChild(ptri))) {
-            return {
-              done: true,
-              value: shader
-            };
-          }
-          return {
-            done: false,
-            value: ptri
-          };
-        }
-      };
-    }
-  }
-});
-
 export var ShaderKey = (function() {
   class ShaderKey extends Pointer {
     is() {
@@ -1855,40 +1501,6 @@ export var ShaderKey = (function() {
   return ShaderKey;
 
 }).call(this);
-
-Object.define(ShaderKey.registerClass().prototype, {
-  gl: {
-    get: ShaderKey.prototype.getGL
-  },
-  glProgram: {
-    get: ShaderKey.prototype.getGLProgram
-  },
-  glShader: {
-    get: ShaderKey.prototype.getGLShader
-  },
-  program: {
-    get: ShaderKey.prototype.getProgram
-  },
-  shader: {
-    get: ShaderKey.prototype.getShader
-  },
-  name: {
-    get: ShaderKey.prototype.getNameString,
-    set: ShaderKey.prototype.setNameString
-  },
-  components: {
-    get: ShaderKey.prototype.getComponents,
-    set: ShaderKey.prototype.setComponents
-  },
-  type: {
-    get: ShaderKey.prototype.keyTypeGLCode,
-    set: ShaderKey.prototype.setTypeGLCode
-  },
-  needsUpload: {
-    get: ShaderKey.prototype.getNeedsUpload,
-    set: ShaderKey.prototype.setNeedsUpload
-  }
-});
 
 export var Attribute = (function() {
   var float, mat4, vec3, vec4;
@@ -2071,40 +1683,6 @@ export var Attribute = (function() {
 
 }).call(this);
 
-Object.define(Attribute.prototype, {
-  glLocation: {
-    get: Attribute.prototype.getGLLocation
-  },
-  location: {
-    get: Attribute.prototype.getLocation,
-    set: Attribute.prototype.setLocation
-  },
-  stride: {
-    get: Attribute.prototype.getStride,
-    set: Attribute.prototype.setStride
-  },
-  offset: {
-    get: Attribute.prototype.getOffset,
-    set: Attribute.prototype.setOffset
-  },
-  normalize: {
-    get: Attribute.prototype.getNormalize,
-    set: Attribute.prototype.setNormalize
-  }
-});
-
-Object.protos(Attribute).filter(function() {
-  return Object.hasOwn(arguments[0].prototype, "getValue");
-}).forEach(function() {
-  var Key;
-  return Object.define((Key = arguments[0]).prototype, {
-    value: {
-      get: Key.prototype.getValue,
-      set: Key.prototype.setValue
-    }
-  });
-});
-
 export var Uniform = (function() {
   var float, mat4, vec3, vec4;
 
@@ -2234,428 +1812,6 @@ export var Uniform = (function() {
   return Uniform;
 
 }).call(this);
-
-Object.define(Uniform.prototype, {
-  glLocation: {
-    get: Uniform.prototype.getGLLocation
-  },
-  location: {
-    get: Uniform.prototype.getGLLocation
-  }
-});
-
-Object.protos(Uniform).filter(function() {
-  return Object.hasOwn(arguments[0].prototype, "getValue");
-}).forEach(function() {
-  var Key;
-  return Object.define((Key = arguments[0]).prototype, {
-    value: {
-      get: Key.prototype.getValue,
-      set: Key.prototype.setValue
-    }
-  });
-});
-
-Object.define(Draw.registerClass(), {
-  byteLength: {
-    value: 4 * 0
-  },
-  typedArray: {
-    value: Uint32Array
-  }
-});
-
-Object.hidden(Draw, "parent", "link", "array", "headers", "protoClass", "length", "children", "byteOffset", "byteLength");
-
-Object.define(Draw.prototype, {
-  getGL: {
-    value: function() {
-      return this.ptrParentNode().getGL();
-    }
-  },
-  getTarget: {
-    value: function() {
-      return this.ptrParentNode().ptrParentNode().getBindTarget();
-    }
-  },
-  getSrcData: {
-    value: function() {
-      return this.ptrParentNode().ptrParentNode().getTypedArray();
-    }
-  },
-  keyTypeGLCode: {
-    value: function() {
-      return this.ptrParentNode().keyTypeGLCode();
-    }
-  },
-  getDstOffset: {
-    value: function() {
-      return this.getResvUint32(0);
-    }
-  },
-  setDstOffset: {
-    value: function() {
-      return this.setResvUint32(0, arguments[0]);
-    }
-  },
-  getModeBegin: {
-    value: function() {
-      return this.getResvUint32(3);
-    }
-  },
-  setModeBegin: {
-    value: function() {
-      return this.setResvUint32(3, arguments[0]);
-    }
-  },
-  getModeEnd: {
-    value: function() {
-      return this.getResvUint32(4);
-    }
-  },
-  setModeEnd: {
-    value: function() {
-      return this.setResvUint32(4, arguments[0]);
-    }
-  },
-  getStart: {
-    value: function() {
-      return this.getResvUint32(1);
-    }
-  },
-  setStart: {
-    value: function() {
-      return this.setResvUint32(1, arguments[0]);
-    }
-  },
-  getCount: {
-    value: function() {
-      return this.getResvUint32(2);
-    }
-  },
-  setCount: {
-    value: function() {
-      return this.setResvUint32(2, arguments[0]);
-    }
-  },
-  getAttributes: {
-    value: function() {
-      return this.ptrParentNode().getAttributes().subarray(this.getModeBegin(), this.getModeEnd());
-    }
-  },
-  setAttributes: {
-    value: function() {
-      this.getAttributes().set(arguments[0]);
-      return this;
-    }
-  },
-  getVertices: {
-    value: function() {
-      return this.ptrLinkedNode().getVertices();
-    }
-  },
-  getColor: {
-    value: function() {
-      return this.ptrLinkedNode().getColor();
-    }
-  },
-  getMatrix: {
-    value: function() {
-      return this.ptrLinkedNode().getMatrix();
-    }
-  },
-  upload: {
-    value: function() {
-      this.gl.bufferSubData(this.target, this.dstOffset, this.srcData, this.start, this.count);
-      return this;
-    }
-  }
-});
-
-Object.define(Draw.prototype, {
-  gl: {
-    get: Draw.prototype.getGL
-  },
-  target: {
-    get: Draw.prototype.getTarget
-  },
-  srcData: {
-    get: Draw.prototype.getSrcData
-  },
-  object3: {
-    get: Draw.prototype.ptrLinkedNode,
-    set: Draw.prototype.setLinkedPtri
-  },
-  mode: {
-    get: Draw.prototype.ptrParentNode,
-    set: Draw.prototype.setParentPtri
-  },
-  type: {
-    get: Draw.prototype.keyTypeGLCode
-  },
-  dstOffset: {
-    get: Draw.prototype.getDstOffset,
-    set: Draw.prototype.setDstOffset
-  },
-  start: {
-    get: Draw.prototype.getStart,
-    set: Draw.prototype.setStart
-  },
-  count: {
-    get: Draw.prototype.getCount,
-    set: Draw.prototype.setCount
-  },
-  attributes: {
-    get: Draw.prototype.getAttributes
-  },
-  vertices: {
-    get: Draw.prototype.getVertices
-  },
-  color: {
-    get: Draw.prototype.getColor
-  },
-  matrix: {
-    get: Draw.prototype.getMatrix
-  }
-});
-
-Object.symbol(Mode.prototype, {
-  iterate: {
-    value: function() {
-      var draw, ptri;
-      draw = this;
-      ptri = 0.00;
-      return {
-        next: function() {
-          if (!(ptri = draw.getNextChild(ptri))) {
-            return {
-              done: true,
-              value: draw
-            };
-          }
-          return {
-            done: false,
-            value: ptri
-          };
-        }
-      };
-    }
-  }
-});
-
-Object.define(Mode.registerClass(), {
-  byteLength: {
-    value: 4 * 0
-  },
-  typedArray: {
-    value: Uint32Array
-  }
-});
-
-Object.hidden(Mode, "array", "byteLength", "byteOffset", "headers", "length", "protoClass");
-
-Object.define(Mode.prototype, {
-  is: {
-    value: function() {
-      return 0 === this.getTypeGLCode() - arguments[0];
-    }
-  },
-  malloc: {
-    value: function() {
-      var byteLength, components, count, destOffset, draw, length, mallocOffset, obj3, vertices;
-      obj3 = arguments[0];
-      vertices = obj3.getVertices();
-      components = this.getComponents();
-      count = vertices.length / 3;
-      length = count * components;
-      byteLength = length * vertices.BYTES_PER_ELEMENT;
-      mallocOffset = this.addAllocBytes(byteLength);
-      destOffset = this.getModeOffset() + mallocOffset;
-      this.addModeLength(length);
-      this.addDrawLength(count);
-      draw = new Draw();
-      draw.setParentPtri(this);
-      draw.setLinkedPtri(obj3);
-      draw.setDstOffset(destOffset);
-      draw.setStart(destOffset / 4);
-      draw.setCount(length);
-      draw.setModeBegin(mallocOffset / 4);
-      draw.setModeEnd(draw.getModeBegin() + length);
-      return draw;
-    }
-  },
-  render: {
-    value: function() {
-      this.gl.drawArrays(this.mode, this.first, this.count);
-      return log(`draw call  ->  ${this.mode.constructor.name}`);
-    }
-  }
-});
-
-Object.define(Mode.prototype, {
-  getGL: {
-    value: function() {
-      return this.parent.getGL(); // todo fix worker  
-    }
-  },
-  getBuffer: {
-    value: function() {
-      return this.parent;
-    }
-  },
-  getProgram: {
-    value: function() {
-      return this.buffer.parent.program;
-    }
-  },
-  findObjects: {
-    value: function() {
-      return this.findAllChilds().flatMap(function(v) {
-        return v.object3;
-      });
-    }
-  },
-  getComponents: {
-    value: function() {
-      return this.getResvUint16(0);
-    }
-  },
-  setComponents: {
-    value: function() {
-      return this.setResvUint16(0, arguments[0]);
-    }
-  },
-  keyTypeGLCode: {
-    value: function() {
-      return this.keyResvUint16(1, KEYEXTEND_OBJECT3D);
-    }
-  },
-  getTypeGLCode: {
-    value: function() {
-      return this.getResvUint16(1);
-    }
-  },
-  setTypeGLCode: {
-    value: function() {
-      return this.setResvUint16(1, arguments[0]);
-    }
-  },
-  getFirstIndex: {
-    value: function() {
-      return this.getResvUint32(1);
-    }
-  },
-  setFirstIndex: {
-    value: function() {
-      return this.setResvUint32(1, arguments[0]);
-    }
-  },
-  getModeLength: {
-    value: function() {
-      return this.getResvUint32(2);
-    }
-  },
-  addModeLength: {
-    value: function() {
-      return this.addResvUint32(2, arguments[0]);
-    }
-  },
-  setModeLength: {
-    value: function() {
-      return this.setResvUint32(2, arguments[0]);
-    }
-  },
-  getDrawLength: {
-    value: function() {
-      return this.getResvUint32(3);
-    }
-  },
-  addDrawLength: {
-    value: function() {
-      return this.addResvUint32(3, arguments[0]);
-    }
-  },
-  setDrawLength: {
-    value: function() {
-      return this.setResvUint32(3, arguments[0]);
-    }
-  },
-  getAllocBytes: {
-    value: function() {
-      return this.getResvUint32(4);
-    }
-  },
-  addAllocBytes: {
-    value: function() {
-      return this.addResvUint32(4, arguments[0]);
-    }
-  },
-  setAllocBytes: {
-    value: function() {
-      return this.setResvUint32(4, arguments[0]);
-    }
-  },
-  getModeOffset: {
-    value: function() {
-      return this.getResvUint32(5);
-    }
-  },
-  setModeOffset: {
-    value: function() {
-      return this.setResvUint32(5, arguments[0]);
-    }
-  },
-  getAttributes: {
-    value: function() {
-      return this.getParentPtrP().getTArray(this.getModeOffset(), this.getAllocBytes());
-    }
-  },
-  setAttributes: {
-    value: function() {
-      this.getAttributes().set(arguments[0]);
-      return this;
-    }
-  }
-});
-
-Object.define(Mode.prototype, {
-  gl: {
-    get: Mode.prototype.getGL
-  },
-  buffer: {
-    get: Mode.prototype.getBuffer
-  },
-  program: {
-    get: Mode.prototype.getProgram
-  },
-  objects: {
-    get: Mode.prototype.findObjects
-  },
-  mode: {
-    get: Mode.prototype.keyTypeGLCode,
-    set: Mode.prototype.setTypeGLCode
-  },
-  first: {
-    get: Mode.prototype.getFirstIndex,
-    set: Mode.prototype.setFirstIndex
-  },
-  count: {
-    get: Mode.prototype.getDrawLength,
-    set: Mode.prototype.setDrawLength
-  },
-  offset: {
-    get: Mode.prototype.getModeOffset,
-    set: Mode.prototype.setModeOffset
-  },
-  numCmponents: {
-    get: Mode.prototype.getComponents,
-    set: Mode.prototype.setComponents
-  },
-  attributes: {
-    get: Mode.prototype.getAttributes,
-    set: Mode.prototype.setAttributes
-  }
-});
 
 export var Buffer = (function() {
   class Buffer extends Pointer {
@@ -2908,29 +2064,782 @@ export var Buffer = (function() {
 
 }).call(this);
 
+Object.symbol(GL.registerClass(), {
+  instance: {
+    value: function() {
+      return this.isPrototypeOf(Object.getPrototypeOf(arguments[0]));
+    }
+  }
+});
+
+Object.define(Shader.registerClass().prototype, {
+  gl: {
+    get: Shader.prototype.getGL
+  },
+  glProgram: {
+    get: Shader.prototype.getGLProgram
+  },
+  glSource: {
+    get: Shader.prototype.getGLSource,
+    set: Shader.prototype.setGLSource
+  },
+  glShader: {
+    get: Shader.prototype.getGLShader,
+    set: Shader.prototype.setGLShader
+  },
+  type: {
+    get: Shader.prototype.keyShaderType,
+    set: Shader.prototype.setShaderType
+  },
+  source: {
+    get: Shader.prototype.getSourceText,
+    set: Shader.prototype.setSourceText
+  },
+  charLength: {
+    get: Shader.prototype.getCharLength,
+    set: Shader.prototype.setCharLength
+  },
+  isUploaded: {
+    get: Shader.prototype.getIsUploaded,
+    set: Shader.prototype.setIsUploaded
+  },
+  isCompiled: {
+    get: Shader.prototype.getIsCompiled,
+    set: Shader.prototype.setIsCompiled
+  },
+  isAttached: {
+    get: Shader.prototype.getIsAttached,
+    set: Shader.prototype.setIsAttached
+  },
+  variables: {
+    get: Shader.prototype.getAllVariables
+  },
+  uniforms: {
+    get: Shader.prototype.getUniforms
+  },
+  attributes: {
+    get: Shader.prototype.getAttributes
+  },
+  sumComponents: {
+    get: function() {
+      return this.attributes.sumAttrib("components");
+    }
+  },
+  stride: {
+    get: function() {
+      return this.attributes[0].stride;
+    }
+  }
+});
+
+Object.define(ShaderKey.registerClass().prototype, {
+  gl: {
+    get: ShaderKey.prototype.getGL
+  },
+  glProgram: {
+    get: ShaderKey.prototype.getGLProgram
+  },
+  glShader: {
+    get: ShaderKey.prototype.getGLShader
+  },
+  program: {
+    get: ShaderKey.prototype.getProgram
+  },
+  shader: {
+    get: ShaderKey.prototype.getShader
+  },
+  name: {
+    get: ShaderKey.prototype.getNameString,
+    set: ShaderKey.prototype.setNameString
+  },
+  components: {
+    get: ShaderKey.prototype.getComponents,
+    set: ShaderKey.prototype.setComponents
+  },
+  type: {
+    get: ShaderKey.prototype.keyTypeGLCode,
+    set: ShaderKey.prototype.setTypeGLCode
+  },
+  needsUpload: {
+    get: ShaderKey.prototype.getNeedsUpload,
+    set: ShaderKey.prototype.setNeedsUpload
+  }
+});
+
+Object.define(Draw.registerClass(), {
+  byteLength: {
+    value: 4 * 0
+  },
+  typedArray: {
+    value: Uint32Array
+  }
+});
+
+Object.define(Mode.registerClass(), {
+  byteLength: {
+    value: 4 * 0
+  },
+  typedArray: {
+    value: Uint32Array
+  }
+});
+
 Object.hidden(Buffer.registerClass(), "headers", "protoClass", "length", "array", "byteOffset", "byteLength");
 
-Object.symbol(Buffer.prototype, {
-  iterate: {
+Object.define(Object3.registerClass(), {
+  byteLength: {
+    value: 4 * 12
+  },
+  typedArray: {
+    value: Float32Array
+  }
+});
+
+Object.define(GL.prototype, {
+  gl: {
+    get: GL.prototype.getLinkedNode
+  },
+  glError: {
+    get: GL.prototype.getGLError
+  },
+  program: {
+    get: GL.prototype.getProgram
+  },
+  programVertex: {
+    get: GL.prototype.getVertShader
+  },
+  programFragment: {
+    get: GL.prototype.getFragShader
+  },
+  programAttribs: {
+    get: GL.prototype.getAttributes
+  },
+  glBuffer: {
+    get: GL.prototype.getGLBuffer
+  },
+  buffers: {
+    get: GL.prototype.getAllBuffers
+  },
+  allShaders: {
+    get: GL.prototype.getAllShaders
+  },
+  allPrograms: {
+    get: GL.prototype.getAllPrograms
+  },
+  allVariables: {
+    get: GL.prototype.getAllVariables
+  },
+  allUniforms: {
+    get: GL.prototype.getUniforms
+  },
+  nodeBuffer: {
+    get: GL.prototype.getArrayBuffer
+  },
+  canvas: {
+    get: GL.prototype.getCanvasNode,
+    set: GL.prototype.setCanvasNode
+  },
+  glActive: {
+    get: GL.prototype.getDrawActive,
+    set: GL.prototype.setDrawActive
+  },
+  glCullEnabled: {
+    get: GL.prototype.getCullEnabled,
+    set: GL.prototype.setCullEnabled
+  },
+  glCullFace: {
+    get: GL.prototype.keyCullFace,
+    set: GL.prototype.setCullFace
+  },
+  glFrontFace: {
+    get: GL.prototype.keyFrontFace,
+    set: GL.prototype.setFrontFace
+  },
+  glBlendEnabled: {
+    get: GL.prototype.getBlendActive,
+    set: GL.prototype.setBlendActive
+  },
+  glBlendEquation: {
+    get: GL.prototype.keyBlendEquate,
+    set: GL.prototype.setBlendEquate
+  },
+  glBlendFunc: {
+    get: GL.prototype.keyBlendFunc,
+    set: GL.prototype.setBlendFunc
+  },
+  glBlendInArg: {
+    get: GL.prototype.keyBlendInArg,
+    set: GL.prototype.setBlendInArg
+  },
+  glBlendOutArg: {
+    get: GL.prototype.keyBlendOutArg,
+    set: GL.prototype.setBlendOutArg
+  },
+  glDepthEnabled: {
+    get: GL.prototype.getDepthActive,
+    set: GL.prototype.setDepthActive
+  },
+  glDepthTest: {
+    get: GL.prototype.keyDepthTest,
+    set: GL.prototype.setDepthTest
+  },
+  glDepthFunc: {
+    get: GL.prototype.keyDepthFunc,
+    set: GL.prototype.setDepthFunc
+  },
+  clearMask: {
+    get: GL.prototype.keyClearMask,
+    set: GL.prototype.setClearMask
+  },
+  glBindTarget: {
+    get: GL.prototype.keyBindTarget,
+    set: GL.prototype.setBindTarget
+  },
+  glClearDepth: {
+    get: GL.prototype.getClearDepth,
+    set: GL.prototype.setClearDepth
+  },
+  clearColor: {
+    get: GL.prototype.getClearColor,
+    set: GL.prototype.setClearColor
+  },
+  pxWidth: {
+    get: GL.prototype.getWidth,
+    set: GL.prototype.setWidth
+  },
+  pxHeight: {
+    get: GL.prototype.getHeight,
+    set: GL.prototype.setHeight
+  },
+  pxLeft: {
+    get: GL.prototype.getLeft,
+    set: GL.prototype.setLeft
+  },
+  pxTop: {
+    get: GL.prototype.getTop,
+    set: GL.prototype.setTop
+  },
+  ratioPixel: {
+    get: GL.prototype.getPixelRatio,
+    set: GL.prototype.setPixelRatio
+  },
+  ratioAspect: {
+    get: GL.prototype.getAspectRatio,
+    set: GL.prototype.setAspectRatio
+  },
+  ratioShift: {
+    get: GL.prototype.getShiftRatio,
+    set: GL.prototype.setShiftRatio
+  },
+  uxActive: {
+    get: GL.prototype.getUXEnabled,
+    set: GL.prototype.setUXEnabled
+  },
+  uxMoveWalking: {
+    get: GL.prototype.getWalking,
+    set: GL.prototype.setWalking
+  },
+  uxMoveJumping: {
+    get: GL.prototype.getJumping,
+    set: GL.prototype.setJumping
+  },
+  uxKeyShift: {
+    get: GL.prototype.getKeyShift,
+    set: GL.prototype.setKeyShift
+  },
+  uxKeyAlt: {
+    get: GL.prototype.getKeyAlt,
+    set: GL.prototype.setKeyAlt
+  },
+  uxKeyMeta: {
+    get: GL.prototype.getKeyMeta,
+    set: GL.prototype.setKeyMeta
+  },
+  uxKeyCtrl: {
+    get: GL.prototype.getKeyCtrl,
+    set: GL.prototype.setKeyCtrl
+  },
+  uxPtrClick: {
+    get: GL.prototype.getPtrClick,
+    set: GL.prototype.setPtrClick
+  },
+  uxPtrDblClick: {
+    get: GL.prototype.getPtrDblClick,
+    set: GL.prototype.setPtrDblClick
+  },
+  uxPtrLooking: {
+    get: GL.prototype.getLooking,
+    set: GL.prototype.setLooking
+  },
+  uxPtrZooming: {
+    get: GL.prototype.getZooming,
+    set: GL.prototype.setZooming
+  },
+  uxPtrDragging: {
+    get: GL.prototype.getDragging,
+    set: GL.prototype.setDragging
+  },
+  uxPtrRotating: {
+    get: GL.prototype.getRotating,
+    set: GL.prototype.setRotating
+  },
+  uxMoveFwd: {
+    get: GL.prototype.getMoveFwd,
+    set: GL.prototype.setMoveFwd
+  },
+  uxMoveBack: {
+    get: GL.prototype.getMoveBack,
+    set: GL.prototype.setMoveBack
+  },
+  uxMoveLeft: {
+    get: GL.prototype.getMoveLeft,
+    set: GL.prototype.setMoveLeft
+  },
+  uxMoveRight: {
+    get: GL.prototype.getMoveRight,
+    set: GL.prototype.setMoveRight
+  },
+  uxMoveUp: {
+    get: GL.prototype.getMoveUp,
+    set: GL.prototype.setMoveUp
+  },
+  uxMoveDown: {
+    get: GL.prototype.getMoveDown,
+    set: GL.prototype.setMoveDown
+  },
+  x: {
+    get: GL.prototype.getX,
+    set: GL.prototype.setX
+  },
+  xDelta: {
+    get: GL.prototype.getXDelta,
+    set: GL.prototype.setXDelta
+  },
+  xRotate: {
+    get: GL.prototype.getXRotate,
+    set: GL.prototype.setXRotate
+  },
+  xScale: {
+    get: GL.prototype.getXScale,
+    set: GL.prototype.setXScale
+  },
+  xVector: {
+    get: GL.prototype.getXVector,
+    set: GL.prototype.setXVector
+  },
+  y: {
+    get: GL.prototype.getY,
+    set: GL.prototype.setY
+  },
+  yDelta: {
+    get: GL.prototype.getYDelta,
+    set: GL.prototype.setYDelta
+  },
+  yRotate: {
+    get: GL.prototype.getYRotate,
+    set: GL.prototype.setYRotate
+  },
+  yScale: {
+    get: GL.prototype.getYScale,
+    set: GL.prototype.setYScale
+  },
+  yVector: {
+    get: GL.prototype.getYVector,
+    set: GL.prototype.setYVector
+  },
+  zScale: {
+    get: GL.prototype.getZScale,
+    set: GL.prototype.setZScale
+  },
+  zVector: {
+    get: GL.prototype.getZVector,
+    set: GL.prototype.setZVector
+  }
+});
+
+Object.define(Attribute.prototype, {
+  glLocation: {
+    get: Attribute.prototype.getGLLocation
+  },
+  location: {
+    get: Attribute.prototype.getLocation,
+    set: Attribute.prototype.setLocation
+  },
+  stride: {
+    get: Attribute.prototype.getStride,
+    set: Attribute.prototype.setStride
+  },
+  offset: {
+    get: Attribute.prototype.getOffset,
+    set: Attribute.prototype.setOffset
+  },
+  normalize: {
+    get: Attribute.prototype.getNormalize,
+    set: Attribute.prototype.setNormalize
+  }
+});
+
+Object.define(Uniform.prototype, {
+  glLocation: {
+    get: Uniform.prototype.getGLLocation
+  },
+  location: {
+    get: Uniform.prototype.getGLLocation
+  }
+});
+
+Object.define(Draw.prototype, {
+  getGL: {
     value: function() {
-      var mode, ptri;
-      mode = this;
-      ptri = 0.00;
-      return {
-        next: function() {
-          if (!(ptri = mode.getNextChild(ptri))) {
-            return {
-              done: true,
-              value: mode
-            };
-          }
-          return {
-            done: false,
-            value: ptri
-          };
-        }
-      };
+      return this.ptrParentNode().getGL();
     }
+  },
+  getTarget: {
+    value: function() {
+      return this.ptrParentNode().ptrParentNode().getBindTarget();
+    }
+  },
+  getSrcData: {
+    value: function() {
+      return this.ptrParentNode().ptrParentNode().getTypedArray();
+    }
+  },
+  keyTypeGLCode: {
+    value: function() {
+      return this.ptrParentNode().keyTypeGLCode();
+    }
+  },
+  getDstOffset: {
+    value: function() {
+      return this.getResvUint32(0);
+    }
+  },
+  setDstOffset: {
+    value: function() {
+      return this.setResvUint32(0, arguments[0]);
+    }
+  },
+  getModeBegin: {
+    value: function() {
+      return this.getResvUint32(3);
+    }
+  },
+  setModeBegin: {
+    value: function() {
+      return this.setResvUint32(3, arguments[0]);
+    }
+  },
+  getModeEnd: {
+    value: function() {
+      return this.getResvUint32(4);
+    }
+  },
+  setModeEnd: {
+    value: function() {
+      return this.setResvUint32(4, arguments[0]);
+    }
+  },
+  getStart: {
+    value: function() {
+      return this.getResvUint32(1);
+    }
+  },
+  setStart: {
+    value: function() {
+      return this.setResvUint32(1, arguments[0]);
+    }
+  },
+  getCount: {
+    value: function() {
+      return this.getResvUint32(2);
+    }
+  },
+  setCount: {
+    value: function() {
+      return this.setResvUint32(2, arguments[0]);
+    }
+  },
+  getAttributes: {
+    value: function() {
+      return this.ptrParentNode().getAttributes().subarray(this.getModeBegin(), this.getModeEnd());
+    }
+  },
+  setAttributes: {
+    value: function() {
+      this.getAttributes().set(arguments[0]);
+      return this;
+    }
+  },
+  getVertices: {
+    value: function() {
+      return this.ptrLinkedNode().getVertices();
+    }
+  },
+  getColor: {
+    value: function() {
+      return this.ptrLinkedNode().getColor();
+    }
+  },
+  getMatrix: {
+    value: function() {
+      return this.ptrLinkedNode().getMatrix();
+    }
+  },
+  upload: {
+    value: function() {
+      this.gl.bufferSubData(this.target, this.dstOffset, this.srcData, this.start, this.count);
+      return this;
+    }
+  }
+});
+
+Object.define(Draw.prototype, {
+  gl: {
+    get: Draw.prototype.getGL
+  },
+  target: {
+    get: Draw.prototype.getTarget
+  },
+  srcData: {
+    get: Draw.prototype.getSrcData
+  },
+  object3: {
+    get: Draw.prototype.ptrLinkedNode,
+    set: Draw.prototype.setLinkedPtri
+  },
+  mode: {
+    get: Draw.prototype.ptrParentNode,
+    set: Draw.prototype.setParentPtri
+  },
+  type: {
+    get: Draw.prototype.keyTypeGLCode
+  },
+  dstOffset: {
+    get: Draw.prototype.getDstOffset,
+    set: Draw.prototype.setDstOffset
+  },
+  start: {
+    get: Draw.prototype.getStart,
+    set: Draw.prototype.setStart
+  },
+  count: {
+    get: Draw.prototype.getCount,
+    set: Draw.prototype.setCount
+  },
+  attributes: {
+    get: Draw.prototype.getAttributes
+  },
+  vertices: {
+    get: Draw.prototype.getVertices
+  },
+  color: {
+    get: Draw.prototype.getColor
+  },
+  matrix: {
+    get: Draw.prototype.getMatrix
+  }
+});
+
+Object.define(Mode.prototype, {
+  is: {
+    value: function() {
+      return 0 === this.getTypeGLCode() - arguments[0];
+    }
+  },
+  malloc: {
+    value: function() {
+      var byteLength, components, count, destOffset, draw, length, mallocOffset, obj3, vertices;
+      obj3 = arguments[0];
+      vertices = obj3.getVertices();
+      components = this.getComponents();
+      count = vertices.length / 3;
+      length = count * components;
+      byteLength = length * vertices.BYTES_PER_ELEMENT;
+      mallocOffset = this.addAllocBytes(byteLength);
+      destOffset = this.getModeOffset() + mallocOffset;
+      this.addModeLength(length);
+      this.addDrawLength(count);
+      draw = new Draw();
+      draw.setParentPtri(this);
+      draw.setLinkedPtri(obj3);
+      draw.setDstOffset(destOffset);
+      draw.setStart(destOffset / 4);
+      draw.setCount(length);
+      draw.setModeBegin(mallocOffset / 4);
+      draw.setModeEnd(draw.getModeBegin() + length);
+      return draw;
+    }
+  },
+  render: {
+    value: function() {
+      this.gl.drawArrays(this.mode, this.first, this.count);
+      return log(`draw call  ->  ${this.mode.constructor.name}`);
+    }
+  }
+});
+
+Object.define(Mode.prototype, {
+  getGL: {
+    value: function() {
+      return this.parent.getGL(); // todo fix worker  
+    }
+  },
+  getBuffer: {
+    value: function() {
+      return this.parent;
+    }
+  },
+  getProgram: {
+    value: function() {
+      return this.buffer.parent.program;
+    }
+  },
+  findObjects: {
+    value: function() {
+      return this.findAllChilds().flatMap(function(v) {
+        return v.object3;
+      });
+    }
+  },
+  getComponents: {
+    value: function() {
+      return this.getResvUint16(0);
+    }
+  },
+  setComponents: {
+    value: function() {
+      return this.setResvUint16(0, arguments[0]);
+    }
+  },
+  keyTypeGLCode: {
+    value: function() {
+      return this.keyResvUint16(1, KEYEXTEND_OBJECT3D);
+    }
+  },
+  getTypeGLCode: {
+    value: function() {
+      return this.getResvUint16(1);
+    }
+  },
+  setTypeGLCode: {
+    value: function() {
+      return this.setResvUint16(1, arguments[0]);
+    }
+  },
+  getFirstIndex: {
+    value: function() {
+      return this.getResvUint32(1);
+    }
+  },
+  setFirstIndex: {
+    value: function() {
+      return this.setResvUint32(1, arguments[0]);
+    }
+  },
+  getModeLength: {
+    value: function() {
+      return this.getResvUint32(2);
+    }
+  },
+  addModeLength: {
+    value: function() {
+      return this.addResvUint32(2, arguments[0]);
+    }
+  },
+  setModeLength: {
+    value: function() {
+      return this.setResvUint32(2, arguments[0]);
+    }
+  },
+  getDrawLength: {
+    value: function() {
+      return this.getResvUint32(3);
+    }
+  },
+  addDrawLength: {
+    value: function() {
+      return this.addResvUint32(3, arguments[0]);
+    }
+  },
+  setDrawLength: {
+    value: function() {
+      return this.setResvUint32(3, arguments[0]);
+    }
+  },
+  getAllocBytes: {
+    value: function() {
+      return this.getResvUint32(4);
+    }
+  },
+  addAllocBytes: {
+    value: function() {
+      return this.addResvUint32(4, arguments[0]);
+    }
+  },
+  setAllocBytes: {
+    value: function() {
+      return this.setResvUint32(4, arguments[0]);
+    }
+  },
+  getModeOffset: {
+    value: function() {
+      return this.getResvUint32(5);
+    }
+  },
+  setModeOffset: {
+    value: function() {
+      return this.setResvUint32(5, arguments[0]);
+    }
+  },
+  getAttributes: {
+    value: function() {
+      return this.getParentPtrP().getTArray(this.getModeOffset(), this.getAllocBytes());
+    }
+  },
+  setAttributes: {
+    value: function() {
+      this.getAttributes().set(arguments[0]);
+      return this;
+    }
+  }
+});
+
+Object.define(Mode.prototype, {
+  gl: {
+    get: Mode.prototype.getGL
+  },
+  buffer: {
+    get: Mode.prototype.getBuffer
+  },
+  program: {
+    get: Mode.prototype.getProgram
+  },
+  objects: {
+    get: Mode.prototype.findObjects
+  },
+  mode: {
+    get: Mode.prototype.keyTypeGLCode,
+    set: Mode.prototype.setTypeGLCode
+  },
+  first: {
+    get: Mode.prototype.getFirstIndex,
+    set: Mode.prototype.setFirstIndex
+  },
+  count: {
+    get: Mode.prototype.getDrawLength,
+    set: Mode.prototype.setDrawLength
+  },
+  offset: {
+    get: Mode.prototype.getModeOffset,
+    set: Mode.prototype.setModeOffset
+  },
+  numCmponents: {
+    get: Mode.prototype.getComponents,
+    set: Mode.prototype.setComponents
+  },
+  attributes: {
+    get: Mode.prototype.getAttributes,
+    set: Mode.prototype.setAttributes
   }
 });
 
@@ -2949,41 +2858,6 @@ Object.define(Buffer.prototype, {
   },
   attributes: {
     get: Buffer.prototype.getTypedArray
-  }
-});
-
-Object.define(Object3.registerClass(), {
-  byteLength: {
-    value: 4 * 12
-  },
-  typedArray: {
-    value: Float32Array
-  }
-});
-
-Object.hidden(Object3, "array", "byteLength", "byteOffset", "headers", "length", "link", "protoClass");
-
-Object.symbol(Object3.prototype, {
-  iterate: {
-    value: function() {
-      var obj3, ptri;
-      obj3 = this;
-      ptri = 0.00;
-      return {
-        next: function() {
-          if (!(ptri = obj3.getNextChild(ptri))) {
-            return {
-              done: true,
-              value: obj3
-            };
-          }
-          return {
-            done: false,
-            value: ptri
-          };
-        }
-      };
-    }
   }
 });
 
@@ -3107,6 +2981,132 @@ Object.define(Object3.prototype, {
   matrix: {
     get: Object3.prototype.getMatrix
   }
+});
+
+Object.symbol(Shader.prototype, {
+  iterate: {
+    value: function() {
+      var ptri, shader;
+      shader = this;
+      ptri = 0.00;
+      return {
+        next: function() {
+          if (!(ptri = shader.getNextChild(ptri))) {
+            return {
+              done: true,
+              value: shader
+            };
+          }
+          return {
+            done: false,
+            value: ptri
+          };
+        }
+      };
+    }
+  }
+});
+
+Object.symbol(Mode.prototype, {
+  iterate: {
+    value: function() {
+      var draw, ptri;
+      draw = this;
+      ptri = 0.00;
+      return {
+        next: function() {
+          if (!(ptri = draw.getNextChild(ptri))) {
+            return {
+              done: true,
+              value: draw
+            };
+          }
+          return {
+            done: false,
+            value: ptri
+          };
+        }
+      };
+    }
+  }
+});
+
+Object.symbol(Buffer.prototype, {
+  iterate: {
+    value: function() {
+      var mode, ptri;
+      mode = this;
+      ptri = 0.00;
+      return {
+        next: function() {
+          if (!(ptri = mode.getNextChild(ptri))) {
+            return {
+              done: true,
+              value: mode
+            };
+          }
+          return {
+            done: false,
+            value: ptri
+          };
+        }
+      };
+    }
+  }
+});
+
+Object.symbol(Object3.prototype, {
+  iterate: {
+    value: function() {
+      var obj3, ptri;
+      obj3 = this;
+      ptri = 0.00;
+      return {
+        next: function() {
+          if (!(ptri = obj3.getNextChild(ptri))) {
+            return {
+              done: true,
+              value: obj3
+            };
+          }
+          return {
+            done: false,
+            value: ptri
+          };
+        }
+      };
+    }
+  }
+});
+
+Object.hidden(Draw, "parent", "link", "array", "headers", "protoClass", "length", "children", "byteOffset", "byteLength");
+
+Object.hidden(Mode, "array", "byteLength", "byteOffset", "headers", "length", "protoClass");
+
+Object.hidden(Object3, "array", "byteLength", "byteOffset", "headers", "length", "link", "protoClass");
+
+Object.protos(Attribute).filter(function() {
+  return Object.hasOwn(arguments[0].prototype, "getValue");
+}).forEach(function() {
+  var Key;
+  return Object.define((Key = arguments[0]).prototype, {
+    value: {
+      get: Key.prototype.getValue,
+      set: Key.prototype.setValue
+    }
+  });
+});
+
+Object.protos(Uniform).filter(function() {
+  return Object.hasOwn(arguments[0].prototype, "getValue");
+}).forEach(function() {
+  var Key;
+  return Object.define((Key = arguments[0]).prototype, {
+    value: {
+      get: Key.prototype.getValue,
+      set: Key.prototype.setValue
+    }
+  });
 });
 
 export default GL;
