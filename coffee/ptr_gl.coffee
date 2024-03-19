@@ -1,77 +1,74 @@
-import { Pointer, Vertex, Angle3, Scale3, Color4, Matrix4 } from "./ptr.coffee"
+import {
+    Pointer, Vertex, Angle3,
+    Scale3, Color4, Matrix4
+} from "./ptr.coffee"
 
-OFFSET_DRAW_ACTIVE  = 4 * 0
-OFFSET_CULL_ENABLED = 4 * 0 + 1
-OFFSET_BLEND_ACTIVE = 4 * 0 + 2
-OFFSET_DEPTH_ACTIVE = 4 * 0 + 3
+OFFSET_DRAW_ACTIVE      = 4 * 0
+OFFSET_CULL_ENABLED     = 4 * 0 + 1
+OFFSET_BLEND_ACTIVE     = 4 * 0 + 2
+OFFSET_DEPTH_ACTIVE     = 4 * 0 + 3
+OFFSET_CULL_FACE        = 4 *  1
+OFFSET_FRONTFACE        = 4 *  1 + 2
+OFFSET_DEPTH_FUNC       = 4 *  2
+OFFSET_CLEAR_MASK       = 4 *  2 + 2
+OFFSET_CLEAR_DEPTH      = 4 *  3
+OFFSET_CLEAR_COLOR      = 4 *  4
+OFFSET_BIND_TARGET      = 4 *  8
+OFFSET_BLEND_EQUATE     = 4 *  8 + 2
+OFFSET_BLEND_INARG      = 4 *  9
+OFFSET_BLEND_OUTARG     = 4 *  9 + 2
+OFFSET_BLEND_FUNC       = 4 * 10
+OFFSET_DEPTH_TEST       = 4 * 10 + 2
+OFFSET_WALKING          = 4 * 11
+OFFSET_JUMPING          = 4 * 11 + 1
+OFFSET_KEY_SHIFT        = 4 * 11 + 2
+OFFSET_KEY_ALT          = 4 * 11 + 3
+OFFSET_KEY_CTRL         = 4 * 12
+OFFSET_KEY_META         = 4 * 12 + 1
+OFFSET_MOVE_FWD         = 4 * 12 + 2
+OFFSET_MOVE_BACK        = 4 * 12 + 3
+OFFSET_MOVE_LEFT        = 4 * 13
+OFFSET_MOVE_RIGHT       = 4 * 13 + 1
+OFFSET_MOVE_UP          = 4 * 13 + 2
+OFFSET_MOVE_DOWN        = 4 * 13 + 3
+OFFSET_LOOKING          = 4 * 14
+OFFSET_ZOOMING          = 4 * 14 + 1
+OFFSET_PTR_DCLICK       = 4 * 14 + 2
+OFFSET_PTR_CLICK        = 4 * 14 + 3
+OFFSET_PTR_BUTTON       = 4 * 15
+OFFSET_ROTATING         = 4 * 16
+OFFSET_DRAGGING         = 4 * 16 + 1
+OFFSET_UX_ENABLED       = 4 * 16 + 2
+OFFSET_X                = 4 * 21
+OFFSET_Y                = 4 * 22
+OFFSET_DX               = 4 * 23
+OFFSET_DY               = 4 * 24
+OFFSET_RX               = 4 * 25
+OFFSET_RY               = 4 * 26
+OFFSET_SX               = 4 * 27
+OFFSET_SY               = 4 * 28
+OFFSET_SZ               = 4 * 29
+OFFSET_VX               = 4 * 30
+OFFSET_VY               = 4 * 31
+OFFSET_VZ               = 4 * 32
+OFFSET_SHIFT_RATIO      = 4 * 33
+OFFSET_TIME             = 4 * 34
+OFFSET_WIDTH            = 4 * 40
+OFFSET_HEIGHT           = 4 * 41
+OFFSET_LEFT             = 4 * 42
+OFFSET_TOP              = 4 * 43
+OFFSET_PIXEL_RATIO      = 4 * 44
+OFFSET_ASPECT_RATIO     = 4 * 45
+KEYEXTEND_CLEARMASK     =
+    [ 16640 ] : new (class DEPTH_N_COLOR_BIT extends Number) 16640
 
-OFFSET_CULL_FACE    = 4 *  1
-OFFSET_FRONTFACE    = 4 *  1 + 2
-OFFSET_DEPTH_FUNC   = 4 *  2
-OFFSET_CLEAR_MASK   = 4 *  2 + 2
-OFFSET_CLEAR_DEPTH  = 4 *  3
-OFFSET_CLEAR_COLOR  = 4 *  4
-OFFSET_BIND_TARGET  = 4 *  8
-OFFSET_BLEND_EQUATE = 4 *  8 + 2
-OFFSET_BLEND_INARG  = 4 *  9
-OFFSET_BLEND_OUTARG = 4 *  9 + 2
-OFFSET_BLEND_FUNC   = 4 * 10
-OFFSET_DEPTH_TEST   = 4 * 10 + 2
+export class Object3    extends Pointer
 
-OFFSET_WALKING      = 4 * 11
-OFFSET_JUMPING      = 4 * 11 + 1
-OFFSET_KEY_SHIFT    = 4 * 11 + 2
-OFFSET_KEY_ALT      = 4 * 11 + 3
-OFFSET_KEY_CTRL     = 4 * 12
-OFFSET_KEY_META     = 4 * 12 + 1
-OFFSET_MOVE_FWD     = 4 * 12 + 2
-OFFSET_MOVE_BACK    = 4 * 12 + 3
-OFFSET_MOVE_LEFT    = 4 * 13
-OFFSET_MOVE_RIGHT   = 4 * 13 + 1
-OFFSET_MOVE_UP      = 4 * 13 + 2
-OFFSET_MOVE_DOWN    = 4 * 13 + 3
-OFFSET_LOOKING      = 4 * 14
-OFFSET_ZOOMING      = 4 * 14 + 1
-OFFSET_PTR_DCLICK   = 4 * 14 + 2
-OFFSET_PTR_CLICK    = 4 * 14 + 3
-OFFSET_PTR_BUTTON   = 4 * 15
-OFFSET_ROTATING     = 4 * 16
-OFFSET_DRAGGING     = 4 * 16 + 1
-OFFSET_UX_ENABLED   = 4 * 16 + 2
+export class Draw       extends Pointer
 
-OFFSET_X            = 4 * 21
-OFFSET_Y            = 4 * 22
-OFFSET_DX           = 4 * 23
-OFFSET_DY           = 4 * 24
-OFFSET_RX           = 4 * 25
-OFFSET_RY           = 4 * 26
-OFFSET_SX           = 4 * 27
-OFFSET_SY           = 4 * 28
-OFFSET_SZ           = 4 * 29
-OFFSET_VX           = 4 * 30
-OFFSET_VY           = 4 * 31
-OFFSET_VZ           = 4 * 32
-OFFSET_SHIFT_RATIO  = 4 * 33
-OFFSET_TIME         = 4 * 34
+export class Mode       extends Pointer
 
-OFFSET_WIDTH        = 4 * 40
-OFFSET_HEIGHT       = 4 * 41
-OFFSET_LEFT         = 4 * 42
-OFFSET_TOP          = 4 * 43
-OFFSET_PIXEL_RATIO  = 4 * 44
-OFFSET_ASPECT_RATIO = 4 * 45
-
-KEYEXTEND_CLEARMASK = [ 16640 ] : new (class DEPTH_N_COLOR_BIT extends Number) 16640
-
-export { Pointer }
-
-export class Object3 extends Pointer
-
-export class Draw    extends Pointer
-
-export class Mode    extends Pointer
-
-export class GL      extends Pointer
+export class GL         extends Pointer
 
     @byteLength     = 4 * 48
 
@@ -416,13 +413,13 @@ export class GL      extends Pointer
 
     setZVector      : -> @setFloat32 OFFSET_VZ             , arguments[0]
 
-Object.symbol GL,
+Object.symbol           GL.registerClass(),
 
     instance        : value : ->
         
         @isPrototypeOf Object.getPrototypeOf arguments[0]
 
-Object.define GL::,
+Object.define           GL::,
 
     gl              : get   : GL::getLinkedNode
 
@@ -560,7 +557,7 @@ Object.define GL::,
 
     zVector         : get   : GL::getZVector      , set : GL::setZVector
 
-export default GL.registerClass()
+export                  default GL
 
 OFFSET_INUSE_STATUS     = 1
 
@@ -568,7 +565,7 @@ OFFSET_LINKED_STATUS    = 1 + 1
 
 OFFSET_ATTACH_STATUS    = 1 + 2
 
-export class Program extends Pointer
+export class Program    extends Pointer
 
         @byteLength     : 4 * 8
 
@@ -721,7 +718,7 @@ OFFSET_CHAR_LENGTH      = 4 * 1 + 2
 
 OFFSET_SOURCE_TEXT      = 4 * 2
 
-export class Shader extends Pointer
+export class Shader     extends Pointer
 
     @byteLength         : 256 * 256
 
@@ -892,7 +889,7 @@ export class Shader extends Pointer
 
     getUniforms         : -> @findAllChilds().filter (i) -> i instanceof Uniform
 
-Object.define Shader.registerClass()::,
+Object.define           Shader.registerClass()::,
 
     gl              : get : Shader::getGL
 
@@ -924,7 +921,7 @@ Object.define Shader.registerClass()::,
     
     stride          : get : -> @attributes[ 0 ].stride
 
-Object.symbol Shader::,
+Object.symbol           Shader::,
 
     iterate             : value : ->
         shader = this ; ptri = 0.00
@@ -998,7 +995,7 @@ export class ShaderKey  extends Pointer
 
     setKeyLocated       : -> @setUint8  OFFSET_KEY_LOCATED , arguments[0] ; arguments[0]
 
-Object.define ShaderKey.registerClass()::,
+Object.define           ShaderKey.registerClass()::,
 
     gl                  : get   : ShaderKey::getGL
 
@@ -1028,7 +1025,7 @@ OFFSET_ATTR_OFFSET      = 4 * 0 + 3
 
 export class Attribute  extends ShaderKey
 
-    Object.define Attribute.registerClass(),
+    Object.define       Attribute.registerClass(),
         
         vec3    : value : class  vec3 extends this
             
@@ -1140,7 +1137,7 @@ export class Attribute  extends ShaderKey
 
     setOffset           : -> @setUint8 OFFSET_ATTR_OFFSET , arguments[0]
 
-Object.define Attribute::,
+Object.define           Attribute::,
 
     glLocation          : get   : Attribute::getGLLocation
 
@@ -1152,7 +1149,7 @@ Object.define Attribute::,
 
     normalize           : get   : Attribute::getNormalize     , set : Attribute::setNormalize
 
-Object.protos Attribute
+Object.protos           Attribute
 
     .filter             -> Object.hasOwn arguments[0]:: , "getValue"
     
@@ -1162,7 +1159,7 @@ Object.protos Attribute
 
 export class Uniform    extends ShaderKey
 
-    Object.define Uniform.registerClass(),
+    Object.define       Uniform.registerClass(),
         
         vec3    : value : class  vec3 extends this
             @components : 3
@@ -1221,14 +1218,13 @@ export class Uniform    extends ShaderKey
         return unless location  = gl.getUniformLocation program, @getNameString()
         @setKeyLocated 1 ; @setLinkedNode location ; location
 
-Object.define Uniform::,
+Object.define           Uniform::,
 
     glLocation          : get   : Uniform::getGLLocation
 
     location            : get   : Uniform::getGLLocation
 
-
-Object.protos Uniform
+Object.protos           Uniform
 
     .filter             -> Object.hasOwn arguments[0]:: , "getValue"
     
@@ -1245,19 +1241,19 @@ KEYEXTEND_OBJECT3D      =
     [ WebGL2RenderingContext  .TRIANGLE_FAN ] : new (class     TRIANGLE_FAN extends Number) WebGL2RenderingContext  .TRIANGLE_FAN
     [ WebGL2RenderingContext.TRIANGLE_STRIP ] : new (class   TRIANGLE_STRIP extends Number) WebGL2RenderingContext.TRIANGLE_STRIP
 
-Object.define Draw.registerClass(),
+Object.define           Draw.registerClass(),
 
     byteLength          : value : 4 * 0
 
     typedArray          : value : Uint32Array
 
-Object.hidden Draw,
+Object.hidden           Draw,
 
     "parent", "link", "array",
     "headers", "protoClass", "length",  
     "children", "byteOffset", "byteLength", 
 
-Object.define Draw::,
+Object.define           Draw::,
 
     getGL               : value : -> @ptrParentNode().getGL()
 
@@ -1299,7 +1295,7 @@ Object.define Draw::,
 
     upload              : value : -> @gl.bufferSubData @target, @dstOffset, @srcData, @start, @count ; this
 
-Object.define Draw::,
+Object.define           Draw::,
 
     gl                  : get   : Draw::getGL
 
@@ -1327,7 +1323,7 @@ Object.define Draw::,
 
     matrix              : get   : Draw::getMatrix
 
-Object.symbol Mode::,
+Object.symbol           Mode::,
 
     iterate             : value : ->
         draw = this ; ptri = 0.00
@@ -1336,18 +1332,18 @@ Object.symbol Mode::,
                 return done : on , value : draw
             return done : no , value : ptri
     
-Object.define Mode.registerClass(),
+Object.define           Mode.registerClass(),
 
     byteLength          : value : 4 * 0
 
     typedArray          : value : Uint32Array
 
-Object.hidden Mode  ,
+Object.hidden           Mode  ,
 
     "array", "byteLength", "byteOffset", "headers", 
     "length", "protoClass"
 
-Object.define Mode::,
+Object.define           Mode::,
 
     is                  : value : ->
         0 is @getTypeGLCode() - arguments[0]
@@ -1383,7 +1379,7 @@ Object.define Mode::,
         @gl.drawArrays @mode , @first , @count
         log "draw call  ->  #{@mode.constructor.name}"
 
-Object.define Mode::,
+Object.define           Mode::,
 
     getGL               : value : -> @parent.getGL()# todo fix worker  
 
@@ -1433,7 +1429,7 @@ Object.define Mode::,
 
     setAttributes       : value : -> @getAttributes().set arguments[0] ; this
 
-Object.define Mode::,
+Object.define           Mode::,
 
     gl                  : get   : Mode::getGL
 
@@ -1455,7 +1451,7 @@ Object.define Mode::,
 
     attributes          : get   : Mode::getAttributes , set   : Mode::setAttributes
 
-export class Buffer extends Pointer
+export class Buffer     extends Pointer
 
     @byteLength         : 4 * 256 * 256
 
@@ -1611,12 +1607,12 @@ export class Buffer extends Pointer
     
     setModeOffset       : -> @setResvUint32 2 , arguments[0] ; arguments[0] 
 
-Object.hidden Buffer  ,
+Object.hidden           Buffer.registerClass(),
 
     "headers", "protoClass", "length",  
     "array", "byteOffset", "byteLength", 
 
-Object.symbol Buffer::,
+Object.symbol           Buffer::,
 
     iterate             : value : ->
         mode = this ; ptri = 0.00
@@ -1625,7 +1621,7 @@ Object.symbol Buffer::,
                 return done : on , value : mode
             return done : no , value : ptri
 
-Object.define Buffer.registerClass()::,
+Object.define           Buffer::,
 
     target              : get   : Buffer::keyBindTarget   , set : Buffer::setBindTarget 
 
@@ -1643,18 +1639,18 @@ OFFSET_O3_ROTATION      = 4 * 8
 
 OFFSET_O3_SCALE_3D      = 4 * 12
 
-Object.define Object3  . registerClass(),
+Object.define           Object3.registerClass(),
 
     byteLength          : value : 4 * 12
 
     typedArray          : value : Float32Array
 
-Object.hidden Object3  , 
+Object.hidden           Object3,
 
     "array", "byteLength", "byteOffset", 
     "headers", "length", "link", "protoClass"
 
-Object.symbol Object3::,
+Object.symbol           Object3::,
 
     iterate             : value : ->
 
@@ -1663,7 +1659,7 @@ Object.symbol Object3::,
                 return done : on , value : obj3
             return done : no , value : ptri
 
-Object.define Object3::,
+Object.define           Object3::,
 
     getDraws            : value : -> @findAllLinks().filter (v) -> v instanceof Draw
 
@@ -1716,7 +1712,7 @@ Object.define Object3::,
         end = begin + 3
         return @vertices.subarray begin, end
 
-Object.define Object3::,
+Object.define           Object3::,
     
     vertices            : get   : Object3::getVertices   , set : Object3::setVertexArray
 

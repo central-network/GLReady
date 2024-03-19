@@ -125,10 +125,6 @@ KEYEXTEND_CLEARMASK = {
   [16640]: new (DEPTH_N_COLOR_BIT = class DEPTH_N_COLOR_BIT extends Number {})(16640)
 };
 
-export {
-  Pointer
-};
-
 export var Object3 = class Object3 extends Pointer {};
 
 export var Draw = class Draw extends Pointer {};
@@ -810,7 +806,7 @@ export var GL = (function() {
 
 }).call(this);
 
-Object.symbol(GL, {
+Object.symbol(GL.registerClass(), {
   instance: {
     value: function() {
       return this.isPrototypeOf(Object.getPrototypeOf(arguments[0]));
@@ -1080,7 +1076,7 @@ Object.define(GL.prototype, {
   }
 });
 
-export default GL.registerClass();
+export default GL;
 
 OFFSET_INUSE_STATUS = 1;
 
@@ -2906,7 +2902,7 @@ export var Buffer = (function() {
 
 }).call(this);
 
-Object.hidden(Buffer, "headers", "protoClass", "length", "array", "byteOffset", "byteLength");
+Object.hidden(Buffer.registerClass(), "headers", "protoClass", "length", "array", "byteOffset", "byteLength");
 
 Object.symbol(Buffer.prototype, {
   iterate: {
@@ -2932,7 +2928,7 @@ Object.symbol(Buffer.prototype, {
   }
 });
 
-Object.define(Buffer.registerClass().prototype, {
+Object.define(Buffer.prototype, {
   target: {
     get: Buffer.prototype.keyBindTarget,
     set: Buffer.prototype.setBindTarget
