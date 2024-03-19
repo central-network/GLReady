@@ -436,8 +436,6 @@ Object.define GL::,
 
     programAttribs  : get : GL::getAttributes
 
-    programUniforms : get : GL::getUniforms
-
     glBuffer        : get : GL::getGLBuffer
 
     buffers         : get : GL::getAllBuffers 
@@ -448,9 +446,11 @@ Object.define GL::,
 
     allVariables    : get : GL::getAllVariables
 
+    allUniforms     : get : GL::getUniforms
+
     nodeBuffer      : get : GL::getArrayBuffer
 
-    nodeCanvas      : get : GL::getCanvasNode   , set : GL::setCanvasNode
+    canvas          : get : GL::getCanvasNode   , set : GL::setCanvasNode
 
     glActive        : get : GL::getDrawActive   , set : GL::setDrawActive
             
@@ -685,7 +685,9 @@ export class Program extends Pointer
 
         glIsProgram     : get : Program::getGLIsProgram
 
-        glVertexShader  : get : Program::getGLVertShader
+        glVertShader    : get : Program::getGLVertShader
+        
+        glFragShader    : get : Program::getGLFragShader
 
         glProgram       : get : Program::getGLProgram
         
@@ -697,9 +699,9 @@ export class Program extends Pointer
         
         isAttached      : get : Program::getAttachStatus , set : Program::setAttachStatus
 
-        vertexShader    : get : Program::getVertShader   , set : Program::setVertShader
+        vertShader      : get : Program::getVertShader   , set : Program::setVertShader
         
-        fragmentShader  : get : Program::getFragShader   , set : Program::setFragShader
+        fragShader      : get : Program::getFragShader   , set : Program::setFragShader
 
         attributes      : get : Program::getAttributes
 
@@ -818,6 +820,12 @@ export class Shader extends Pointer
         @setIsCompiled @getGLCompileStatus()
         @setIsAttached @getProgram().getGLShaders().includes @getGLShader()
 
+    findKey             : ->
+        name = arguments[0]
+        for key from this
+            return key if key.is name
+        off
+
     getProgram          : -> @getParentPtrP()
 
     getGL               : -> @getParentPtrP().getParentPtrO()
@@ -884,37 +892,46 @@ export class Shader extends Pointer
 
     getUniforms         : -> @findAllChilds().filter (i) -> i instanceof Uniform
 
-    Object.define Shader.registerClass()::,
+Object.define Shader.registerClass()::,
 
-        gl              : get : Shader::getGL
+    gl              : get : Shader::getGL
 
-        glProgram       : get : Shader::getGLProgram
+    glProgram       : get : Shader::getGLProgram
 
-        glSource        : get : Shader::getGLSource     , set : Shader::setGLSource
+    glSource        : get : Shader::getGLSource     , set : Shader::setGLSource
 
-        glShader        : get : Shader::getGLShader     , set : Shader::setGLShader
+    glShader        : get : Shader::getGLShader     , set : Shader::setGLShader
 
-        type            : get : Shader::keyShaderType   , set : Shader::setShaderType
+    type            : get : Shader::keyShaderType   , set : Shader::setShaderType
 
-        source          : get : Shader::getSourceText   , set : Shader::setSourceText
+    source          : get : Shader::getSourceText   , set : Shader::setSourceText
 
-        charLength      : get : Shader::getCharLength   , set : Shader::setCharLength
+    charLength      : get : Shader::getCharLength   , set : Shader::setCharLength
 
-        isUploaded      : get : Shader::getIsUploaded   , set : Shader::setIsUploaded
+    isUploaded      : get : Shader::getIsUploaded   , set : Shader::setIsUploaded
 
-        isCompiled      : get : Shader::getIsCompiled   , set : Shader::setIsCompiled
+    isCompiled      : get : Shader::getIsCompiled   , set : Shader::setIsCompiled
 
-        isAttached      : get : Shader::getIsAttached   , set : Shader::setIsAttached
+    isAttached      : get : Shader::getIsAttached   , set : Shader::setIsAttached
 
-        variables       : get : Shader::getAllVariables
+    variables       : get : Shader::getAllVariables
 
-        uniforms        : get : Shader::getUniforms
+    uniforms        : get : Shader::getUniforms
 
-        attributes      : get : Shader::getAttributes  
-        
-        sumComponents   : get : -> @attributes.sumAttrib "components"
-        
-        stride          : get : -> @attributes[ 0 ].stride
+    attributes      : get : Shader::getAttributes  
+    
+    sumComponents   : get : -> @attributes.sumAttrib "components"
+    
+    stride          : get : -> @attributes[ 0 ].stride
+
+Object.symbol Shader::,
+
+    iterate             : value : ->
+        shader = this ; ptri = 0.00
+        next : ->
+            unless ptri = shader . getNextChild ptri
+                return done : on , value : shader
+            return done : no , value : ptri
 
 OFFSET_TYPE_GLCODE      = 4 * 2
 
@@ -932,7 +949,22 @@ export class ShaderKey  extends Pointer
 
     @typedArray         : Uint8Array
 
-    enable              : -> @getLinkedNode()()
+    is                  : ->
+        name = "#{arguments[0]}"
+        len = name.length
+
+        while len-- then return if (
+            name[ len ].charCodeAt() -
+            @getUint8 len + OFFSET_NAME_TARRAY 
+        )
+        
+        this
+
+    enable              : -> @getLinkedNode() @setResvUint8( 0, 0 ) ### sign uploaded ###
+
+    getNeedsUpload      : -> @getResvUint8 0
+
+    setNeedsUpload      : -> @setResvUint8 0, arguments[0]
 
     getGL               : -> @getShader().getGL()
 
@@ -984,6 +1016,8 @@ Object.define ShaderKey.registerClass()::,
 
     type                : get : ShaderKey::keyTypeGLCode    , set : ShaderKey::setTypeGLCode
 
+    needsUpload         : get : ShaderKey::getNeedsUpload   , set : ShaderKey::setNeedsUpload
+
 OFFSET_LOCATION_AT      = 4 * 0
 
 OFFSET_ISNORMALIZE      = 4 * 0 + 1
@@ -997,9 +1031,16 @@ export class Attribute  extends ShaderKey
     Object.define Attribute.registerClass(),
         
         vec3    : value : class  vec3 extends this
+            
             @components : 3
+            
             @protoClass : 0
+
             @registerClass()
+
+            getValue    : -> @array
+
+            setValue    : -> @array.set arguments[0]
 
         vec4    : value : class  vec4 extends this 
             @components : 4
@@ -1017,8 +1058,9 @@ export class Attribute  extends ShaderKey
             @registerClass()
 
     @parse              : ->
-        [ source ] = arguments
-        [ keys, offset ] = [ [], 0 ]
+
+        [ source         ] = arguments
+        [ keys  , offset ] = [ [], 0 ]
 
         source.split(/attribute/g).slice( 1 ).map ( line ) =>
             [ , type, name ] = line.split(/\;/g)[0].split /\s+/g
@@ -1030,6 +1072,11 @@ export class Attribute  extends ShaderKey
             key.setTypeGLCode   WebGL2RenderingContext.FLOAT
             key.setNormalize    off
             key.setOffset       offset
+
+            ( ( a_Name ) -> Object.define this, [ a_Name ] :
+                get : -> @findKey( a_Name )
+                set : -> @findKey( a_Name ).setValue arguments[0]
+            ).call( Shader::, name ) unless Object.hasOwn Shader::, name
 
             offset += key.getComponents() * 4
         
@@ -1078,8 +1125,6 @@ export class Attribute  extends ShaderKey
 
         argv
 
-    enable              : -> @getLinkedNode()()
-
     setLocation         : -> @setUint8 OFFSET_LOCATION_AT , arguments[0]
 
     getNormalize        : -> @getUint8 OFFSET_ISNORMALIZE
@@ -1106,6 +1151,14 @@ Object.define Attribute::,
 
     normalize           : get : Attribute::getNormalize     , set : Attribute::setNormalize
 
+Object.protos Attribute
+
+    .filter             -> Object.hasOwn arguments[0]:: , "getValue"
+    
+    .forEach            -> Object.define (Key = arguments[0]):: ,
+    
+        value           : get : Key::getValue , set : Key::setValue
+
 export class Uniform    extends ShaderKey
 
     Object.define Uniform.registerClass(),
@@ -1126,8 +1179,17 @@ export class Uniform    extends ShaderKey
             @registerClass()
 
         float   : value : class float extends this 
+            
             @components : 1
+            
             @protoClass : 0
+
+            setValue    : -> @setResvFloat32 @needsUpload = 1, arguments[0]
+
+            getValue    : -> @getResvFloat32 1
+
+            upload      : -> @needsUpload = @gl.uniform1f @location, @value
+
             @registerClass()
 
     @parse              : ->
@@ -1144,6 +1206,11 @@ export class Uniform    extends ShaderKey
             key.setComponents   key.constructor.components
             key.setTypeGLCode   WebGL2RenderingContext.FLOAT
 
+            ( ( u_Name ) -> Object.define this, [ u_Name ] :
+                get : -> @findKey( u_Name )
+                set : -> @findKey( u_Name ).setValue arguments[0]
+            ).call( Shader::, name ) unless Object.hasOwn Shader::, name
+    
         keys
 
     getGLLocation       : ->
@@ -1151,13 +1218,25 @@ export class Uniform    extends ShaderKey
         return unless gl = @getGL()
         return unless program = @getGLProgram()
         return unless location = gl.getUniformLocation program, @getNameString()
-        @setKeyLocated 1 ; @setLinkedNode location ; locatio
+
+        
+        
+        @setKeyLocated 1 ; @setLinkedNode location ; location
 
 Object.define Uniform::,
 
     glLocation          : get : Uniform::getGLLocation
 
     location            : get : Uniform::getGLLocation
+
+
+Object.protos Uniform
+
+    .filter             -> Object.hasOwn arguments[0]:: , "getValue"
+    
+    .forEach            -> Object.define (Key = arguments[0]):: ,
+    
+        value           : get : Key::getValue , set : Key::setValue
 
 KEYEXTEND_OBJECT3D      =
     [ WebGL2RenderingContext        .POINTS ] : new (class           POINTS extends Number) WebGL2RenderingContext        .POINTS

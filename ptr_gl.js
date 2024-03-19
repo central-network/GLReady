@@ -837,9 +837,6 @@ Object.define(GL.prototype, {
   programAttribs: {
     get: GL.prototype.getAttributes
   },
-  programUniforms: {
-    get: GL.prototype.getUniforms
-  },
   glBuffer: {
     get: GL.prototype.getGLBuffer
   },
@@ -855,10 +852,13 @@ Object.define(GL.prototype, {
   allVariables: {
     get: GL.prototype.getAllVariables
   },
+  allUniforms: {
+    get: GL.prototype.getUniforms
+  },
   nodeBuffer: {
     get: GL.prototype.getArrayBuffer
   },
-  nodeCanvas: {
+  canvas: {
     get: GL.prototype.getCanvasNode,
     set: GL.prototype.setCanvasNode
   },
@@ -1091,7 +1091,7 @@ OFFSET_ATTACH_STATUS = 1 + 2;
 export var Program = (function() {
   class Program extends Pointer {
     link() {
-      var attr, j, len, ref;
+      var attr, j, len1, ref;
       if (this.getLinkedStatus()) {
         return this;
       }
@@ -1100,7 +1100,7 @@ export var Program = (function() {
         return this;
       }
       ref = this.getAttributes();
-      for (j = 0, len = ref.length; j < len; j++) {
+      for (j = 0, len1 = ref.length; j < len1; j++) {
         attr = ref[j];
         attr.getGLLocation();
         attr.bindFunctions();
@@ -1290,8 +1290,11 @@ Object.define(Program.registerClass().prototype, {
   glIsProgram: {
     get: Program.prototype.getGLIsProgram
   },
-  glVertexShader: {
+  glVertShader: {
     get: Program.prototype.getGLVertShader
+  },
+  glFragShader: {
+    get: Program.prototype.getGLFragShader
   },
   glProgram: {
     get: Program.prototype.getGLProgram
@@ -1311,11 +1314,11 @@ Object.define(Program.registerClass().prototype, {
     get: Program.prototype.getAttachStatus,
     set: Program.prototype.setAttachStatus
   },
-  vertexShader: {
+  vertShader: {
     get: Program.prototype.getVertShader,
     set: Program.prototype.setVertShader
   },
-  fragmentShader: {
+  fragShader: {
     get: Program.prototype.getFragShader,
     set: Program.prototype.setFragShader
   },
@@ -1349,7 +1352,7 @@ export var Shader = (function() {
     }
 
     static fromSource() {
-      var byteLength, byteSource, charLength, j, key, len, parsedKeys, ptr, shaderType, textSource;
+      var byteLength, byteSource, charLength, j, key, len1, parsedKeys, ptr, shaderType, textSource;
       textSource = arguments[0];
       parsedKeys = this.parse(textSource);
       shaderType = /gl_Frag/.test(textSource) ? Shader.prototype.FRAGMENT : Shader.prototype.VERTEX;
@@ -1360,7 +1363,7 @@ export var Shader = (function() {
       ptr.setCharLength(charLength);
       ptr.setByteSource(byteSource);
       ptr.setShaderType(shaderType);
-      for (j = 0, len = parsedKeys.length; j < len; j++) {
+      for (j = 0, len1 = parsedKeys.length; j < len1; j++) {
         key = parsedKeys[j];
         key.setParentPtri(ptr);
       }
@@ -1419,13 +1422,13 @@ export var Shader = (function() {
     }
 
     parse() {
-      var j, key, len, ref;
+      var j, key, len1, ref;
       if (!this.isVertexShader()) {
         return this;
       }
       this.getAllVariables().forEach(Pointer.removePointer);
       ref = Shader.parse(this.getSourceText());
-      for (j = 0, len = ref.length; j < len; j++) {
+      for (j = 0, len1 = ref.length; j < len1; j++) {
         key = ref[j];
         this.add(key);
       }
@@ -1450,6 +1453,18 @@ export var Shader = (function() {
       this.setIsUploaded(this.getSourceText() === this.getGLSource());
       this.setIsCompiled(this.getGLCompileStatus());
       return this.setIsAttached(this.getProgram().getGLShaders().includes(this.getGLShader()));
+    }
+
+    findKey() {
+      var key, name, ref;
+      name = arguments[0];
+      ref = this;
+      for (key of ref) {
+        if (key.is(name)) {
+          return key;
+        }
+      }
+      return false;
     }
 
     getProgram() {
@@ -1622,69 +1637,93 @@ export var Shader = (function() {
 
   Shader.prototype.HIGH_INT = WebGL2RenderingContext.HIGH_INT;
 
-  Object.define(Shader.registerClass().prototype, {
-    gl: {
-      get: Shader.prototype.getGL
-    },
-    glProgram: {
-      get: Shader.prototype.getGLProgram
-    },
-    glSource: {
-      get: Shader.prototype.getGLSource,
-      set: Shader.prototype.setGLSource
-    },
-    glShader: {
-      get: Shader.prototype.getGLShader,
-      set: Shader.prototype.setGLShader
-    },
-    type: {
-      get: Shader.prototype.keyShaderType,
-      set: Shader.prototype.setShaderType
-    },
-    source: {
-      get: Shader.prototype.getSourceText,
-      set: Shader.prototype.setSourceText
-    },
-    charLength: {
-      get: Shader.prototype.getCharLength,
-      set: Shader.prototype.setCharLength
-    },
-    isUploaded: {
-      get: Shader.prototype.getIsUploaded,
-      set: Shader.prototype.setIsUploaded
-    },
-    isCompiled: {
-      get: Shader.prototype.getIsCompiled,
-      set: Shader.prototype.setIsCompiled
-    },
-    isAttached: {
-      get: Shader.prototype.getIsAttached,
-      set: Shader.prototype.setIsAttached
-    },
-    variables: {
-      get: Shader.prototype.getAllVariables
-    },
-    uniforms: {
-      get: Shader.prototype.getUniforms
-    },
-    attributes: {
-      get: Shader.prototype.getAttributes
-    },
-    sumComponents: {
-      get: function() {
-        return this.attributes.sumAttrib("components");
-      }
-    },
-    stride: {
-      get: function() {
-        return this.attributes[0].stride;
-      }
-    }
-  });
-
   return Shader;
 
 }).call(this);
+
+Object.define(Shader.registerClass().prototype, {
+  gl: {
+    get: Shader.prototype.getGL
+  },
+  glProgram: {
+    get: Shader.prototype.getGLProgram
+  },
+  glSource: {
+    get: Shader.prototype.getGLSource,
+    set: Shader.prototype.setGLSource
+  },
+  glShader: {
+    get: Shader.prototype.getGLShader,
+    set: Shader.prototype.setGLShader
+  },
+  type: {
+    get: Shader.prototype.keyShaderType,
+    set: Shader.prototype.setShaderType
+  },
+  source: {
+    get: Shader.prototype.getSourceText,
+    set: Shader.prototype.setSourceText
+  },
+  charLength: {
+    get: Shader.prototype.getCharLength,
+    set: Shader.prototype.setCharLength
+  },
+  isUploaded: {
+    get: Shader.prototype.getIsUploaded,
+    set: Shader.prototype.setIsUploaded
+  },
+  isCompiled: {
+    get: Shader.prototype.getIsCompiled,
+    set: Shader.prototype.setIsCompiled
+  },
+  isAttached: {
+    get: Shader.prototype.getIsAttached,
+    set: Shader.prototype.setIsAttached
+  },
+  variables: {
+    get: Shader.prototype.getAllVariables
+  },
+  uniforms: {
+    get: Shader.prototype.getUniforms
+  },
+  attributes: {
+    get: Shader.prototype.getAttributes
+  },
+  sumComponents: {
+    get: function() {
+      return this.attributes.sumAttrib("components");
+    }
+  },
+  stride: {
+    get: function() {
+      return this.attributes[0].stride;
+    }
+  }
+});
+
+Object.symbol(Shader.prototype, {
+  iterate: {
+    value: function() {
+      var ptri, shader;
+      shader = this;
+      ptri = 0.00;
+      return {
+        next: function() {
+          if (!(ptri = shader.getNextChild(ptri))) {
+            return {
+              done: true,
+              value: shader
+            };
+          }
+          return {
+            done: false,
+            value: ptri
+          };
+        }
+      };
+    }
+  }
+});
 
 OFFSET_TYPE_GLCODE = 4 * 2;
 
@@ -1698,8 +1737,28 @@ OFFSET_NAME_TARRAY = 4 * 4;
 
 export var ShaderKey = (function() {
   class ShaderKey extends Pointer {
+    is() {
+      var len, name;
+      name = `${arguments[0]}`;
+      len = name.length;
+      while (len--) {
+        if (name[len].charCodeAt() - this.getUint8(len + OFFSET_NAME_TARRAY)) {
+          return;
+        }
+      }
+      return this;
+    }
+
     enable() {
-      return this.getLinkedNode()();
+      return this.getLinkedNode()(this.setResvUint8(0, 0));
+    }
+
+    /* sign uploaded */    getNeedsUpload() {
+      return this.getResvUint8(0);
+    }
+
+    setNeedsUpload() {
+      return this.setResvUint8(0, arguments[0]);
     }
 
     getGL() {
@@ -1804,6 +1863,10 @@ Object.define(ShaderKey.registerClass().prototype, {
   type: {
     get: ShaderKey.prototype.keyTypeGLCode,
     set: ShaderKey.prototype.setTypeGLCode
+  },
+  needsUpload: {
+    get: ShaderKey.prototype.getNeedsUpload,
+    set: ShaderKey.prototype.setNeedsUpload
   }
 });
 
@@ -1820,7 +1883,7 @@ export var Attribute = (function() {
 
   class Attribute extends ShaderKey {
     static parse() {
-      var j, key, keys, len, offset, source;
+      var j, key, keys, len1, offset, source;
       [source] = arguments;
       [keys, offset] = [[], 0];
       source.split(/attribute/g).slice(1).map((line) => {
@@ -1832,9 +1895,23 @@ export var Attribute = (function() {
         key.setTypeGLCode(WebGL2RenderingContext.FLOAT);
         key.setNormalize(false);
         key.setOffset(offset);
+        if (!Object.hasOwn(Shader.prototype, name)) {
+          (function(a_Name) {
+            return Object.define(this, {
+              [a_Name]: {
+                get: function() {
+                  return this.findKey(a_Name);
+                },
+                set: function() {
+                  return this.findKey(a_Name).setValue(arguments[0]);
+                }
+              }
+            });
+          }).call(Shader.prototype, name);
+        }
         return offset += key.getComponents() * 4;
       });
-      for (j = 0, len = keys.length; j < len; j++) {
+      for (j = 0, len1 = keys.length; j < len1; j++) {
         key = keys[j];
         key.setStride(offset);
       }
@@ -1880,10 +1957,6 @@ export var Attribute = (function() {
       return argv;
     }
 
-    enable() {
-      return this.getLinkedNode()();
-    }
-
     setLocation() {
       return this.setUint8(OFFSET_LOCATION_AT, arguments[0]);
     }
@@ -1917,7 +1990,16 @@ export var Attribute = (function() {
   Object.define(Attribute.registerClass(), {
     vec3: {
       value: vec3 = (function() {
-        class vec3 extends Attribute {};
+        class vec3 extends Attribute {
+          getValue() {
+            return this.array;
+          }
+
+          setValue() {
+            return this.array.set(arguments[0]);
+          }
+
+        };
 
         vec3.components = 3;
 
@@ -1999,6 +2081,18 @@ Object.define(Attribute.prototype, {
   }
 });
 
+Object.protos(Attribute).filter(function() {
+  return Object.hasOwn(arguments[0].prototype, "getValue");
+}).forEach(function() {
+  var Key;
+  return Object.define((Key = arguments[0]).prototype, {
+    value: {
+      get: Key.prototype.getValue,
+      set: Key.prototype.setValue
+    }
+  });
+});
+
 export var Uniform = (function() {
   var float, mat4, vec3, vec4;
 
@@ -2013,7 +2107,21 @@ export var Uniform = (function() {
         keys.push(key = new Uniform[type]);
         key.setNameString(name);
         key.setComponents(key.constructor.components);
-        return key.setTypeGLCode(WebGL2RenderingContext.FLOAT);
+        key.setTypeGLCode(WebGL2RenderingContext.FLOAT);
+        if (!Object.hasOwn(Shader.prototype, name)) {
+          return (function(u_Name) {
+            return Object.define(this, {
+              [u_Name]: {
+                get: function() {
+                  return this.findKey(u_Name);
+                },
+                set: function() {
+                  return this.findKey(u_Name).setValue(arguments[0]);
+                }
+              }
+            });
+          }).call(Shader.prototype, name);
+        }
       });
       return keys;
     }
@@ -2034,7 +2142,7 @@ export var Uniform = (function() {
       }
       this.setKeyLocated(1);
       this.setLinkedNode(location);
-      return locatio;
+      return location;
     }
 
   };
@@ -2084,7 +2192,20 @@ export var Uniform = (function() {
     },
     float: {
       value: float = (function() {
-        class float extends Uniform {};
+        class float extends Uniform {
+          setValue() {
+            return this.setResvFloat32(this.needsUpload = 1, arguments[0]);
+          }
+
+          getValue() {
+            return this.getResvFloat32(1);
+          }
+
+          upload() {
+            return this.needsUpload = this.gl.uniform1f(this.location, this.value);
+          }
+
+        };
 
         float.components = 1;
 
@@ -2109,6 +2230,18 @@ Object.define(Uniform.prototype, {
   location: {
     get: Uniform.prototype.getGLLocation
   }
+});
+
+Object.protos(Uniform).filter(function() {
+  return Object.hasOwn(arguments[0].prototype, "getValue");
+}).forEach(function() {
+  var Key;
+  return Object.define((Key = arguments[0]).prototype, {
+    value: {
+      get: Key.prototype.getValue,
+      set: Key.prototype.setValue
+    }
+  });
 });
 
 KEYEXTEND_OBJECT3D = {
@@ -2571,10 +2704,10 @@ export var Buffer = (function() {
     }
 
     getMode() {
-      var j, len, mode, ref, type;
+      var j, len1, mode, ref, type;
       type = arguments[0];
       ref = this.getModes();
-      for (j = 0, len = ref.length; j < len; j++) {
+      for (j = 0, len1 = ref.length; j < len1; j++) {
         mode = ref[j];
         if (mode.is(type)) {
           return mode;

@@ -87,6 +87,12 @@ KEYEX = 0 : new (class NONE extends Number) 0
 do -> for k , v of WebGL2RenderingContext then KEYED[ v ] =
     eval "new (class #{k} extends Number {})(#{v})"
 
+Object.defineProperty Object, "protos", value : ->
+    protos = []
+    for prop , desc of @getOwnPropertyDescriptors arguments[ 0 ] 
+        protos.push desc.value if @hasOwn desc.value, "protoClass"
+    protos
+
 Object.defineProperty Object, "define", value : ->
     try [ proto, prop, desc ] = [ ...arguments ]
     if desc then @define proto , [ prop ] : desc
@@ -728,6 +734,7 @@ Object.define Pointer::,
     ptrParentNode   : value : -> new Pointer dvw.getUint32 this + OFFSET_PARENT_PTR, LE
 
     ptrResvUint32   : value : -> new Pointer dvw.getUint32 this + OFFSET_RESVERVEDS + arguments[0] * 4, LE
+
     
     keyResvUint32   : value : -> dvw.keyUint32 this + OFFSET_RESVERVEDS + arguments[0] * 4, arguments[1]
     
@@ -737,6 +744,7 @@ Object.define Pointer::,
     
     addResvUint32   : value : -> dvw.setUint32 this + OFFSET_RESVERVEDS + arguments[0] * 4, arguments[1] + o = @getResvUint32( arguments[0] ), LE ; o
     
+
     keyResvUint16   : value : -> dvw.keyUint16 this + OFFSET_RESVERVEDS + arguments[0] * 2, arguments[1]
     
     getResvUint16   : value : -> dvw.getUint16 this + OFFSET_RESVERVEDS + arguments[0] * 2, LE
@@ -744,6 +752,21 @@ Object.define Pointer::,
     setResvUint16   : value : -> dvw.setUint16 this + OFFSET_RESVERVEDS + arguments[0] * 2, arguments[1], LE
     
     addResvUint16   : value : -> dvw.setUint16 this + OFFSET_RESVERVEDS + arguments[0] * 2, arguments[1] + o = @getResvUint16( arguments[0] ), LE ; o
+
+
+    getResvFloat32  : value : -> dvw.getFloat32 this + OFFSET_RESVERVEDS + arguments[0] * 4, LE
+    
+    setResvFloat32  : value : -> dvw.setFloat32 this + OFFSET_RESVERVEDS + arguments[0] * 4, arguments[1], LE ; arguments[ 1 ]
+    
+    addResvFloat32  : value : -> dvw.setFloat32 this + OFFSET_RESVERVEDS + arguments[0] * 4, arguments[1] + o = @getResvFloat32( arguments[0] ), LE ; o
+
+
+    getResvUint8    : value : -> dvw.getUint8 this + OFFSET_RESVERVEDS + arguments[0]
+    
+    setResvUint8    : value : -> dvw.setUint8 this + OFFSET_RESVERVEDS + arguments[0], arguments[1] ; arguments[ 1 ]
+    
+    addResvUint8    : value : -> dvw.setUint8 this + OFFSET_RESVERVEDS + arguments[0], arguments[1] + o = @getResvUint8( arguments[0] ) ; o
+
 
 Object.define Pointer::,
 

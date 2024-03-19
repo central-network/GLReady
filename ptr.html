@@ -29,6 +29,29 @@
                 color: rgb(152, 152, 152);
             }
         </style>
+
+        <script id="vertShader" type="x-shader/x-vertex">
+            attribute vec3     a_Vertex;
+            attribute vec4     a_Color;
+            uniform   float    u_PointSize;
+            uniform   mat4     u_Camera;
+            varying   vec4     v_Color;
+
+            void main() {
+                gl_Position  =  u_Camera * vec4(a_Vertex, 1.0);
+                gl_PointSize =  u_PointSize;
+                v_Color      =  a_Color;
+            }
+        </script>
+
+        <script id="fragShader" type="x-shader/x-fragment">
+            precision highp    float;
+            varying   vec4     v_Color;
+
+            void main() {
+                gl_FragColor = v_Color;
+            }
+        </script>
     </head>
     <body style="background: black;">
         <canvas></canvas>
@@ -54,21 +77,19 @@
             self.program = null;
             self.buff = null;
 
-            let canvas = document.querySelector( 'canvas' );
-            let buffer = new SharedArrayBuffer( 1e8 );
-
-            gl = new GL();
+            gl      = new GL();
+            buff    = new Buffer();
             program = new Program();
 
-            gl.setCanvasNode( canvas ).bindEvents();
+            gl.canvas = document.querySelector( 'canvas' );
+
+            gl.bindEvents();
+            
             gl.add( program );
-
-
-            buff = new Buffer();
             gl.add( buff );
-            buff.load();
 
-            gl.fork()
+            buff.load();
+            gl.fork();
             
             gl.glCullEnabled    = true;
             gl.glCullFace       = WebGL2RenderingContext.CULL_FACE;
@@ -86,29 +107,8 @@
                 WebGL2RenderingContext.DEPTH_BUFFER_BIT |
                 WebGL2RenderingContext.COLOR_BUFFER_BIT ;
 
-
-            program.vertexShader = `
-                attribute vec3     a_Vertex;
-                attribute vec4     a_Color;
-                uniform   float    u_PointSize;
-                uniform   mat4     u_Camera;
-                varying   vec4     v_Color;
-
-                void main() {
-                    gl_Position  =  u_Camera * vec4(a_Vertex, 1.0);
-                    gl_PointSize =  20.0;
-                    v_Color      =  a_Color;
-                }
-            `;
-
-            program.fragmentShader = `
-                precision highp    float;
-                varying   vec4     v_Color;
-
-                void main() {
-                    gl_FragColor = v_Color;
-                }
-            `;
+            program.vertShader  = document.getElementById("vertShader").text;
+            program.fragShader  = document.getElementById("fragShader").text;
             
             log( gl );
             
@@ -151,13 +151,17 @@
             buff.drawLines( o32 )
             buff.drawPoints( o3 )
 
-
             o32.add(o3);
             o32.add(o33);
 
             setTimeout(function (){
                 
                 gl.clear()
+
+                program.vertShader.u_PointSize = 2
+                
+                for ( let skey of program.vertShader )
+                    if (skey.needsUpload) skey.upload()
 
                 for ( let mode of buff ) for ( let draw of mode )
                     draw.upload()   
@@ -169,7 +173,7 @@
                     mode.render()
                 
 
-            }, 100)
+            }, 300)
 
 
 

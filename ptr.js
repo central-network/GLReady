@@ -110,6 +110,21 @@ KEYEX = {
   return results;
 })();
 
+Object.defineProperty(Object, "protos", {
+  value: function() {
+    var desc, prop, protos, ref;
+    protos = [];
+    ref = this.getOwnPropertyDescriptors(arguments[0]);
+    for (prop in ref) {
+      desc = ref[prop];
+      if (this.hasOwn(desc.value, "protoClass")) {
+        protos.push(desc.value);
+      }
+    }
+    return protos;
+  }
+});
+
 Object.defineProperty(Object, "define", {
   value: function() {
     var desc, prop, proto;
@@ -1210,6 +1225,42 @@ Object.define(Pointer.prototype, {
     value: function() {
       var o;
       dvw.setUint16(this + OFFSET_RESVERVEDS + arguments[0] * 2, arguments[1] + (o = this.getResvUint16(arguments[0])), LE);
+      return o;
+    }
+  },
+  getResvFloat32: {
+    value: function() {
+      return dvw.getFloat32(this + OFFSET_RESVERVEDS + arguments[0] * 4, LE);
+    }
+  },
+  setResvFloat32: {
+    value: function() {
+      dvw.setFloat32(this + OFFSET_RESVERVEDS + arguments[0] * 4, arguments[1], LE);
+      return arguments[1];
+    }
+  },
+  addResvFloat32: {
+    value: function() {
+      var o;
+      dvw.setFloat32(this + OFFSET_RESVERVEDS + arguments[0] * 4, arguments[1] + (o = this.getResvFloat32(arguments[0])), LE);
+      return o;
+    }
+  },
+  getResvUint8: {
+    value: function() {
+      return dvw.getUint8(this + OFFSET_RESVERVEDS + arguments[0]);
+    }
+  },
+  setResvUint8: {
+    value: function() {
+      dvw.setUint8(this + OFFSET_RESVERVEDS + arguments[0], arguments[1]);
+      return arguments[1];
+    }
+  },
+  addResvUint8: {
+    value: function() {
+      var o;
+      dvw.setUint8(this + OFFSET_RESVERVEDS + arguments[0], arguments[1] + (o = this.getResvUint8(arguments[0])));
       return o;
     }
   }
