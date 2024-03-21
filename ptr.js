@@ -94,7 +94,7 @@ proxy = function() {
   });
 };
 
-KEYED = {};
+export var GLType = KEYED = {};
 
 KEYEX = {
   0: new (NONE = class NONE extends Number {})(0)
@@ -127,16 +127,22 @@ Object.defineProperty(Object, "protos", {
 
 Object.defineProperty(Object, "define", {
   value: function() {
-    var desc, prop, proto;
+    var desc, prop, props, proto;
     try {
-      [proto, prop, desc] = [...arguments];
+      [proto, props, desc] = [...arguments];
     } catch (error) {}
     if (desc) {
       this.define(proto, {
-        [prop]: desc
+        [props]: desc
       });
     } else {
-      this.defineProperties(proto, prop, desc);
+      for (prop in props) {
+        desc = props[prop];
+        this.defineProperty(proto, prop, {
+          configurable: true,
+          ...desc
+        });
+      }
     }
     return proto;
   }
@@ -168,7 +174,7 @@ Object.defineProperty(Object, "symbol", {
           }
         })();
         try {
-          this.define(proto, symbol, desc);
+          this.defineProperty(proto, symbol, desc);
         } catch (error) {
           fail = error;
           throw fail;
@@ -208,7 +214,7 @@ Object.defineProperty(Object, "hidden", {
   }
 });
 
-Object.define(Array.prototype, {
+Object.defineProperties(Array.prototype, {
   sumAttrib: {
     value: function() {
       var j, len1, n, ref, s, v;
@@ -234,7 +240,7 @@ Object.define(Array.prototype, {
   }
 });
 
-Object.define(DataView.prototype, {
+Object.defineProperties(DataView.prototype, {
   setObject: {
     value: function(offset, object) {
       var i;
@@ -284,6 +290,26 @@ Object.define(DataView.prototype, {
     value: function(offset, extend = KEYEX) {
       var v;
       return extend[v = this.getUint32(offset, LE)] || KEYED[v];
+    }
+  }
+});
+
+Object.defineProperties(Math, {
+  rad: {
+    value: function(deg) {
+      return deg * Math.PI / 180;
+    }
+  },
+  deg: {
+    value: function(rad) {
+      return rad * 180 / Math.PI;
+    }
+  },
+  powsum: {
+    value: function(arr, pow = 2) {
+      return [...arr].flat().reduce(function(a, b) {
+        return a + Math.pow(b, pow);
+      });
     }
   }
 });
@@ -832,10 +858,11 @@ export var Pointer = class Pointer extends Number {
         } catch (error) {}
       }
     } else {
-      byteLength = this.constructor.byteLength;
-      dvw.setUint32(this + OFFSET_BYTELENGTH, byteLength, LE);
       dvw.setUint32(this + OFFSET_PROTOCLASS, this.constructor.protoClass, LE);
-      dvw.setUint32(this + OFFSET_BYTEOFFSET, malloc(byteLength), LE);
+      if (byteLength = this.constructor.byteLength) {
+        dvw.setUint32(this + OFFSET_BYTELENGTH, byteLength, LE);
+        dvw.setUint32(this + OFFSET_BYTEOFFSET, malloc(byteLength), LE);
+      }
       this.init();
     }
   }
@@ -937,6 +964,8 @@ export var Pointer = class Pointer extends Number {
 
 export var Matrix4 = class Matrix4 extends Pointer {};
 
+export var Camera = class Camera extends Matrix4 {};
+
 export var WorkerPointer = class WorkerPointer extends Pointer {};
 
 Object.symbol(Pointer.prototype, {
@@ -978,8 +1007,13 @@ Object.symbol(Pointer.prototype, {
 Object.define(Pointer, {
   registerClass: {
     value: function() {
-      (this.protoClass || (this.protoClass = -1 + POINTER_PROTOTYPE.push(this)));
-      return this;
+      if (-1 === POINTER_PROTOTYPE.indexOf(this)) {
+        this.protoClass = -1 + POINTER_PROTOTYPE.push(this);
+      }
+      if (this.byteLength) {
+        return this;
+      }
+      return Object.hidden(this, "array", "byteLength", "byteOffset", "headers", "length", "children");
     }
   },
   setDataBuffer: {
@@ -1413,6 +1447,10 @@ Object.define(Pointer.prototype, {
 });
 
 Object.define(Pointer.prototype, {
+  headers: {
+    get: Pointer.prototype.getAllHeaders,
+    set: Pointer.prototype.setAllHeaders
+  },
   length: {
     get: Pointer.prototype.getTypedLength
   },
@@ -1421,10 +1459,6 @@ Object.define(Pointer.prototype, {
   },
   children: {
     get: Pointer.prototype.findAllChilds
-  },
-  headers: {
-    get: Pointer.prototype.getAllHeaders,
-    set: Pointer.prototype.setAllHeaders
   },
   byteOffset: {
     get: Pointer.prototype.getByteOffset,
@@ -1460,40 +1494,9 @@ Object.define(Matrix4.registerClass(), {
   },
   multiply: {
     value: function() {
-      var a, a00, a01, a02, a03, a10, a11, a12, a13, a20, a21, a22, a23, a30, a31, a32, a33, b, b00, b01, b02, b03, b10, b11, b12, b13, b20, b21, b22, b23, b30, b31, b32, b33;
-      [a, b] = arguments;
-      a00 = a[0 * 4 + 0];
-      a01 = a[0 * 4 + 1];
-      a02 = a[0 * 4 + 2];
-      a03 = a[0 * 4 + 3];
-      a10 = a[1 * 4 + 0];
-      a11 = a[1 * 4 + 1];
-      a12 = a[1 * 4 + 2];
-      a13 = a[1 * 4 + 3];
-      a20 = a[2 * 4 + 0];
-      a21 = a[2 * 4 + 1];
-      a22 = a[2 * 4 + 2];
-      a23 = a[2 * 4 + 3];
-      a30 = a[3 * 4 + 0];
-      a31 = a[3 * 4 + 1];
-      a32 = a[3 * 4 + 2];
-      a33 = a[3 * 4 + 3];
-      b00 = b[0 * 4 + 0];
-      b01 = b[0 * 4 + 1];
-      b02 = b[0 * 4 + 2];
-      b03 = b[0 * 4 + 3];
-      b10 = b[1 * 4 + 0];
-      b11 = b[1 * 4 + 1];
-      b12 = b[1 * 4 + 2];
-      b13 = b[1 * 4 + 3];
-      b20 = b[2 * 4 + 0];
-      b21 = b[2 * 4 + 1];
-      b22 = b[2 * 4 + 2];
-      b23 = b[2 * 4 + 3];
-      b30 = b[3 * 4 + 0];
-      b31 = b[3 * 4 + 1];
-      b32 = b[3 * 4 + 2];
-      b33 = b[3 * 4 + 3];
+      var a00, a01, a02, a03, a10, a11, a12, a13, a20, a21, a22, a23, a30, a31, a32, a33, b00, b01, b02, b03, b10, b11, b12, b13, b20, b21, b22, b23, b30, b31, b32, b33;
+      [a00, a01, a02, a03, a10, a11, a12, a13, a20, a21, a22, a23, a30, a31, a32, a33] = arguments[0];
+      [b00, b01, b02, b03, b10, b11, b12, b13, b20, b21, b22, b23, b30, b31, b32, b33] = arguments[1];
       return Float32Array.of(b00 * a00 + b01 * a10 + b02 * a20 + b03 * a30, b00 * a01 + b01 * a11 + b02 * a21 + b03 * a31, b00 * a02 + b01 * a12 + b02 * a22 + b03 * a32, b00 * a03 + b01 * a13 + b02 * a23 + b03 * a33, b10 * a00 + b11 * a10 + b12 * a20 + b13 * a30, b10 * a01 + b11 * a11 + b12 * a21 + b13 * a31, b10 * a02 + b11 * a12 + b12 * a22 + b13 * a32, b10 * a03 + b11 * a13 + b12 * a23 + b13 * a33, b20 * a00 + b21 * a10 + b22 * a20 + b23 * a30, b20 * a01 + b21 * a11 + b22 * a21 + b23 * a31, b20 * a02 + b21 * a12 + b22 * a22 + b23 * a32, b20 * a03 + b21 * a13 + b22 * a23 + b23 * a33, b30 * a00 + b31 * a10 + b32 * a20 + b33 * a30, b30 * a01 + b31 * a11 + b32 * a21 + b33 * a31, b30 * a02 + b31 * a12 + b32 * a22 + b33 * a32, b30 * a03 + b31 * a13 + b32 * a23 + b33 * a33);
     }
   },
@@ -1568,15 +1571,66 @@ Object.define(Matrix4.registerClass(), {
 });
 
 Object.define(Matrix4.prototype, {
+  getPositionX: {
+    value: function() {
+      return this.getFloat32(4 * 12);
+    }
+  },
+  getPositionY: {
+    value: function() {
+      return this.getFloat32(4 * 13);
+    }
+  },
+  getPositionZ: {
+    value: function() {
+      return this.getFloat32(4 * 14);
+    }
+  },
+  getPosition3: {
+    value: function() {
+      return this.subarray(12, 15);
+    }
+  },
+  setPositionX: {
+    value: function() {
+      return this.translateX(arguments[0]);
+    }
+  },
+  setPositionY: {
+    value: function() {
+      return this.translateY(arguments[0]);
+    }
+  },
+  setPositionZ: {
+    value: function() {
+      return this.translateZ(arguments[0]);
+    }
+  },
+  setPosition3: {
+    value: function() {
+      this.translate(arguments[0]);
+      return this;
+    }
+  },
   getIsUpdated: {
     value: function() {
-      return this.getResvUint32(0);
+      return this.getResvUint8(0);
     }
   },
   setIsUpdated: {
     value: function() {
-      this.setResvUint32(0, arguments[0]);
+      this.setResvUint8(0, arguments[0]);
       return this;
+    }
+  },
+  uploadNeeded: {
+    value: function() {
+      var ref;
+      if ((ref = this.link) != null) {
+        ref.needsUpload = 1;
+      }
+      this.setResvUint8(0, 0);
+      return arguments[0];
     }
   }
 });
@@ -1584,47 +1638,47 @@ Object.define(Matrix4.prototype, {
 Object.define(Matrix4.prototype, {
   rotateX: {
     value: function() {
-      return this.multiply(this.slice(), Matrix4.xRotation(arguments[0]));
+      return this.multiply(this, Matrix4.xRotation(arguments[0]));
     }
   },
   rotateY: {
     value: function() {
-      return this.multiply(this.slice(), Matrix4.yRotation(arguments[0]));
+      return this.multiply(this, Matrix4.yRotation(arguments[0]));
     }
   },
   rotateZ: {
     value: function() {
-      return this.multiply(this.slice(), Matrix4.zRotation(arguments[0]));
+      return this.multiply(this, Matrix4.zRotation(arguments[0]));
     }
   },
   translateX: {
     value: function() {
-      return this.multiply(this.slice(), Matrix4.xTranslation(arguments[0]));
+      return this.multiply(this, Matrix4.xTranslation(arguments[0]));
     }
   },
   translateY: {
     value: function() {
-      return this.multiply(this.slice(), Matrix4.yTranslation(arguments[0]));
+      return this.multiply(this, Matrix4.yTranslation(arguments[0]));
     }
   },
   translateZ: {
     value: function() {
-      return this.multiply(this.slice(), Matrix4.zTranslation(arguments[0]));
+      return this.multiply(this, Matrix4.zTranslation(arguments[0]));
     }
   },
   scaleX: {
     value: function() {
-      return this.multiply(this.slice(), Matrix4.xScale(arguments[0]));
+      return this.multiply(this, Matrix4.xScale(arguments[0]));
     }
   },
   scaleY: {
     value: function() {
-      return this.multiply(this.slice(), Matrix4.yScale(arguments[0]));
+      return this.multiply(this, Matrix4.yScale(arguments[0]));
     }
   },
   scaleZ: {
     value: function() {
-      return this.multiply(this.slice(), Matrix4.zScale(arguments[0]));
+      return this.multiply(this, Matrix4.zScale(arguments[0]));
     }
   }
 });
@@ -1644,7 +1698,8 @@ Object.define(Matrix4.prototype, {
   },
   multiply: {
     value: function() {
-      return this.set(Matrix4.multiply(this.slice(), arguments[0]));
+      this.uploadNeeded(this.set(Matrix4.multiply(this, arguments[0])));
+      return this;
     }
   },
   translate: {
@@ -1662,13 +1717,13 @@ Object.define(Matrix4.prototype, {
       var rx, ry, rz;
       [rx, ry, rz] = arguments[1] ? arguments : arguments[0];
       if (rx) {
-        this.xRotate(rx);
+        this.rotateX(rx);
       }
       if (ry) {
-        this.yRotate(ry);
+        this.rotateY(ry);
       }
       if (rz) {
-        this.yRotate(rz);
+        this.rotateZ(rz);
       }
       return this;
     }
@@ -1679,6 +1734,50 @@ Object.define(Matrix4.prototype, {
   isUpdated: {
     get: Matrix4.prototype.getIsUpdated,
     set: Matrix4.prototype.setIsUpdated
+  },
+  x: {
+    get: Matrix4.prototype.getPositionX,
+    set: Matrix4.prototype.setPositionX
+  },
+  y: {
+    get: Matrix4.prototype.getPositionY,
+    set: Matrix4.prototype.setPositionY
+  },
+  z: {
+    get: Matrix4.prototype.getPositionZ,
+    set: Matrix4.prototype.setPositionZ
+  },
+  position: {
+    get: Matrix4.prototype.getPosition3,
+    set: Matrix4.prototype.setPosition3
+  }
+});
+
+Object.symbol(Matrix4.prototype, {
+  iterate: {
+    value: function() {
+      var byteLength, byteOffset, length, matrix, stride;
+      byteOffset = dvw.getUint32(this + OFFSET_BYTEOFFSET, LE);
+      byteLength = dvw.getUint32(this + OFFSET_BYTELENGTH, LE);
+      matrix = this;
+      stride = this.constructor.BYTES_PER_ELEMENT;
+      length = byteLength / stride;
+      byteOffset -= stride;
+      return {
+        next: function() {
+          if (!length--) {
+            return {
+              done: true,
+              value: matrix
+            };
+          }
+          return {
+            done: false,
+            value: dvw.getFloat32(byteOffset += stride)
+          };
+        }
+      };
+    }
   }
 });
 

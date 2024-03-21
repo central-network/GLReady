@@ -81,7 +81,7 @@ proxy = ->
             #TODO hey beyb: that's sync on window and worker
             return result #? awesome :))) <3
 
-KEYED = {}
+export GLType = KEYED = {}
 KEYEX = 0 : new (class NONE extends Number) 0
 
 do -> for k , v of WebGL2RenderingContext then KEYED[ v ] =
@@ -94,9 +94,12 @@ Object.defineProperty Object, "protos", value : ->
     protos
 
 Object.defineProperty Object, "define", value : ->
-    try [ proto, prop, desc ] = [ ...arguments ]
-    if desc then @define proto , [ prop ] : desc
-    else @defineProperties proto , prop , ( desc )
+    try [ proto, props, desc ] = [ ...arguments ]
+    if desc then @define proto , [ props ] : desc
+    else
+        for prop , desc of props then @defineProperty(
+            proto , prop, { configurable: yes, ...desc }
+        )
     return proto
 
 Object.defineProperty Object, "symbol", value : ->
@@ -108,7 +111,7 @@ Object.defineProperty Object, "symbol", value : ->
             when "instance" then Symbol.hasInstance
             when "iterate" then Symbol.iterator
             else Symbol[ key ]
-        try @define proto , symbol , desc
+        try @defineProperty proto , symbol , desc
         catch fail then throw fail
     return proto
 
@@ -128,7 +131,7 @@ Object.defineProperty Object, "hidden", value : ->
 
     proto  
 
-Object.define Array::,
+Object.defineProperties Array::,
 
     sumAttrib : value : ->
         n = arguments[ s = 0 ]
@@ -138,7 +141,7 @@ Object.define Array::,
         [ func , value ] = arguments
         ( this . find (v) -> 0 is v[ func ]() - value )
 
-Object.define DataView::,
+Object.defineProperties DataView::,
     
     setObject : value : ( offset, object ) ->
         if -1 is i = OBJECTS.indexOf object
@@ -164,6 +167,12 @@ Object.define DataView::,
 
     keyUint32 : value : ( offset, extend = KEYEX ) ->
         extend[ v = @getUint32 offset, LE ] or KEYED[ v ] 
+
+Object.defineProperties Math,
+    rad             : value : ( deg ) -> deg * Math.PI / 180
+    deg             : value : ( rad ) -> rad * 180 / Math.PI
+    powsum          : value : ( arr, pow = 2 ) ->
+        [ ...arr ].flat().reduce (a, b) -> a + Math.pow b, pow
 
 export class Vector extends Number
 
@@ -512,7 +521,7 @@ export class Pointer        extends Number
 
     constructor : ( ptr = palloc BYTES_PER_POINTER ) ->
         
-        super ptr
+        super( ptr )
 
         if  arguments.length
             if  this.constructor is Pointer
@@ -522,11 +531,11 @@ export class Pointer        extends Number
                 try Object.setPrototypeOf this, proto::
                 
         else
-            byteLength = @constructor.byteLength
-            
-            dvw.setUint32 this + OFFSET_BYTELENGTH, byteLength, LE
             dvw.setUint32 this + OFFSET_PROTOCLASS, @constructor.protoClass, LE
-            dvw.setUint32 this + OFFSET_BYTEOFFSET, malloc( byteLength ), LE
+            
+            if  byteLength  = this . constructor . byteLength
+                dvw.setUint32 this + OFFSET_BYTELENGTH, byteLength, LE
+                dvw.setUint32 this + OFFSET_BYTEOFFSET, malloc( byteLength ), LE
                 
             this.init()
 
@@ -611,6 +620,8 @@ export class Pointer        extends Number
 
 export class Matrix4        extends Pointer
 
+export class Camera         extends Matrix4
+
 export class WorkerPointer  extends Pointer
 
 Object.symbol Pointer::,
@@ -639,7 +650,16 @@ Object.symbol Pointer::,
 
 Object.define Pointer,
 
-    registerClass   : value : -> ( @protoClass or= -1 + POINTER_PROTOTYPE.push this  ); @
+    registerClass   : value : ->
+
+        if -1 is POINTER_PROTOTYPE.indexOf this
+            @protoClass = -1 + POINTER_PROTOTYPE.push this
+        
+        return this if @byteLength
+
+        Object.hidden this , 
+            "array", "byteLength", "byteOffset", 
+            "headers", "length", "children"
 
     setDataBuffer   : value : -> [ @prototype.buffer ] = arguments ; @
 
@@ -767,7 +787,6 @@ Object.define Pointer::,
     
     addResvUint8    : value : -> dvw.setUint8 this + OFFSET_RESVERVEDS + arguments[0], arguments[1] + o = @getResvUint8( arguments[0] ) ; o
 
-
 Object.define Pointer::,
 
     getTArray       : value : ->
@@ -803,7 +822,6 @@ Object.define Pointer::,
     setUint32       : value : -> dvw.setUint32  @getByteOffset( arguments[0] ), arguments[1], LE ; arguments[1]
     
     addUint32       : value : -> dvw.setUint32  @getByteOffset( arguments[0] ), arguments[1] + ( v = @getUint32 arguments[0], LE ), LE ; v
-
 
     setArray3       : value : ->
 
@@ -865,13 +883,13 @@ Object.define Pointer::,
 
 Object.define Pointer::,
 
+    headers         : get   : Pointer::getAllHeaders , set : Pointer::setAllHeaders
+    
     length          : get   : Pointer::getTypedLength
 
     array           : get   : Pointer::getTypedArray
 
     children        : get   : Pointer::findAllChilds
-
-    headers         : get   : Pointer::getAllHeaders , set : Pointer::setAllHeaders
 
     byteOffset      : get   : Pointer::getByteOffset , set : Pointer::setByteOffset
     
@@ -897,18 +915,17 @@ Object.define Matrix4.registerClass(),
     )
 
     multiply        : value : ->
-        [ a, b ] = arguments
 
-        a00 = a[0 * 4 + 0]; a01 = a[0 * 4 + 1]; a02 = a[0 * 4 + 2]; a03 = a[0 * 4 + 3]
-        a10 = a[1 * 4 + 0]; a11 = a[1 * 4 + 1]; a12 = a[1 * 4 + 2]; a13 = a[1 * 4 + 3]
-        a20 = a[2 * 4 + 0]; a21 = a[2 * 4 + 1]; a22 = a[2 * 4 + 2]; a23 = a[2 * 4 + 3] 
-        a30 = a[3 * 4 + 0]; a31 = a[3 * 4 + 1]; a32 = a[3 * 4 + 2]; a33 = a[3 * 4 + 3]
+        [   a00, a01, a02, a03
+            a10, a11, a12, a13
+            a20, a21, a22, a23
+            a30, a31, a32, a33  ] = arguments[ 0 ]
 
-        b00 = b[0 * 4 + 0]; b01 = b[0 * 4 + 1]; b02 = b[0 * 4 + 2]; b03 = b[0 * 4 + 3] 
-        b10 = b[1 * 4 + 0]; b11 = b[1 * 4 + 1]; b12 = b[1 * 4 + 2]; b13 = b[1 * 4 + 3] 
-        b20 = b[2 * 4 + 0]; b21 = b[2 * 4 + 1]; b22 = b[2 * 4 + 2]; b23 = b[2 * 4 + 3] 
-        b30 = b[3 * 4 + 0]; b31 = b[3 * 4 + 1]; b32 = b[3 * 4 + 2]; b33 = b[3 * 4 + 3]
-        
+        [   b00, b01, b02, b03
+            b10, b11, b12, b13
+            b20, b21, b22, b23
+            b30, b31, b32, b33  ] = arguments[ 1 ]
+
         Float32Array.of(
             b00 * a00 + b01 * a10 + b02 * a20 + b03 * a30,
             b00 * a01 + b01 * a11 + b02 * a21 + b03 * a31,
@@ -979,7 +996,8 @@ Object.define Matrix4.registerClass(),
              1,  0,  0,  0,
              0,  1,  0,  0,
              0,  0,  1,  0,
-             arguments[0] or 0,  0,  0,  1,
+             arguments[0] or 0,
+                 0,  0,  1,
         )
 
     yTranslation    : value : ->
@@ -987,7 +1005,8 @@ Object.define Matrix4.registerClass(),
              1,  0,  0,  0,
              0,  1,  0,  0,
              0,  0,  1,  0,
-             0, arguments[0] or 0,  0,  1,
+             0,  arguments[0] or 0, 
+                     0,  1,
         )
 
     zTranslation    : value : ->
@@ -995,7 +1014,8 @@ Object.define Matrix4.registerClass(),
              1,  0,  0,  0,
              0,  1,  0,  0,
              0,  0,  1,  0,
-             0,  0, arguments[0] or 0,  1,
+             0,  0,  arguments[0] or 0,  
+                         1,
         )
 
     scalation       : value : ->
@@ -1037,29 +1057,49 @@ Object.define Matrix4.registerClass(),
 
 Object.define Matrix4::,
 
-    getIsUpdated    : value : -> @getResvUint32 0
+    getPositionX    : value : -> @getFloat32 4 * 12
+
+    getPositionY    : value : -> @getFloat32 4 * 13
     
-    setIsUpdated    : value : -> @setResvUint32 0, arguments[0] ; this
+    getPositionZ    : value : -> @getFloat32 4 * 14
+
+    getPosition3    : value : -> @subarray  12 , 15
+
+    setPositionX    : value : -> @translateX arguments[0]
+
+    setPositionY    : value : -> @translateY arguments[0]
+    
+    setPositionZ    : value : -> @translateZ arguments[0]
+
+    setPosition3    : value : -> @translate  arguments[0] ; this
+
+    getIsUpdated    : value : -> @getResvUint8 0
+    
+    setIsUpdated    : value : -> @setResvUint8 0, arguments[0] ; this
+
+    uploadNeeded    : value : ->
+        @link?.needsUpload = 1
+        @setResvUint8 0, 0 ; arguments[0]
 
 Object.define Matrix4::,
 
-    rotateX         : value : -> @multiply @slice(), Matrix4.xRotation arguments[0]
+    rotateX         : value : -> @multiply this, Matrix4.xRotation arguments[0]
 
-    rotateY         : value : -> @multiply @slice(), Matrix4.yRotation arguments[0]
+    rotateY         : value : -> @multiply this, Matrix4.yRotation arguments[0]
 
-    rotateZ         : value : -> @multiply @slice(), Matrix4.zRotation arguments[0]
+    rotateZ         : value : -> @multiply this, Matrix4.zRotation arguments[0]
 
-    translateX      : value : -> @multiply @slice(), Matrix4.xTranslation arguments[0]
+    translateX      : value : -> @multiply this, Matrix4.xTranslation arguments[0]
     
-    translateY      : value : -> @multiply @slice(), Matrix4.yTranslation arguments[0]
+    translateY      : value : -> @multiply this, Matrix4.yTranslation arguments[0]
 
-    translateZ      : value : -> @multiply @slice(), Matrix4.zTranslation arguments[0]
+    translateZ      : value : -> @multiply this, Matrix4.zTranslation arguments[0]
 
-    scaleX          : value : -> @multiply @slice(), Matrix4.xScale arguments[0]
+    scaleX          : value : -> @multiply this, Matrix4.xScale arguments[0]
     
-    scaleY          : value : -> @multiply @slice(), Matrix4.yScale arguments[0]
+    scaleY          : value : -> @multiply this, Matrix4.yScale arguments[0]
 
-    scaleZ          : value : -> @multiply @slice(), Matrix4.zScale arguments[0]
+    scaleZ          : value : -> @multiply this, Matrix4.zScale arguments[0]
 
 Object.define Matrix4::,
 
@@ -1069,7 +1109,7 @@ Object.define Matrix4::,
         mat4 = Matrix4.translation arguments[0]
         Matrix4.multiply( mat4, @slice() ).subarray 12, 15
 
-    multiply        : value : -> @set Matrix4.multiply @slice(), arguments[0]
+    multiply        : value : -> @uploadNeeded @set Matrix4.multiply this, arguments[0] ; this
 
     translate       : value : -> @multiply Matrix4.translation arguments...
 
@@ -1080,15 +1120,44 @@ Object.define Matrix4::,
             if arguments[1] then arguments
             else arguments[0]
 
-        this . xRotate rx if rx
-        this . yRotate ry if ry
-        this . yRotate rz if rz
+        this . rotateX rx if rx
+        this . rotateY ry if ry
+        this . rotateZ rz if rz
 
         this
 
 Object.define Matrix4::,
 
     isUpdated       : get   : Matrix4::getIsUpdated , set   : Matrix4::setIsUpdated
+
+    x               : get   : Matrix4::getPositionX , set   : Matrix4::setPositionX
+
+    y               : get   : Matrix4::getPositionY , set   : Matrix4::setPositionY
+
+    z               : get   : Matrix4::getPositionZ , set   : Matrix4::setPositionZ
+
+    position        : get   : Matrix4::getPosition3 , set   : Matrix4::setPosition3
+
+Object.symbol Matrix4::, 
+
+    iterate         : value : ->
+
+        byteOffset = dvw.getUint32 this + OFFSET_BYTEOFFSET, LE
+        byteLength = dvw.getUint32 this + OFFSET_BYTELENGTH, LE
+
+        matrix = this
+        stride = @constructor.BYTES_PER_ELEMENT
+        length = byteLength / stride
+        
+        byteOffset -= stride
+
+        next : ->
+            unless length--
+                return done : on , value : matrix
+
+            done  : no
+            value : dvw.getFloat32 byteOffset += stride
+
 
 Object.define WorkerPointer.registerClass(),
     

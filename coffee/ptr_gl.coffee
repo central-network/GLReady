@@ -1,6 +1,6 @@
 import                  {
-    Pointer, Vertex, Angle3,    
-    Scale3, Color4, Matrix4 } from "./ptr.coffee"
+    Pointer, Vertex, Angle3,   
+    Scale3, Color4, Matrix4, GLType } from "./ptr.coffee"
 
 OFFSET_DRAW_ACTIVE      = 4 * 0
 
@@ -170,6 +170,14 @@ KEYEXTEND_OBJECT3D      =
     [ WebGL2RenderingContext  .TRIANGLE_FAN ] : new (class     TRIANGLE_FAN extends Number) WebGL2RenderingContext  .TRIANGLE_FAN
     [ WebGL2RenderingContext.TRIANGLE_STRIP ] : new (class   TRIANGLE_STRIP extends Number) WebGL2RenderingContext.TRIANGLE_STRIP
 
+WIDTH               = innerWidth ? 1024
+
+HEIGHT              = innerHeight ? 768
+
+PIXEL_RATIO         = devicePixelRatio ? 1
+
+ASPECT_RATIO        = WIDTH / HEIGHT
+
 export class            Object3       extends Pointer
 
 export class            Draw          extends Pointer
@@ -183,8 +191,8 @@ export class            GL            extends Pointer
     @typedArray     = Uint32Array
 
     load            : ->
-        { width, height, left, top } = arguments[ 0 ].getBoundingClientRect()
-        [ ratioAspect , ratioPixel ] = [ width / height, self.devicePixelRatio || 1 ]
+        { width = WIDTH, height = HEIGHT, left = 0, top = 0 } = arguments[ 0 ].getBoundingClientRect()
+        [ ratioAspect = ASPECT_RATIO, ratioPixel ] = [ width / height , devicePixelRatio ? 1 ]
 
         this.setTop         top
         this.setHeight      height
@@ -266,6 +274,10 @@ export class            GL            extends Pointer
     getAllBuffers   : -> @findAllChilds().filter (p) -> p instanceof Buffer
 
     getAllShaders   : -> @getAllPrograms().flatMap (p) -> p.getAllShaders()
+
+    getAllCameras   : -> @findAllChilds().filter (p) -> p instanceof Camera
+
+    getCamera       : -> @getAllCameras().find (p) -> p # filter
 
     getProgram      : -> @getAllPrograms().find (p) -> p.getInUseStatus()
 
@@ -521,6 +533,97 @@ export class            GL            extends Pointer
 
     setZVector      : -> @setFloat32 OFFSET_VZ             , arguments[0]
 
+export class            Variable      extends Pointer
+    
+    @registerClass()
+
+Object.define Variable::,
+
+    value   :
+        get : -> @getValue()
+        set : -> @setValue arguments[0]
+
+    location        : get   : -> @link.bind
+
+    program         : get   : -> @getParentPtrO()
+
+    gl              : get   : -> @getParentPtrP().gl
+
+export class            Attribute2    extends Variable
+
+    @registerClass()
+
+export class            Uniform2      extends Variable
+
+    @registerClass()
+
+
+Attribute2[ WebGL2RenderingContext.FLOAT_VEC2 ] =
+
+    class FLOAT_VEC2 extends Attribute2
+
+        @byteLength : 4 * 2
+
+        @typedArray : Float32Array
+        
+        getValue : -> @getTypedArray()
+
+        setValue : -> @getValue().set arguments[0]
+
+        upload   : -> @gl.uniform2f @bind, ...@array
+
+        @registerClass()
+
+Attribute2[ WebGL2RenderingContext.FLOAT_VEC3 ] =
+
+    class FLOAT_VEC3 extends FLOAT_VEC2
+
+        @byteLength : 4 * 3
+
+        upload      : -> @gl.uniform3f @bind, ...@array
+
+        @registerClass()
+
+Attribute2[ WebGL2RenderingContext.FLOAT_VEC4 ] =
+
+    class FLOAT_VEC4 extends FLOAT_VEC2
+
+        @byteLength : 4 * 4
+
+        upload      : -> @gl.uniform4f @bind, ...@array
+        
+        @registerClass()
+
+
+Uniform2[ WebGL2RenderingContext.FLOAT ] =
+    
+    class FLOAT extends Uniform2
+        
+        getValue : -> @getResvFloat32 1
+
+        setValue : -> @setResvFloat32 1, arguments[0]
+
+        upload   : -> @gl.uniform1f @bind, @getValue()
+
+        @registerClass()
+
+Uniform2[ WebGL2RenderingContext.FLOAT_MAT4 ] =
+
+    class FLOAT_MAT4 extends Uniform2
+
+        @byteLength : 4 * 16
+
+        @typedArray : Float32Array
+        
+        getValue : -> @getTypedArray()
+
+        setValue : -> @getValue().set arguments[0]
+
+        upload   : -> @gl.uniformMatrix4fv @bind, off, @getValue()
+
+        @registerClass()
+
+
 export class            Program       extends Pointer
 
         @byteLength     : 4 * 8
@@ -529,11 +632,28 @@ export class            Program       extends Pointer
 
         LINK_STATUS     : WebGL2RenderingContext.LINK_STATUS
 
+        ACTIVE_UNIFORMS : WebGL2RenderingContext.ACTIVE_UNIFORMS
+
+        ACTIVE_ATTRIBUTES : WebGL2RenderingContext.ACTIVE_ATTRIBUTES
+
         link            : ->
             return this if @getLinkedStatus()
             @getParentPtrO().linkProgram @getGLProgram()
 
             return this unless @setLinkedStatus @getGLLinkStatus @getGLValidate()
+
+            for node in @getGLAttributes()
+                classN = eval "(class #{node.name} extends #{Attribute2[ node.type ].name} {})"
+                classN.registerClass()
+                @add attrib = new classN()
+                attrib.setLinkedNode node
+
+            for node in @getGLUniforms()
+                classN = eval "(class #{node.name} extends #{Uniform2[ node.type ].name} {})"
+                classN.registerClass()
+                @add uniform = new classN()
+                uniform.setLinkedNode node
+
             for attr in @getAttributes()
                 attr    .getGLLocation()
                 attr    .bindFunctions()
@@ -545,7 +665,8 @@ export class            Program       extends Pointer
             @getParentPtrO().useProgram @getLinkedNode()
             @setAttachStatus @setInUseStatus Boolean this ; this
             
-        load            : -> @link().use() unless @getAttachStatus() ; this
+        load            : ->
+            @link().use() unless @getAttachStatus() ; this
 
         create          : ->
             @getParentPtrO().createProgram()
@@ -559,6 +680,26 @@ export class            Program       extends Pointer
         setGLProgram    : -> @setLinkedNode( arguments[0] )
 
         getGLParameter  : -> @getParentPtrO().getProgramParameter @getGLProgram(), arguments[0]
+
+        getGLUniform    : ->
+            Object.assign(
+                info = @getParentPtrO().getActiveUniform( @getGLProgram(), arguments[0] ),
+                kind : GLType[ info.type ] 
+                bind : @getParentPtrO().getUniformLocation @getGLProgram(), info.name
+            )
+
+        getGLAttribute  : ->
+            Object.assign(
+                info = @getParentPtrO().getActiveAttrib( @getGLProgram(), arguments[0] ),
+                kind : GLType[ info.type ] 
+                bind : @getParentPtrO().getAttribLocation( @getGLProgram(), info.name )
+            )
+
+        getGLUniforms   : -> @getGLUniform i for i in [ 0 ... @getGLParameter @ACTIVE_UNIFORMS ]
+        
+        getGLAttributes : -> @getGLAttribute i for i in [ 0 ... @getGLParameter @ACTIVE_ATTRIBUTES ]
+        
+        getGLVariables  : -> [ ...@getGLUniforms(), ...@getGLAttributes() ]
 
         getGLLinkStatus : -> @getGLParameter @LINK_STATUS 
         
@@ -835,9 +976,9 @@ export class            Shader        extends Pointer
 
 export class            ShaderKey     extends Pointer
 
-    @byteLength         : 4 * 8
+    @byteLength         : 4 * 16
 
-    @typedArray         : Uint8Array
+    @typedArray         : Float32Array
 
     is                  : ->
         name = "#{arguments[0]}"
@@ -888,6 +1029,8 @@ export class            ShaderKey     extends Pointer
 
     setKeyLocated       : -> @setUint8  OFFSET_KEY_LOCATED , arguments[0] ; arguments[0]
 
+    getTArray       : -> @link
+
 export class            Attribute     extends ShaderKey
 
     Object.define       Attribute.registerClass(),
@@ -896,7 +1039,7 @@ export class            Attribute     extends ShaderKey
             
             @components : 3
             
-            @protoClass : 0
+            
 
             @registerClass()
 
@@ -906,17 +1049,17 @@ export class            Attribute     extends ShaderKey
 
         vec4    : value : class  vec4 extends this 
             @components : 4
-            @protoClass : 0
+            
             @registerClass()
         
         mat4    : value : class  mat4 extends this 
             @components : 16
-            @protoClass : 0
+            
             @registerClass()
 
         float   : value : class float extends this 
             @components : 1
-            @protoClass : 0
+            
             @registerClass()
 
     @parse              : ->
@@ -1007,25 +1150,51 @@ export class            Uniform       extends ShaderKey
     Object.define       Uniform.registerClass(),
         
         vec3    : value : class  vec3 extends this
+            
             @components : 3
-            @protoClass : 0
+
+            @byteLength : 4 * 3
+
+            @typedArray : Float32Array
+
             @registerClass()
 
         vec4    : value : class  vec4 extends this 
+
             @components : 4
-            @protoClass : 0
+
+            @byteLength : 4 * 4
+
+            @typedArray : Float32Array            
+
             @registerClass()
         
         mat4    : value : class  mat4 extends this 
+
             @components : 16
-            @protoClass : 0
+
+            @byteLength : 4 * 16
+
+            @typedArray : Float32Array
+
+            setValue    : ->
+                @setResvUint32 1 , arguments[0]
+                arguments[0].setLinkedNode this
+                    .needsUpload = 1
+
+            getValue    : ->
+                @ptrResvUint32( 1 ).getTypedArray()
+
+            upload      : ->
+                @needsUpload = @gl.uniformMatrix4fv @location, off, @value
+
             @registerClass()
 
         float   : value : class float extends this 
             
             @components : 1
             
-            @protoClass : 0
+            @typedArray : Float32Array            
 
             setValue    : -> @setResvFloat32 @needsUpload = 1, arguments[0]
 
@@ -1219,6 +1388,102 @@ export class            Buffer        extends Pointer
     
     setModeOffset       : -> @setResvUint32 2 , arguments[0] ; arguments[0] 
 
+export class            Camera        extends Matrix4
+
+    @protoClass     : 0
+
+    @registerClass()
+
+Object.define Camera::,
+
+    toPerspective   : value : ->
+        @reset()
+
+        [ width, height, yFov, zNear, zFar, left, top ] =
+            [ arguments... ]
+
+        @width  = width  or @width  or WIDTH
+        @height = height or @height or HEIGHT
+        @left   = left   or @left   or WIDTH / 2
+        @top    = top    or @top    or HEIGHT / 2
+        @yFov   = yFov   or @yFov   or 9e+1
+        @zNear  = zNear  or @zNear  or 1e-3
+        @zFar   = zFar   or @zFar   or 1e+3
+
+        w = @width - @left
+        h = @top - @height
+
+        sx = 2 * @zNear / w
+        sy = 2 * @zNear / h
+
+        c2 = - ( @zFar + @zNear ) / (@zFar - @zNear)
+        c1 = 2 * @zNear * @zFar / ( @zNear - @zFar )
+
+        tx = -@zNear * (   @left + @width ) / w
+        ty = -@zNear * ( @height + @top   ) / h
+
+        @set Float32Array.from [
+            sx,       0,       0,      0,
+             0,      sy,       0,      0,
+             0,       0,      c2,     -1,
+            tx,      ty,      c1,      0
+        ]
+
+        @translate [ 0, 0, -5 ]
+        @rotate [ Math.PI, 0, 0 ]
+        @scale [ 1, 1, 1 ]
+
+        this
+
+
+    getFovY         : value : -> @getResvUint8  1
+    
+    setFovY         : value : -> @setResvUint8  1, arguments[0] ; this
+
+    getFarZ         : value : -> @getResvUint16 1
+    
+    setFarZ         : value : -> @setResvUint16 1, arguments[0] ; this
+
+    getWidth        : value : -> @getResvUint16 2
+    
+    setWidth        : value : -> @setResvUint16 2, arguments[0] ; this
+
+    getHeight       : value : -> @getResvUint16 3
+    
+    setHeight       : value : -> @setResvUint16 3, arguments[0] ; this
+    
+    getLeft         : value : -> @getResvUint16 4
+    
+    setLeft         : value : -> @setResvUint16 4, arguments[0] ; this
+
+    getTop          : value : -> @getResvUint16 5
+    
+    setTop          : value : -> @setResvUint16 5, arguments[0] ; this
+    
+    getNearZ        : value : -> 1e-5 * @getResvUint16 6
+    
+    setNearZ        : value : -> @setResvUint16 6, 1e+5 * arguments[0] ; this
+
+    getAspectRatio  : value : -> @getWidth() / @getHeight()
+
+Object.define Camera::,
+
+    aRatio          : get   : Camera::getAspectRatio
+    
+    yFov            : get   : Camera::getFovY   , set   : Camera::setFovY 
+    
+    zNear           : get   : Camera::getNearZ  , set   : Camera::setNearZ
+
+    zFar            : get   : Camera::getFarZ   , set   : Camera::setFarZ 
+
+    width           : get   : Camera::getWidth  , set   : Camera::setWidth 
+    
+    height          : get   : Camera::getHeight , set   : Camera::setHeight 
+    
+    left            : get   : Camera::getLeft   , set   : Camera::setLeft 
+    
+    top             : get   : Camera::getTop    , set   : Camera::setTop
+
 Object.symbol           GL          . registerClass(),
 
     instance        : value : ->
@@ -1308,6 +1573,8 @@ Object.define           GL::        ,
 
     program         : get   : GL::getProgram
 
+    camera          : get   : GL::getCamera
+
     programVertex   : get   : GL::getVertShader
 
     programFragment : get   : GL::getFragShader
@@ -1325,6 +1592,8 @@ Object.define           GL::        ,
     allVariables    : get   : GL::getAllVariables
 
     allUniforms     : get   : GL::getUniforms
+
+    allCameras      : get   : GL::getAllCameras
 
     nodeBuffer      : get   : GL::getArrayBuffer
 

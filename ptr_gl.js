@@ -1,4 +1,4 @@
-var DEPTH_N_COLOR_BIT, KEYEXTEND_CLEARMASK, KEYEXTEND_OBJECT3D, LINES, LINE_LOOP, LINE_STRIP, OFFSET_ASPECT_RATIO, OFFSET_ATTACH_STATUS, OFFSET_ATTR_OFFSET, OFFSET_ATTR_STRIDE, OFFSET_BIND_TARGET, OFFSET_BLEND_ACTIVE, OFFSET_BLEND_EQUATE, OFFSET_BLEND_FUNC, OFFSET_BLEND_INARG, OFFSET_BLEND_OUTARG, OFFSET_CHAR_LENGTH, OFFSET_CLEAR_COLOR, OFFSET_CLEAR_DEPTH, OFFSET_CLEAR_MASK, OFFSET_CULL_ENABLED, OFFSET_CULL_FACE, OFFSET_DEPTH_ACTIVE, OFFSET_DEPTH_FUNC, OFFSET_DEPTH_TEST, OFFSET_DRAGGING, OFFSET_DRAW_ACTIVE, OFFSET_DX, OFFSET_DY, OFFSET_FRONTFACE, OFFSET_HEIGHT, OFFSET_INUSE_STATUS, OFFSET_ISNORMALIZE, OFFSET_IS_ATTACHED, OFFSET_IS_COMPILED, OFFSET_IS_UPLOADED, OFFSET_JUMPING, OFFSET_KEY_ALT, OFFSET_KEY_CTRL, OFFSET_KEY_LOCATED, OFFSET_KEY_META, OFFSET_KEY_SHIFT, OFFSET_LEFT, OFFSET_LINKED_STATUS, OFFSET_LOCATION_AT, OFFSET_LOOKING, OFFSET_MOVE_BACK, OFFSET_MOVE_DOWN, OFFSET_MOVE_FWD, OFFSET_MOVE_LEFT, OFFSET_MOVE_RIGHT, OFFSET_MOVE_UP, OFFSET_NAME_LENGTH, OFFSET_NAME_TARRAY, OFFSET_NCOMPONENTS, OFFSET_O3_COLOR_4D, OFFSET_O3_POSITION, OFFSET_O3_ROTATION, OFFSET_O3_SCALE_3D, OFFSET_PIXEL_RATIO, OFFSET_PTR_BUTTON, OFFSET_PTR_CLICK, OFFSET_PTR_DCLICK, OFFSET_ROTATING, OFFSET_RX, OFFSET_RY, OFFSET_SHADER_TYPE, OFFSET_SHIFT_RATIO, OFFSET_SOURCE_TEXT, OFFSET_SX, OFFSET_SY, OFFSET_SZ, OFFSET_TIME, OFFSET_TOP, OFFSET_TYPE_GLCODE, OFFSET_UX_ENABLED, OFFSET_VX, OFFSET_VY, OFFSET_VZ, OFFSET_WALKING, OFFSET_WIDTH, OFFSET_X, OFFSET_Y, OFFSET_ZOOMING, POINTS, TRIANGLES, TRIANGLE_FAN, TRIANGLE_STRIP;
+var ASPECT_RATIO, DEPTH_N_COLOR_BIT, FLOAT, FLOAT_MAT4, FLOAT_VEC2, FLOAT_VEC3, FLOAT_VEC4, HEIGHT, KEYEXTEND_CLEARMASK, KEYEXTEND_OBJECT3D, LINES, LINE_LOOP, LINE_STRIP, OFFSET_ASPECT_RATIO, OFFSET_ATTACH_STATUS, OFFSET_ATTR_OFFSET, OFFSET_ATTR_STRIDE, OFFSET_BIND_TARGET, OFFSET_BLEND_ACTIVE, OFFSET_BLEND_EQUATE, OFFSET_BLEND_FUNC, OFFSET_BLEND_INARG, OFFSET_BLEND_OUTARG, OFFSET_CHAR_LENGTH, OFFSET_CLEAR_COLOR, OFFSET_CLEAR_DEPTH, OFFSET_CLEAR_MASK, OFFSET_CULL_ENABLED, OFFSET_CULL_FACE, OFFSET_DEPTH_ACTIVE, OFFSET_DEPTH_FUNC, OFFSET_DEPTH_TEST, OFFSET_DRAGGING, OFFSET_DRAW_ACTIVE, OFFSET_DX, OFFSET_DY, OFFSET_FRONTFACE, OFFSET_HEIGHT, OFFSET_INUSE_STATUS, OFFSET_ISNORMALIZE, OFFSET_IS_ATTACHED, OFFSET_IS_COMPILED, OFFSET_IS_UPLOADED, OFFSET_JUMPING, OFFSET_KEY_ALT, OFFSET_KEY_CTRL, OFFSET_KEY_LOCATED, OFFSET_KEY_META, OFFSET_KEY_SHIFT, OFFSET_LEFT, OFFSET_LINKED_STATUS, OFFSET_LOCATION_AT, OFFSET_LOOKING, OFFSET_MOVE_BACK, OFFSET_MOVE_DOWN, OFFSET_MOVE_FWD, OFFSET_MOVE_LEFT, OFFSET_MOVE_RIGHT, OFFSET_MOVE_UP, OFFSET_NAME_LENGTH, OFFSET_NAME_TARRAY, OFFSET_NCOMPONENTS, OFFSET_O3_COLOR_4D, OFFSET_O3_POSITION, OFFSET_O3_ROTATION, OFFSET_O3_SCALE_3D, OFFSET_PIXEL_RATIO, OFFSET_PTR_BUTTON, OFFSET_PTR_CLICK, OFFSET_PTR_DCLICK, OFFSET_ROTATING, OFFSET_RX, OFFSET_RY, OFFSET_SHADER_TYPE, OFFSET_SHIFT_RATIO, OFFSET_SOURCE_TEXT, OFFSET_SX, OFFSET_SY, OFFSET_SZ, OFFSET_TIME, OFFSET_TOP, OFFSET_TYPE_GLCODE, OFFSET_UX_ENABLED, OFFSET_VX, OFFSET_VY, OFFSET_VZ, OFFSET_WALKING, OFFSET_WIDTH, OFFSET_X, OFFSET_Y, OFFSET_ZOOMING, PIXEL_RATIO, POINTS, TRIANGLES, TRIANGLE_FAN, TRIANGLE_STRIP, WIDTH;
 
 import {
   Pointer,
@@ -6,7 +6,8 @@ import {
   Angle3,
   Scale3,
   Color4,
-  Matrix4
+  Matrix4,
+  GLType
 } from "./ptr.js";
 
 OFFSET_DRAW_ACTIVE = 4 * 0;
@@ -179,6 +180,14 @@ KEYEXTEND_OBJECT3D = {
   [WebGL2RenderingContext.TRIANGLE_STRIP]: new (TRIANGLE_STRIP = class TRIANGLE_STRIP extends Number {})(WebGL2RenderingContext.TRIANGLE_STRIP)
 };
 
+WIDTH = typeof innerWidth !== "undefined" && innerWidth !== null ? innerWidth : 1024;
+
+HEIGHT = typeof innerHeight !== "undefined" && innerHeight !== null ? innerHeight : 768;
+
+PIXEL_RATIO = typeof devicePixelRatio !== "undefined" && devicePixelRatio !== null ? devicePixelRatio : 1;
+
+ASPECT_RATIO = WIDTH / HEIGHT;
+
 export var Object3 = class Object3 extends Pointer {};
 
 export var Draw = class Draw extends Pointer {};
@@ -189,8 +198,8 @@ export var GL = (function() {
   class GL extends Pointer {
     load() {
       var context, height, left, ratioAspect, ratioPixel, top, width;
-      ({width, height, left, top} = arguments[0].getBoundingClientRect());
-      [ratioAspect, ratioPixel] = [width / height, self.devicePixelRatio || 1];
+      ({width = WIDTH, height = HEIGHT, left = 0, top = 0} = arguments[0].getBoundingClientRect());
+      [ratioAspect = ASPECT_RATIO, ratioPixel] = [width / height, typeof devicePixelRatio !== "undefined" && devicePixelRatio !== null ? devicePixelRatio : 1];
       this.setTop(top);
       this.setHeight(height);
       this.setWidth(width);
@@ -293,6 +302,18 @@ export var GL = (function() {
     getAllShaders() {
       return this.getAllPrograms().flatMap(function(p) {
         return p.getAllShaders();
+      });
+    }
+
+    getAllCameras() {
+      return this.findAllChilds().filter(function(p) {
+        return p instanceof Camera;
+      });
+    }
+
+    getCamera() {
+      return this.getAllCameras().find(function(p) {
+        return p; // filter
       });
     }
 
@@ -860,10 +881,169 @@ export var GL = (function() {
 
 }).call(this);
 
+export var Variable = (function() {
+  class Variable extends Pointer {};
+
+  Variable.registerClass();
+
+  return Variable;
+
+}).call(this);
+
+Object.define(Variable.prototype, {
+  value: {
+    get: function() {
+      return this.getValue();
+    },
+    set: function() {
+      return this.setValue(arguments[0]);
+    }
+  },
+  location: {
+    get: function() {
+      return this.link.bind;
+    }
+  },
+  program: {
+    get: function() {
+      return this.getParentPtrO();
+    }
+  },
+  gl: {
+    get: function() {
+      return this.getParentPtrP().gl;
+    }
+  }
+});
+
+export var Attribute2 = (function() {
+  class Attribute2 extends Variable {};
+
+  Attribute2.registerClass();
+
+  return Attribute2;
+
+}).call(this);
+
+export var Uniform2 = (function() {
+  class Uniform2 extends Variable {};
+
+  Uniform2.registerClass();
+
+  return Uniform2;
+
+}).call(this);
+
+Attribute2[WebGL2RenderingContext.FLOAT_VEC2] = FLOAT_VEC2 = (function() {
+  class FLOAT_VEC2 extends Attribute2 {
+    getValue() {
+      return this.getTypedArray();
+    }
+
+    setValue() {
+      return this.getValue().set(arguments[0]);
+    }
+
+    upload() {
+      return this.gl.uniform2f(this.bind, ...this.array);
+    }
+
+  };
+
+  FLOAT_VEC2.byteLength = 4 * 2;
+
+  FLOAT_VEC2.typedArray = Float32Array;
+
+  FLOAT_VEC2.registerClass();
+
+  return FLOAT_VEC2;
+
+}).call(this);
+
+Attribute2[WebGL2RenderingContext.FLOAT_VEC3] = FLOAT_VEC3 = (function() {
+  class FLOAT_VEC3 extends FLOAT_VEC2 {
+    upload() {
+      return this.gl.uniform3f(this.bind, ...this.array);
+    }
+
+  };
+
+  FLOAT_VEC3.byteLength = 4 * 3;
+
+  FLOAT_VEC3.registerClass();
+
+  return FLOAT_VEC3;
+
+}).call(this);
+
+Attribute2[WebGL2RenderingContext.FLOAT_VEC4] = FLOAT_VEC4 = (function() {
+  class FLOAT_VEC4 extends FLOAT_VEC2 {
+    upload() {
+      return this.gl.uniform4f(this.bind, ...this.array);
+    }
+
+  };
+
+  FLOAT_VEC4.byteLength = 4 * 4;
+
+  FLOAT_VEC4.registerClass();
+
+  return FLOAT_VEC4;
+
+}).call(this);
+
+Uniform2[WebGL2RenderingContext.FLOAT] = FLOAT = (function() {
+  class FLOAT extends Uniform2 {
+    getValue() {
+      return this.getResvFloat32(1);
+    }
+
+    setValue() {
+      return this.setResvFloat32(1, arguments[0]);
+    }
+
+    upload() {
+      return this.gl.uniform1f(this.bind, this.getValue());
+    }
+
+  };
+
+  FLOAT.registerClass();
+
+  return FLOAT;
+
+}).call(this);
+
+Uniform2[WebGL2RenderingContext.FLOAT_MAT4] = FLOAT_MAT4 = (function() {
+  class FLOAT_MAT4 extends Uniform2 {
+    getValue() {
+      return this.getTypedArray();
+    }
+
+    setValue() {
+      return this.getValue().set(arguments[0]);
+    }
+
+    upload() {
+      return this.gl.uniformMatrix4fv(this.bind, false, this.getValue());
+    }
+
+  };
+
+  FLOAT_MAT4.byteLength = 4 * 16;
+
+  FLOAT_MAT4.typedArray = Float32Array;
+
+  FLOAT_MAT4.registerClass();
+
+  return FLOAT_MAT4;
+
+}).call(this);
+
 export var Program = (function() {
   class Program extends Pointer {
     link() {
-      var attr, j, len1, ref;
+      var attr, attrib, classN, j, k, len1, len2, len3, m, node, ref, ref1, ref2, uniform;
       if (this.getLinkedStatus()) {
         return this;
       }
@@ -871,9 +1051,25 @@ export var Program = (function() {
       if (!this.setLinkedStatus(this.getGLLinkStatus(this.getGLValidate()))) {
         return this;
       }
-      ref = this.getAttributes();
+      ref = this.getGLAttributes();
       for (j = 0, len1 = ref.length; j < len1; j++) {
-        attr = ref[j];
+        node = ref[j];
+        classN = eval(`(class ${node.name} extends ${Attribute2[node.type].name} {})`);
+        classN.registerClass();
+        this.add(attrib = new classN());
+        attrib.setLinkedNode(node);
+      }
+      ref1 = this.getGLUniforms();
+      for (k = 0, len2 = ref1.length; k < len2; k++) {
+        node = ref1[k];
+        classN = eval(`(class ${node.name} extends ${Uniform2[node.type].name} {})`);
+        classN.registerClass();
+        this.add(uniform = new classN());
+        uniform.setLinkedNode(node);
+      }
+      ref2 = this.getAttributes();
+      for (m = 0, len3 = ref2.length; m < len3; m++) {
+        attr = ref2[m];
         attr.getGLLocation();
         attr.bindFunctions();
       }
@@ -916,6 +1112,44 @@ export var Program = (function() {
 
     getGLParameter() {
       return this.getParentPtrO().getProgramParameter(this.getGLProgram(), arguments[0]);
+    }
+
+    getGLUniform() {
+      var info;
+      return Object.assign(info = this.getParentPtrO().getActiveUniform(this.getGLProgram(), arguments[0]), {
+        kind: GLType[info.type],
+        bind: this.getParentPtrO().getUniformLocation(this.getGLProgram(), info.name)
+      });
+    }
+
+    getGLAttribute() {
+      var info;
+      return Object.assign(info = this.getParentPtrO().getActiveAttrib(this.getGLProgram(), arguments[0]), {
+        kind: GLType[info.type],
+        bind: this.getParentPtrO().getAttribLocation(this.getGLProgram(), info.name)
+      });
+    }
+
+    getGLUniforms() {
+      var i, j, ref, results;
+      results = [];
+      for (i = j = 0, ref = this.getGLParameter(this.ACTIVE_UNIFORMS); (0 <= ref ? j < ref : j > ref); i = 0 <= ref ? ++j : --j) {
+        results.push(this.getGLUniform(i));
+      }
+      return results;
+    }
+
+    getGLAttributes() {
+      var i, j, ref, results;
+      results = [];
+      for (i = j = 0, ref = this.getGLParameter(this.ACTIVE_ATTRIBUTES); (0 <= ref ? j < ref : j > ref); i = 0 <= ref ? ++j : --j) {
+        results.push(this.getGLAttribute(i));
+      }
+      return results;
+    }
+
+    getGLVariables() {
+      return [...this.getGLUniforms(), ...this.getGLAttributes()];
     }
 
     getGLLinkStatus() {
@@ -1041,6 +1275,10 @@ export var Program = (function() {
   Program.typedArray = Int32Array;
 
   Program.prototype.LINK_STATUS = WebGL2RenderingContext.LINK_STATUS;
+
+  Program.prototype.ACTIVE_UNIFORMS = WebGL2RenderingContext.ACTIVE_UNIFORMS;
+
+  Program.prototype.ACTIVE_ATTRIBUTES = WebGL2RenderingContext.ACTIVE_ATTRIBUTES;
 
   return Program;
 
@@ -1492,11 +1730,15 @@ export var ShaderKey = (function() {
       return arguments[0];
     }
 
+    getTArray() {
+      return this.link;
+    }
+
   };
 
-  ShaderKey.byteLength = 4 * 8;
+  ShaderKey.byteLength = 4 * 16;
 
-  ShaderKey.typedArray = Uint8Array;
+  ShaderKey.typedArray = Float32Array;
 
   return ShaderKey;
 
@@ -1627,8 +1869,6 @@ export var Attribute = (function() {
 
         vec3.components = 3;
 
-        vec3.protoClass = 0;
-
         vec3.registerClass();
 
         return vec3;
@@ -1640,8 +1880,6 @@ export var Attribute = (function() {
         class vec4 extends Attribute {};
 
         vec4.components = 4;
-
-        vec4.protoClass = 0;
 
         vec4.registerClass();
 
@@ -1655,8 +1893,6 @@ export var Attribute = (function() {
 
         mat4.components = 16;
 
-        mat4.protoClass = 0;
-
         mat4.registerClass();
 
         return mat4;
@@ -1668,8 +1904,6 @@ export var Attribute = (function() {
         class float extends Attribute {};
 
         float.components = 1;
-
-        float.protoClass = 0;
 
         float.registerClass();
 
@@ -1744,7 +1978,9 @@ export var Uniform = (function() {
 
         vec3.components = 3;
 
-        vec3.protoClass = 0;
+        vec3.byteLength = 4 * 3;
+
+        vec3.typedArray = Float32Array;
 
         vec3.registerClass();
 
@@ -1758,7 +1994,9 @@ export var Uniform = (function() {
 
         vec4.components = 4;
 
-        vec4.protoClass = 0;
+        vec4.byteLength = 4 * 4;
+
+        vec4.typedArray = Float32Array;
 
         vec4.registerClass();
 
@@ -1768,11 +2006,27 @@ export var Uniform = (function() {
     },
     mat4: {
       value: mat4 = (function() {
-        class mat4 extends Uniform {};
+        class mat4 extends Uniform {
+          setValue() {
+            this.setResvUint32(1, arguments[0]);
+            return arguments[0].setLinkedNode(this).needsUpload = 1;
+          }
+
+          getValue() {
+            return this.ptrResvUint32(1).getTypedArray();
+          }
+
+          upload() {
+            return this.needsUpload = this.gl.uniformMatrix4fv(this.location, false, this.value);
+          }
+
+        };
 
         mat4.components = 16;
 
-        mat4.protoClass = 0;
+        mat4.byteLength = 4 * 16;
+
+        mat4.typedArray = Float32Array;
 
         mat4.registerClass();
 
@@ -1799,7 +2053,7 @@ export var Uniform = (function() {
 
         float.components = 1;
 
-        float.protoClass = 0;
+        float.typedArray = Float32Array;
 
         float.registerClass();
 
@@ -2064,6 +2318,163 @@ export var Buffer = (function() {
 
 }).call(this);
 
+export var Camera = (function() {
+  class Camera extends Matrix4 {};
+
+  Camera.protoClass = 0;
+
+  Camera.registerClass();
+
+  return Camera;
+
+}).call(this);
+
+Object.define(Camera.prototype, {
+  toPerspective: {
+    value: function() {
+      var c1, c2, h, height, left, sx, sy, top, tx, ty, w, width, yFov, zFar, zNear;
+      this.reset();
+      [width, height, yFov, zNear, zFar, left, top] = [...arguments];
+      this.width = width || this.width || WIDTH;
+      this.height = height || this.height || HEIGHT;
+      this.left = left || this.left || WIDTH / 2;
+      this.top = top || this.top || HEIGHT / 2;
+      this.yFov = yFov || this.yFov || 9e+1;
+      this.zNear = zNear || this.zNear || 1e-3;
+      this.zFar = zFar || this.zFar || 1e+3;
+      w = this.width - this.left;
+      h = this.top - this.height;
+      sx = 2 * this.zNear / w;
+      sy = 2 * this.zNear / h;
+      c2 = -(this.zFar + this.zNear) / (this.zFar - this.zNear);
+      c1 = 2 * this.zNear * this.zFar / (this.zNear - this.zFar);
+      tx = -this.zNear * (this.left + this.width) / w;
+      ty = -this.zNear * (this.height + this.top) / h;
+      this.set(Float32Array.from([sx, 0, 0, 0, 0, sy, 0, 0, 0, 0, c2, -1, tx, ty, c1, 0]));
+      this.translate([0, 0, -5]);
+      this.rotate([Math.PI, 0, 0]);
+      this.scale([1, 1, 1]);
+      return this;
+    }
+  },
+  getFovY: {
+    value: function() {
+      return this.getResvUint8(1);
+    }
+  },
+  setFovY: {
+    value: function() {
+      this.setResvUint8(1, arguments[0]);
+      return this;
+    }
+  },
+  getFarZ: {
+    value: function() {
+      return this.getResvUint16(1);
+    }
+  },
+  setFarZ: {
+    value: function() {
+      this.setResvUint16(1, arguments[0]);
+      return this;
+    }
+  },
+  getWidth: {
+    value: function() {
+      return this.getResvUint16(2);
+    }
+  },
+  setWidth: {
+    value: function() {
+      this.setResvUint16(2, arguments[0]);
+      return this;
+    }
+  },
+  getHeight: {
+    value: function() {
+      return this.getResvUint16(3);
+    }
+  },
+  setHeight: {
+    value: function() {
+      this.setResvUint16(3, arguments[0]);
+      return this;
+    }
+  },
+  getLeft: {
+    value: function() {
+      return this.getResvUint16(4);
+    }
+  },
+  setLeft: {
+    value: function() {
+      this.setResvUint16(4, arguments[0]);
+      return this;
+    }
+  },
+  getTop: {
+    value: function() {
+      return this.getResvUint16(5);
+    }
+  },
+  setTop: {
+    value: function() {
+      this.setResvUint16(5, arguments[0]);
+      return this;
+    }
+  },
+  getNearZ: {
+    value: function() {
+      return 1e-5 * this.getResvUint16(6);
+    }
+  },
+  setNearZ: {
+    value: function() {
+      this.setResvUint16(6, 1e+5 * arguments[0]);
+      return this;
+    }
+  },
+  getAspectRatio: {
+    value: function() {
+      return this.getWidth() / this.getHeight();
+    }
+  }
+});
+
+Object.define(Camera.prototype, {
+  aRatio: {
+    get: Camera.prototype.getAspectRatio
+  },
+  yFov: {
+    get: Camera.prototype.getFovY,
+    set: Camera.prototype.setFovY
+  },
+  zNear: {
+    get: Camera.prototype.getNearZ,
+    set: Camera.prototype.setNearZ
+  },
+  zFar: {
+    get: Camera.prototype.getFarZ,
+    set: Camera.prototype.setFarZ
+  },
+  width: {
+    get: Camera.prototype.getWidth,
+    set: Camera.prototype.setWidth
+  },
+  height: {
+    get: Camera.prototype.getHeight,
+    set: Camera.prototype.setHeight
+  },
+  left: {
+    get: Camera.prototype.getLeft,
+    set: Camera.prototype.setLeft
+  },
+  top: {
+    get: Camera.prototype.getTop,
+    set: Camera.prototype.setTop
+  }
+});
+
 Object.symbol(GL.registerClass(), {
   instance: {
     value: function() {
@@ -2205,6 +2616,9 @@ Object.define(GL.prototype, {
   program: {
     get: GL.prototype.getProgram
   },
+  camera: {
+    get: GL.prototype.getCamera
+  },
   programVertex: {
     get: GL.prototype.getVertShader
   },
@@ -2231,6 +2645,9 @@ Object.define(GL.prototype, {
   },
   allUniforms: {
     get: GL.prototype.getUniforms
+  },
+  allCameras: {
+    get: GL.prototype.getAllCameras
   },
   nodeBuffer: {
     get: GL.prototype.getArrayBuffer
