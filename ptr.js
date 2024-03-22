@@ -38,13 +38,13 @@
         }
 
  */
-var BYTES_PER_POINTER, INDEX_BUF, INDEX_FPS, INDEX_HIT, INDEX_LINKEDNODE, INDEX_NOW, INDEX_PARENT_PTR, INDEX_PROTOCLASS, INDEX_PTR, KEYED, KEYEX, LE, LENGTH_OF_POINTER, NONE, OBJECTS, OFFSET_BYTELENGTH, OFFSET_BYTEOFFSET, OFFSET_LINKEDNODE, OFFSET_PARENT_PTR, OFFSET_PROTOCLASS, OFFSET_PTRCLASS_0, OFFSET_PTRCLASS_1, OFFSET_PTRCLASS_2, OFFSET_PTRCLASS_3, OFFSET_PTRCLASS_4, OFFSET_RESVERVEDS, POINTERS_BYTELENGTH, POINTERS_BYTEOFFSET, POINTER_PROTOTYPE, SYM_LOOP, buf, dump, dvw, fill, hist, i32, ival, malloc, palloc, proxy, u32;
+var BYTES_PER_POINTER, INDEX_BUF, INDEX_FPS, INDEX_HIT, INDEX_LINKEDNODE, INDEX_NOW, INDEX_PARENT_PTR, INDEX_PROTOCLASS, INDEX_PTR, KEYED, KEYEX, LE, LENGTH_OF_POINTER, NONE, OFFSET_BYTELENGTH, OFFSET_BYTEOFFSET, OFFSET_LINKEDNODE, OFFSET_PARENT_PTR, OFFSET_PROTOCLASS, OFFSET_PTRCLASS_0, OFFSET_PTRCLASS_1, OFFSET_PTRCLASS_2, OFFSET_PTRCLASS_3, OFFSET_PTRCLASS_4, OFFSET_RESVERVEDS, POINTERS_BYTELENGTH, POINTERS_BYTEOFFSET, SYM_LOOP, buf, dump, dvw, fill, hist, i32, ival, malloc, palloc, proxy, u32;
 
 import "./ptr_self.js";
 
 LE = !new Uint8Array(Float32Array.of(1).buffer)[0];
 
-OBJECTS = [, ];
+self.OBJECTS = [, ];
 
 SYM_LOOP = Symbol.iterator;
 
@@ -802,8 +802,6 @@ OFFSET_PTRCLASS_3 = 4 * 9;
 
 OFFSET_PTRCLASS_4 = 4 * 10;
 
-POINTER_PROTOTYPE = [, ];
-
 export var Pointer = class Pointer extends Number {
   static setBuffer(buf, max = 1e20) {
     var T, f32, ƒ;
@@ -850,7 +848,7 @@ export var Pointer = class Pointer extends Number {
     super(ptr);
     if (arguments.length) {
       if (this.constructor === Pointer) {
-        if (!(proto = POINTER_PROTOTYPE[this.getProtoClass()])) {
+        if (!(proto = OBJECTS[this.getProtoClass()])) {
           console.error(["PROTOCLASS_NOT_FOUND", this * 1]);
         }
         try {
@@ -1004,11 +1002,49 @@ Object.symbol(Pointer.prototype, {
   }
 });
 
+self.RESV_CLASS_BYTES = {};
+
 Object.define(Pointer, {
+  resvStoreIndex: {
+    value: function() {
+      var i;
+      if (!arguments[0]) {
+        return -1 + OBJECTS.push(null);
+      }
+      if (-1 === (i = OBJECTS.indexOf(arguments[0]))) {
+        i += OBJECTS.push(arguments[0]);
+      }
+      return i;
+    }
+  },
+  storeObject: {
+    value: function() {
+      return OBJECTS[arguments[0]] = arguments[1];
+    }
+  },
+  allocHeadByte: {
+    value: function() {
+      var bpe, mod, offset;
+      if (!(offset = RESV_CLASS_BYTES[this])) {
+        offset = RESV_CLASS_BYTES[this] = OFFSET_RESVERVEDS;
+      }
+      bpe = arguments[0].BYTES_PER_ELEMENT;
+      if (mod = offset % bpe) {
+        offset = RESV_CLASS_BYTES[this] += mod;
+      }
+      RESV_CLASS_BYTES[this] += bpe;
+      return offset;
+    }
+  },
+  classExtender: {
+    value: function() {
+      return `(class ${arguments[0]} extends ${this.name} {})`;
+    }
+  },
   registerClass: {
     value: function() {
-      if (-1 === POINTER_PROTOTYPE.indexOf(this)) {
-        this.protoClass = -1 + POINTER_PROTOTYPE.push(this);
+      if (-1 === OBJECTS.indexOf(this)) {
+        this.protoClass = -1 + OBJECTS.push(this);
       }
       if (this.byteLength) {
         return this;
@@ -1036,6 +1072,120 @@ Object.define(Pointer, {
   LENGTH_OF_POINTER: {
     get: function() {
       return this.byteLength / this.BYTES_PER_ELEMENT;
+    }
+  }
+});
+
+
+//? new ones    
+
+//* RESV in HEAD :: Uint8
+Object.define(Pointer.prototype, {
+  objHeadUint8: {
+    value: function() {
+      return OBJECTS[dvw.getUint8(this + arguments[0])];
+    }
+  },
+  ptrHeadUint8: {
+    value: function() {
+      return new Pointer(dvw.getUint8(this + arguments[0]));
+    }
+  },
+  keyHeadUint8: {
+    value: function() {
+      return dvw.keyUint8(this + arguments[0]);
+    }
+  },
+  getHeadUint8: {
+    value: function() {
+      return dvw.getUint8(this + arguments[0]);
+    }
+  },
+  setHeadUint8: {
+    value: function() {
+      dvw.setUint8(this + arguments[0], arguments[1]);
+      return this;
+    }
+  },
+  addHeadUint8: {
+    value: function() {
+      var val;
+      dvw.setUint8(this + arguments[0], arguments[1] + (val = dvw.getUint8(this + arguments[0])));
+      return val;
+    }
+  }
+});
+
+//* RESV in HEAD :: Uint16
+Object.define(Pointer.prototype, {
+  objHeadUint16: {
+    value: function() {
+      return OBJECTS[dvw.getUint16(this + arguments[0], LE)];
+    }
+  },
+  ptrHeadUint16: {
+    value: function() {
+      return new Pointer(dvw.getUint16(this + arguments[0], LE));
+    }
+  },
+  keyHeadUint16: {
+    value: function() {
+      return dvw.keyUint16(this + arguments[0], LE);
+    }
+  },
+  getHeadUint16: {
+    value: function() {
+      return dvw.getUint16(this + arguments[0], LE);
+    }
+  },
+  setHeadUint16: {
+    value: function() {
+      dvw.setUint16(this + arguments[0], arguments[1], LE);
+      return this;
+    }
+  },
+  addHeadUint16: {
+    value: function() {
+      var val;
+      dvw.setUint16(this + arguments[0], arguments[1] + (val = dvw.getUint16(this + arguments[0], LE)), LE);
+      return val;
+    }
+  }
+});
+
+//* RESV in HEAD :: Uint32
+Object.define(Pointer.prototype, {
+  objHeadUint32: {
+    value: function() {
+      return OBJECTS[dvw.getUint32(this + arguments[0], LE)];
+    }
+  },
+  ptrHeadUint32: {
+    value: function() {
+      return new Pointer(dvw.getUint32(this + arguments[0], LE));
+    }
+  },
+  keyHeadUint32: {
+    value: function() {
+      return dvw.keyUint32(this + arguments[0], LE);
+    }
+  },
+  getHeadUint32: {
+    value: function() {
+      return dvw.getUint32(this + arguments[0], LE);
+    }
+  },
+  setHeadUint32: {
+    value: function() {
+      dvw.setUint32(this + arguments[0], arguments[1], LE);
+      return this;
+    }
+  },
+  addHeadUint32: {
+    value: function() {
+      var val;
+      dvw.setUint32(this + arguments[0], arguments[1] + (val = dvw.getUint32(this + arguments[0], LE)), LE);
+      return val;
     }
   }
 });
@@ -1127,6 +1277,11 @@ Object.define(Pointer.prototype, {
     value: function() {
       dvw.setUint32(this + OFFSET_BYTELENGTH, arguments[0], LE);
       return this;
+    }
+  },
+  objProtoClass: {
+    value: function() {
+      return OBJECTS[this.getProtoClass()];
     }
   },
   getProtoClass: {
@@ -1471,6 +1626,9 @@ Object.define(Pointer.prototype, {
   protoClass: {
     get: Pointer.prototype.getProtoClass,
     set: Pointer.prototype.setProtoClass
+  },
+  class: {
+    get: Pointer.prototype.objProtoClass
   },
   link: {
     get: Pointer.prototype.getLinkedNode,

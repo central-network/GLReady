@@ -1,4 +1,4 @@
-var ASPECT_RATIO, DEPTH_N_COLOR_BIT, FLOAT, FLOAT_MAT4, FLOAT_VEC2, FLOAT_VEC3, FLOAT_VEC4, HEIGHT, KEYEXTEND_CLEARMASK, KEYEXTEND_OBJECT3D, LINES, LINE_LOOP, LINE_STRIP, OFFSET_ASPECT_RATIO, OFFSET_ATTACH_STATUS, OFFSET_ATTR_OFFSET, OFFSET_ATTR_STRIDE, OFFSET_BIND_TARGET, OFFSET_BLEND_ACTIVE, OFFSET_BLEND_EQUATE, OFFSET_BLEND_FUNC, OFFSET_BLEND_INARG, OFFSET_BLEND_OUTARG, OFFSET_CHAR_LENGTH, OFFSET_CLEAR_COLOR, OFFSET_CLEAR_DEPTH, OFFSET_CLEAR_MASK, OFFSET_CULL_ENABLED, OFFSET_CULL_FACE, OFFSET_DEPTH_ACTIVE, OFFSET_DEPTH_FUNC, OFFSET_DEPTH_TEST, OFFSET_DRAGGING, OFFSET_DRAW_ACTIVE, OFFSET_DX, OFFSET_DY, OFFSET_FRONTFACE, OFFSET_HEIGHT, OFFSET_INUSE_STATUS, OFFSET_ISNORMALIZE, OFFSET_IS_ATTACHED, OFFSET_IS_COMPILED, OFFSET_IS_UPLOADED, OFFSET_JUMPING, OFFSET_KEY_ALT, OFFSET_KEY_CTRL, OFFSET_KEY_LOCATED, OFFSET_KEY_META, OFFSET_KEY_SHIFT, OFFSET_LEFT, OFFSET_LINKED_STATUS, OFFSET_LOCATION_AT, OFFSET_LOOKING, OFFSET_MOVE_BACK, OFFSET_MOVE_DOWN, OFFSET_MOVE_FWD, OFFSET_MOVE_LEFT, OFFSET_MOVE_RIGHT, OFFSET_MOVE_UP, OFFSET_NAME_LENGTH, OFFSET_NAME_TARRAY, OFFSET_NCOMPONENTS, OFFSET_O3_COLOR_4D, OFFSET_O3_POSITION, OFFSET_O3_ROTATION, OFFSET_O3_SCALE_3D, OFFSET_PIXEL_RATIO, OFFSET_PTR_BUTTON, OFFSET_PTR_CLICK, OFFSET_PTR_DCLICK, OFFSET_ROTATING, OFFSET_RX, OFFSET_RY, OFFSET_SHADER_TYPE, OFFSET_SHIFT_RATIO, OFFSET_SOURCE_TEXT, OFFSET_SX, OFFSET_SY, OFFSET_SZ, OFFSET_TIME, OFFSET_TOP, OFFSET_TYPE_GLCODE, OFFSET_UX_ENABLED, OFFSET_VX, OFFSET_VY, OFFSET_VZ, OFFSET_WALKING, OFFSET_WIDTH, OFFSET_X, OFFSET_Y, OFFSET_ZOOMING, PIXEL_RATIO, POINTS, TRIANGLES, TRIANGLE_FAN, TRIANGLE_STRIP, WIDTH;
+var ASPECT_RATIO, DEPTH_N_COLOR_BIT, FLOAT, FLOAT_MAT4, FLOAT_VEC2, FLOAT_VEC3, FLOAT_VEC4, HEIGHT, HOFFSET_ATTRIB_COMPONENTS, HOFFSET_ATTRIB_ENABLED, HOFFSET_ATTRIB_FNI_ENABLE, HOFFSET_ATTRIB_FNI_POINTS, HOFFSET_ATTRIB_NORMALIZE, HOFFSET_ATTRIB_OFFSET, HOFFSET_ATTRIB_STRIDE, HOFFSET_ATTRIB_UPLOADED, KEYEXTEND_CLEARMASK, KEYEXTEND_OBJECT3D, LINES, LINE_LOOP, LINE_STRIP, OFFSET_ASPECT_RATIO, OFFSET_ATTACH_STATUS, OFFSET_ATTR_OFFSET, OFFSET_ATTR_STRIDE, OFFSET_BIND_TARGET, OFFSET_BLEND_ACTIVE, OFFSET_BLEND_EQUATE, OFFSET_BLEND_FUNC, OFFSET_BLEND_INARG, OFFSET_BLEND_OUTARG, OFFSET_CHAR_LENGTH, OFFSET_CLEAR_COLOR, OFFSET_CLEAR_DEPTH, OFFSET_CLEAR_MASK, OFFSET_CULL_ENABLED, OFFSET_CULL_FACE, OFFSET_DEPTH_ACTIVE, OFFSET_DEPTH_FUNC, OFFSET_DEPTH_TEST, OFFSET_DRAGGING, OFFSET_DRAW_ACTIVE, OFFSET_DX, OFFSET_DY, OFFSET_FRONTFACE, OFFSET_HEIGHT, OFFSET_INUSE_STATUS, OFFSET_ISNORMALIZE, OFFSET_IS_ATTACHED, OFFSET_IS_COMPILED, OFFSET_IS_UPLOADED, OFFSET_JUMPING, OFFSET_KEY_ALT, OFFSET_KEY_CTRL, OFFSET_KEY_LOCATED, OFFSET_KEY_META, OFFSET_KEY_SHIFT, OFFSET_LEFT, OFFSET_LINKED_STATUS, OFFSET_LOCATION_AT, OFFSET_LOOKING, OFFSET_MOVE_BACK, OFFSET_MOVE_DOWN, OFFSET_MOVE_FWD, OFFSET_MOVE_LEFT, OFFSET_MOVE_RIGHT, OFFSET_MOVE_UP, OFFSET_NAME_LENGTH, OFFSET_NAME_TARRAY, OFFSET_NCOMPONENTS, OFFSET_O3_COLOR_4D, OFFSET_O3_POSITION, OFFSET_O3_ROTATION, OFFSET_O3_SCALE_3D, OFFSET_PIXEL_RATIO, OFFSET_PTR_BUTTON, OFFSET_PTR_CLICK, OFFSET_PTR_DCLICK, OFFSET_ROTATING, OFFSET_RX, OFFSET_RY, OFFSET_SHADER_TYPE, OFFSET_SHIFT_RATIO, OFFSET_SOURCE_TEXT, OFFSET_SX, OFFSET_SY, OFFSET_SZ, OFFSET_TIME, OFFSET_TOP, OFFSET_TYPE_GLCODE, OFFSET_UX_ENABLED, OFFSET_VX, OFFSET_VY, OFFSET_VZ, OFFSET_WALKING, OFFSET_WIDTH, OFFSET_X, OFFSET_Y, OFFSET_ZOOMING, PIXEL_RATIO, POINTS, TRIANGLES, TRIANGLE_FAN, TRIANGLE_STRIP, WIDTH;
 
 import {
   Pointer,
@@ -881,14 +881,9 @@ export var GL = (function() {
 
 }).call(this);
 
-export var Variable = (function() {
-  class Variable extends Pointer {};
+export var Variable = class Variable extends Pointer {};
 
-  Variable.registerClass();
-
-  return Variable;
-
-}).call(this);
+Variable.registerClass();
 
 Object.define(Variable.prototype, {
   value: {
@@ -901,7 +896,7 @@ Object.define(Variable.prototype, {
   },
   location: {
     get: function() {
-      return this.link.bind;
+      return this.getLinkedNode().location;
     }
   },
   program: {
@@ -913,17 +908,222 @@ Object.define(Variable.prototype, {
     get: function() {
       return this.getParentPtrP().gl;
     }
+  },
+  type: {
+    get: function() {
+      return this.constructor.typedValue;
+    }
+  },
+  variable: {
+    get: function() {
+      return this.getLinkedNode().variable;
+    }
+  },
+  name: {
+    get: function() {
+      return this.getLinkedNode().name;
+    }
+  },
+  size: {
+    get: function() {
+      return this.getLinkedNode().size;
+    }
   }
 });
 
-export var Attribute2 = (function() {
-  class Attribute2 extends Variable {};
+export var Attribute2 = class Attribute2 extends Variable {};
 
-  Attribute2.registerClass();
+Attribute2.registerClass();
 
-  return Attribute2;
+Object.define(Attribute2.prototype, {
+  bindFunctions: {
+    value: function() {
+      var attrib, i, j, k, len1, len2, len3, length, m, n, offset, ref, ref1, ref2, results, stride;
+      stride = 0;
+      length = 0;
+      ref = this.parent.children;
+      for (k = 0, len1 = ref.length; k < len1; k++) {
+        attrib = ref[k];
+        if (!(attrib instanceof Attribute2)) {
+          continue;
+        }
+        stride += attrib.constructor.byteLength;
+        length += attrib.constructor.byteLength / attrib.constructor.typedArray.BYTES_PER_ELEMENT;
+      }
+      offset = 0;
+      ref1 = this.parent.children;
+      for (m = 0, len2 = ref1.length; m < len2; m++) {
+        attrib = ref1[m];
+        if (!(attrib instanceof Attribute2)) {
+          continue;
+        }
+        attrib.stride = stride;
+        attrib.offset = offset;
+        attrib.numComponents = length;
+        offset += attrib.constructor.byteLength;
+      }
+      ref2 = this.parent.children;
+      results = [];
+      for (n = 0, len3 = ref2.length; n < len3; n++) {
+        attrib = ref2[n];
+        if (!(attrib instanceof Attribute2)) {
+          continue;
+        }
+        if (!(i = attrib.getFniEnable())) {
+          attrib.setFniEnable(i = Pointer.resvStoreIndex());
+        }
+        if (!(j = attrib.getFniPoints())) {
+          attrib.setFniPoints(j = Pointer.resvStoreIndex());
+        }
+        Pointer.storeObject(i, this.gl.enableVertexAttribArray.bind(this.gl, attrib.location));
+        results.push(Pointer.storeObject(j, this.gl.vertexAttribPointer.bind(this.gl, attrib.location, attrib.numComponents, attrib.type, attrib.normalize, attrib.stride, attrib.offset)));
+      }
+      return results;
+    }
+  }
+});
 
-}).call(this);
+HOFFSET_ATTRIB_UPLOADED = Attribute2.allocHeadByte(Uint8Array);
+
+HOFFSET_ATTRIB_COMPONENTS = Attribute2.allocHeadByte(Uint8Array);
+
+HOFFSET_ATTRIB_NORMALIZE = Attribute2.allocHeadByte(Uint8Array);
+
+HOFFSET_ATTRIB_STRIDE = Attribute2.allocHeadByte(Uint8Array);
+
+HOFFSET_ATTRIB_OFFSET = Attribute2.allocHeadByte(Uint8Array);
+
+HOFFSET_ATTRIB_ENABLED = Attribute2.allocHeadByte(Uint8Array);
+
+HOFFSET_ATTRIB_FNI_ENABLE = Attribute2.allocHeadByte(Uint16Array);
+
+HOFFSET_ATTRIB_FNI_POINTS = Attribute2.allocHeadByte(Uint16Array);
+
+Object.define(Attribute2.prototype, {
+  getUploaded: {
+    value: function() {
+      return this.getHeadUint8(HOFFSET_ATTRIB_UPLOADED);
+    }
+  },
+  setUploaded: {
+    value: function() {
+      return this.setHeadUint8(HOFFSET_ATTRIB_UPLOADED, arguments[0]);
+    }
+  },
+  getNumComponents: {
+    value: function() {
+      return this.getHeadUint8(HOFFSET_ATTRIB_COMPONENTS);
+    }
+  },
+  setNumComponents: {
+    value: function() {
+      return this.setHeadUint8(HOFFSET_ATTRIB_COMPONENTS, arguments[0]);
+    }
+  },
+  getNormalize: {
+    value: function() {
+      return this.getHeadUint8(HOFFSET_ATTRIB_NORMALIZE);
+    }
+  },
+  setNormalize: {
+    value: function() {
+      return this.setHeadUint8(HOFFSET_ATTRIB_NORMALIZE, arguments[0]);
+    }
+  },
+  getStride: {
+    value: function() {
+      return this.getHeadUint8(HOFFSET_ATTRIB_STRIDE);
+    }
+  },
+  setStride: {
+    value: function() {
+      return this.setHeadUint8(HOFFSET_ATTRIB_STRIDE, arguments[0]);
+    }
+  },
+  getOffset: {
+    value: function() {
+      return this.getHeadUint8(HOFFSET_ATTRIB_OFFSET);
+    }
+  },
+  setOffset: {
+    value: function() {
+      return this.setHeadUint8(HOFFSET_ATTRIB_OFFSET, arguments[0]);
+    }
+  },
+  getEnabled: {
+    value: function() {
+      return this.getHeadUint8(HOFFSET_ATTRIB_ENABLED);
+    }
+  },
+  setEnabled: {
+    value: function() {
+      return this.setHeadUint8(HOFFSET_ATTRIB_ENABLED, arguments[0]);
+    }
+  },
+  fnCallEnable: {
+    value: function() {
+      return this.objHeadUint16(HOFFSET_ATTRIB_FNI_ENABLE);
+    }
+  },
+  getFniEnable: {
+    value: function() {
+      return this.getHeadUint16(HOFFSET_ATTRIB_FNI_ENABLE);
+    }
+  },
+  setFniEnable: {
+    value: function() {
+      return this.setHeadUint16(HOFFSET_ATTRIB_FNI_ENABLE, arguments[0]);
+    }
+  },
+  fnCallPoints: {
+    value: function() {
+      return this.objHeadUint16(HOFFSET_ATTRIB_FNI_POINTS);
+    }
+  },
+  getFniPoints: {
+    value: function() {
+      return this.getHeadUint16(HOFFSET_ATTRIB_FNI_POINTS);
+    }
+  },
+  setFniPoints: {
+    value: function() {
+      return this.setHeadUint16(HOFFSET_ATTRIB_FNI_POINTS, arguments[0]);
+    }
+  }
+});
+
+Object.define(Attribute2.prototype, {
+  numComponents: {
+    get: Attribute2.prototype.getNumComponents,
+    set: Attribute2.prototype.setNumComponents
+  },
+  normalize: {
+    get: Attribute2.prototype.getNormalize,
+    set: Attribute2.prototype.setNormalize
+  },
+  stride: {
+    get: Attribute2.prototype.getStride,
+    set: Attribute2.prototype.setStride
+  },
+  offset: {
+    get: Attribute2.prototype.getOffset,
+    set: Attribute2.prototype.setOffset
+  },
+  enabled: {
+    get: Attribute2.prototype.getEnabled,
+    set: Attribute2.prototype.setEnabled
+  },
+  uploaded: {
+    get: Attribute2.prototype.getUploaded,
+    set: Attribute2.prototype.setUploaded
+  },
+  fnEnable: {
+    get: Attribute2.prototype.fnCallEnable
+  },
+  fnPoints: {
+    get: Attribute2.prototype.fnCallPoints
+  }
+});
 
 export var Uniform2 = (function() {
   class Uniform2 extends Variable {};
@@ -945,12 +1145,14 @@ Attribute2[WebGL2RenderingContext.FLOAT_VEC2] = FLOAT_VEC2 = (function() {
     }
 
     upload() {
-      return this.gl.uniform2f(this.bind, ...this.array);
+      return this.gl.uniform2f(this.location, ...this.array);
     }
 
   };
 
   FLOAT_VEC2.byteLength = 4 * 2;
+
+  FLOAT_VEC2.typedValue = WebGL2RenderingContext.FLOAT;
 
   FLOAT_VEC2.typedArray = Float32Array;
 
@@ -963,7 +1165,7 @@ Attribute2[WebGL2RenderingContext.FLOAT_VEC2] = FLOAT_VEC2 = (function() {
 Attribute2[WebGL2RenderingContext.FLOAT_VEC3] = FLOAT_VEC3 = (function() {
   class FLOAT_VEC3 extends FLOAT_VEC2 {
     upload() {
-      return this.gl.uniform3f(this.bind, ...this.array);
+      return this.gl.uniform3f(this.location, ...this.array);
     }
 
   };
@@ -979,7 +1181,7 @@ Attribute2[WebGL2RenderingContext.FLOAT_VEC3] = FLOAT_VEC3 = (function() {
 Attribute2[WebGL2RenderingContext.FLOAT_VEC4] = FLOAT_VEC4 = (function() {
   class FLOAT_VEC4 extends FLOAT_VEC2 {
     upload() {
-      return this.gl.uniform4f(this.bind, ...this.array);
+      return this.gl.uniform4f(this.location, ...this.array);
     }
 
   };
@@ -1003,10 +1205,12 @@ Uniform2[WebGL2RenderingContext.FLOAT] = FLOAT = (function() {
     }
 
     upload() {
-      return this.gl.uniform1f(this.bind, this.getValue());
+      return this.gl.uniform1f(this.location, this.getValue());
     }
 
   };
+
+  FLOAT.typedValue = WebGL2RenderingContext.FLOAT;
 
   FLOAT.registerClass();
 
@@ -1025,12 +1229,14 @@ Uniform2[WebGL2RenderingContext.FLOAT_MAT4] = FLOAT_MAT4 = (function() {
     }
 
     upload() {
-      return this.gl.uniformMatrix4fv(this.bind, false, this.getValue());
+      return this.gl.uniformMatrix4fv(this.location, false, this.getValue());
     }
 
   };
 
   FLOAT_MAT4.byteLength = 4 * 16;
+
+  FLOAT_MAT4.typedValue = WebGL2RenderingContext.FLOAT;
 
   FLOAT_MAT4.typedArray = Float32Array;
 
@@ -1040,10 +1246,48 @@ Uniform2[WebGL2RenderingContext.FLOAT_MAT4] = FLOAT_MAT4 = (function() {
 
 }).call(this);
 
+Object.define(Mode.prototype, {
+  is: {
+    value: function() {
+      return 0 === this.getTypeGLCode() - arguments[0];
+    }
+  },
+  malloc: {
+    value: function() {
+      var byteLength, components, count, destOffset, draw, length, mallocOffset, obj3, vertices;
+      obj3 = arguments[0];
+      vertices = obj3.getVertices();
+      components = this.getComponents();
+      count = vertices.length / 3;
+      length = count * components;
+      byteLength = length * vertices.BYTES_PER_ELEMENT;
+      mallocOffset = this.addAllocBytes(byteLength);
+      destOffset = this.getModeOffset() + mallocOffset;
+      this.addModeLength(length);
+      this.addDrawLength(count);
+      draw = new Draw();
+      draw.setParentPtri(this);
+      draw.setLinkedPtri(obj3);
+      draw.setDstOffset(destOffset);
+      draw.setStart(destOffset / 4);
+      draw.setCount(length);
+      draw.setModeBegin(mallocOffset / 4);
+      draw.setModeEnd(draw.getModeBegin() + length);
+      return draw;
+    }
+  },
+  render: {
+    value: function() {
+      this.gl.drawArrays(this.mode, this.first, this.count);
+      return log(`draw call  ->  ${this.mode.constructor.name}`);
+    }
+  }
+});
+
 export var Program = (function() {
   class Program extends Pointer {
     link() {
-      var attr, attrib, classN, j, k, len1, len2, len3, m, node, ref, ref1, ref2, uniform;
+      var attrib, k, len1, len2, m, node, ref, ref1, uniform;
       if (this.getLinkedStatus()) {
         return this;
       }
@@ -1052,26 +1296,17 @@ export var Program = (function() {
         return this;
       }
       ref = this.getGLAttributes();
-      for (j = 0, len1 = ref.length; j < len1; j++) {
-        node = ref[j];
-        classN = eval(`(class ${node.name} extends ${Attribute2[node.type].name} {})`);
-        classN.registerClass();
-        this.add(attrib = new classN());
+      for (k = 0, len1 = ref.length; k < len1; k++) {
+        node = ref[k];
+        this.add(attrib = new Attribute2[node.type]);
         attrib.setLinkedNode(node);
+        attrib.bindFunctions(this);
       }
       ref1 = this.getGLUniforms();
-      for (k = 0, len2 = ref1.length; k < len2; k++) {
-        node = ref1[k];
-        classN = eval(`(class ${node.name} extends ${Uniform2[node.type].name} {})`);
-        classN.registerClass();
-        this.add(uniform = new classN());
+      for (m = 0, len2 = ref1.length; m < len2; m++) {
+        node = ref1[m];
+        this.add(uniform = new Uniform2[node.type]);
         uniform.setLinkedNode(node);
-      }
-      ref2 = this.getAttributes();
-      for (m = 0, len3 = ref2.length; m < len3; m++) {
-        attr = ref2[m];
-        attr.getGLLocation();
-        attr.bindFunctions();
       }
       return this;
     }
@@ -1102,6 +1337,54 @@ export var Program = (function() {
       return this;
     }
 
+    getBuffer() {
+      var buffer, ref;
+      if (!(buffer = (ref = arguments[0]) != null ? ref : this.parent.buffers[0])) {
+        buffer = new Buffer();
+      }
+      if (!buffer.link) {
+        buffer.parent = this;
+        buffer.bind();
+      }
+      return buffer;
+    }
+
+    findKey() {
+      var child, k, len1, ref;
+      ref = this.children;
+      for (k = 0, len1 = ref.length; k < len1; k++) {
+        child = ref[k];
+        if (child.name === arguments[0]) {
+          return child;
+        }
+      }
+      return null;
+    }
+
+    draw() {
+      var buffer, byteLength, key, length, mode, numComponents, options, pointer, prop, ref, shader, vertexCount;
+      options = arguments[0];
+      buffer = this.getBuffer(options.buffer);
+      mode = buffer.getMode(options.mode != null ? options.mode : options.mode = WebGL2RenderingContext.POINTS);
+      shader = options.shader != null ? options.shader : options.shader = this.getVertShader();
+      vertexCount = options.object.vertexCount;
+      length = 0;
+      byteLength = 0;
+      numComponents = 0;
+      console.log(vertexCount);
+      ref = options.values;
+      for (key in ref) {
+        prop = ref[key];
+        pointer = this.findKey(key);
+        console.log(key, prop, pointer);
+      }
+      //draw    = mode.malloc options.object, options.attributes
+      console.log(buffer);
+      console.log(mode);
+      console.log(shader);
+      return console.log(this);
+    }
+
     getGLProgram() {
       return this.getLinkedNode() || this.setGLProgram(this.create());
     }
@@ -1117,32 +1400,34 @@ export var Program = (function() {
     getGLUniform() {
       var info;
       return Object.assign(info = this.getParentPtrO().getActiveUniform(this.getGLProgram(), arguments[0]), {
-        kind: GLType[info.type],
-        bind: this.getParentPtrO().getUniformLocation(this.getGLProgram(), info.name)
+        variable: GLType[info.type],
+        location: this.getParentPtrO().getUniformLocation(this.getGLProgram(), info.name)
       });
     }
 
     getGLAttribute() {
       var info;
       return Object.assign(info = this.getParentPtrO().getActiveAttrib(this.getGLProgram(), arguments[0]), {
-        kind: GLType[info.type],
-        bind: this.getParentPtrO().getAttribLocation(this.getGLProgram(), info.name)
+        variable: GLType[info.type],
+        numComponents: GLType[info.type].byteLength,
+        a: GLType[info.type].constructor.typedArray,
+        location: this.getParentPtrO().getAttribLocation(this.getGLProgram(), info.name)
       });
     }
 
     getGLUniforms() {
-      var i, j, ref, results;
+      var i, k, ref, results;
       results = [];
-      for (i = j = 0, ref = this.getGLParameter(this.ACTIVE_UNIFORMS); (0 <= ref ? j < ref : j > ref); i = 0 <= ref ? ++j : --j) {
+      for (i = k = 0, ref = this.getGLParameter(this.ACTIVE_UNIFORMS); (0 <= ref ? k < ref : k > ref); i = 0 <= ref ? ++k : --k) {
         results.push(this.getGLUniform(i));
       }
       return results;
     }
 
     getGLAttributes() {
-      var i, j, ref, results;
+      var i, k, ref, results;
       results = [];
-      for (i = j = 0, ref = this.getGLParameter(this.ACTIVE_ATTRIBUTES); (0 <= ref ? j < ref : j > ref); i = 0 <= ref ? ++j : --j) {
+      for (i = k = 0, ref = this.getGLParameter(this.ACTIVE_ATTRIBUTES); (0 <= ref ? k < ref : k > ref); i = 0 <= ref ? ++k : --k) {
         results.push(this.getGLAttribute(i));
       }
       return results;
@@ -1350,7 +1635,7 @@ export var Shader = (function() {
     }
 
     static fromSource() {
-      var byteLength, byteSource, charLength, j, key, len1, parsedKeys, ptr, shaderType, textSource;
+      var byteLength, byteSource, charLength, k, key, len1, parsedKeys, ptr, shaderType, textSource;
       textSource = arguments[0];
       parsedKeys = this.parse(textSource);
       shaderType = /gl_Frag/.test(textSource) ? Shader.prototype.FRAGMENT : Shader.prototype.VERTEX;
@@ -1361,8 +1646,8 @@ export var Shader = (function() {
       ptr.setCharLength(charLength);
       ptr.setByteSource(byteSource);
       ptr.setShaderType(shaderType);
-      for (j = 0, len1 = parsedKeys.length; j < len1; j++) {
-        key = parsedKeys[j];
+      for (k = 0, len1 = parsedKeys.length; k < len1; k++) {
+        key = parsedKeys[k];
         key.setParentPtri(ptr);
       }
       return ptr;
@@ -1420,14 +1705,14 @@ export var Shader = (function() {
     }
 
     parse() {
-      var j, key, len1, ref;
+      var k, key, len1, ref;
       if (!this.isVertexShader()) {
         return this;
       }
       this.getAllVariables().forEach(Pointer.removePointer);
       ref = Shader.parse(this.getSourceText());
-      for (j = 0, len1 = ref.length; j < len1; j++) {
-        key = ref[j];
+      for (k = 0, len1 = ref.length; k < len1; k++) {
+        key = ref[k];
         this.add(key);
       }
       return this;
@@ -1749,7 +2034,7 @@ export var Attribute = (function() {
 
   class Attribute extends ShaderKey {
     static parse() {
-      var j, key, keys, len1, offset, source;
+      var k, key, keys, len1, offset, source;
       [source] = arguments;
       [keys, offset] = [[], 0];
       source.split(/attribute/g).slice(1).map((line) => {
@@ -1777,8 +2062,8 @@ export var Attribute = (function() {
         }
         return offset += key.getComponents() * 4;
       });
-      for (j = 0, len1 = keys.length; j < len1; j++) {
-        key = keys[j];
+      for (k = 0, len1 = keys.length; k < len1; k++) {
+        key = keys[k];
         key.setStride(offset);
       }
       return keys;
@@ -2070,57 +2355,47 @@ export var Uniform = (function() {
 export var Buffer = (function() {
   class Buffer extends Pointer {
     create() {
-      var buffer;
       if (this.getLinkedNode()) {
         return this;
       }
-      if (buffer = this.getGL().createBuffer()) {
-        this.setBindTarget(arguments[0] || this.ARRAY_BUFFER);
-      }
-      return buffer;
+      this.setLinkedNode(this.gl.createBuffer());
+      return this;
     }
 
     bind() {
       if (this.getBindStatus()) {
         return this;
       }
-      this.getGL().bindBuffer(this.getBindTarget(), this.getGLBuffer());
-      this.getGL().bufferData(this.getBindTarget(), this.getTypedArray(), this.getUsage() || this.setUsage(this.STATIC_DRAW));
-      this.setBindStatus(1);
+      if (!this.getLinkedNode()) {
+        this.create().setTarget(this.ARRAY_BUFFER).setUsage(this.STATIC_DRAW);
+      }
+      this.gl.bindBuffer(this.getTarget(), this.getLinkedNode());
+      this.setBindStatus(1).upload();
       return this;
     }
 
-    load() {
-      this.create();
-      this.bind();
+    upload() {
+      this.setDataStatus(1).getContext().bufferData(this.getTarget(), this.getTypedArray(), this.getUsage());
       return this;
     }
 
     mode() {
-      var BYTES_PER_ATTRIBUTE, BYTES_PER_ELEMENT, byteOffset, count, first, length, mode, numComponents, type;
-      type = arguments[0];
-      count = 1000;
-      numComponents = 7;
-      BYTES_PER_ELEMENT = 4;
-      BYTES_PER_ATTRIBUTE = BYTES_PER_ELEMENT * numComponents;
-      byteOffset = this.addModeOffset(BYTES_PER_ATTRIBUTE * count);
-      length = count * numComponents;
-      first = byteOffset / BYTES_PER_ATTRIBUTE;
+      var byte, mode, offset;
+      byte = 4 * 7 * 1e5;
       mode = new Mode();
       mode.setParentPtri(this);
-      mode.setTypeGLCode(type);
-      mode.setComponents(numComponents);
-      mode.setModeOffset(byteOffset);
-      mode.setFirstIndex(first);
+      mode.setTypeGLCode(arguments[0]);
+      mode.setModeOffset(offset = this.addModeOffset(byte));
+      mode.setFirstIndex(offset / 4);
       return mode;
     }
 
     getMode() {
-      var j, len1, mode, ref, type;
+      var k, len1, mode, ref, type;
       type = arguments[0];
       ref = this.getModes();
-      for (j = 0, len1 = ref.length; j < len1; j++) {
-        mode = ref[j];
+      for (k = 0, len1 = ref.length; k < len1; k++) {
+        mode = ref[k];
         if (mode.is(type)) {
           return mode;
         }
@@ -2162,12 +2437,12 @@ export var Buffer = (function() {
     }
 
     delete() {
-      this.setBindStatus(this.getParentPtrO().deleteBuffer(this.getLinkedNode()));
+      this.setBindStatus(this.gl.deleteBuffer(this.getLinkedNode()));
       return this;
     }
 
-    getGL() {
-      return this.getParentPtrO();
+    getContext() {
+      return this.parent.gl;
     }
 
     getModes() {
@@ -2185,17 +2460,17 @@ export var Buffer = (function() {
     }
 
     getGLIsBuffer() {
-      return this.getParentPtrO().isBuffer(this.getLinkedNode());
+      return this.gl.isBuffer(this.getLinkedNode());
     }
 
     getGLParameter() {
-      return this.getParentPtrO().getParameter(arguments[0]);
+      return this.gl.getParameter(arguments[0]);
     }
 
     getGLBindings() {
       return {
-        ARRAY_BUFFER: this.getGLParameter(this.getParentPtrO().ARRAY_BUFFER_BINDING),
-        ELEMENT_BUFFER: this.getGLParameter(this.getParentPtrO().ELEMENT_ARRAY_BUFFER_BINDING)
+        ARRAY_BUFFER: this.getGLParameter(this.gl.ARRAY_BUFFER_BINDING),
+        ELEMENT_BUFFER: this.getGLParameter(this.gl.ELEMENT_ARRAY_BUFFER_BINDING)
       };
     }
 
@@ -2204,25 +2479,34 @@ export var Buffer = (function() {
     }
 
     getBindStatus() {
-      return this.getResvUint16(0);
+      return this.getResvUint8(0);
     }
 
     setBindStatus() {
-      this.setResvUint16(0, arguments[0]);
+      this.setResvUint8(0, arguments[0]);
       return this;
     }
 
-    keyBindTarget() {
+    getDataStatus() {
+      return this.getResvUint8(1);
+    }
+
+    setDataStatus() {
+      this.setResvUint8(1, arguments[0]);
+      return this;
+    }
+
+    keyTarget() {
       return this.keyResvUint16(1);
     }
 
-    getBindTarget() {
+    getTarget() {
       return this.getResvUint16(1);
     }
 
-    setBindTarget() {
+    setTarget() {
       this.setResvUint16(1, arguments[0]);
-      return arguments[0];
+      return this;
     }
 
     keyUsage() {
@@ -2586,14 +2870,7 @@ Object.define(Draw.registerClass(), {
   }
 });
 
-Object.define(Mode.registerClass(), {
-  byteLength: {
-    value: 4 * 0
-  },
-  typedArray: {
-    value: Uint32Array
-  }
-});
+Mode.registerClass();
 
 Object.hidden(Buffer.registerClass(), "headers", "protoClass", "length", "array", "byteOffset", "byteLength");
 
@@ -3058,44 +3335,6 @@ Object.define(Draw.prototype, {
 });
 
 Object.define(Mode.prototype, {
-  is: {
-    value: function() {
-      return 0 === this.getTypeGLCode() - arguments[0];
-    }
-  },
-  malloc: {
-    value: function() {
-      var byteLength, components, count, destOffset, draw, length, mallocOffset, obj3, vertices;
-      obj3 = arguments[0];
-      vertices = obj3.getVertices();
-      components = this.getComponents();
-      count = vertices.length / 3;
-      length = count * components;
-      byteLength = length * vertices.BYTES_PER_ELEMENT;
-      mallocOffset = this.addAllocBytes(byteLength);
-      destOffset = this.getModeOffset() + mallocOffset;
-      this.addModeLength(length);
-      this.addDrawLength(count);
-      draw = new Draw();
-      draw.setParentPtri(this);
-      draw.setLinkedPtri(obj3);
-      draw.setDstOffset(destOffset);
-      draw.setStart(destOffset / 4);
-      draw.setCount(length);
-      draw.setModeBegin(mallocOffset / 4);
-      draw.setModeEnd(draw.getModeBegin() + length);
-      return draw;
-    }
-  },
-  render: {
-    value: function() {
-      this.gl.drawArrays(this.mode, this.first, this.count);
-      return log(`draw call  ->  ${this.mode.constructor.name}`);
-    }
-  }
-});
-
-Object.define(Mode.prototype, {
   getGL: {
     value: function() {
       return this.parent.getGL(); // todo fix worker  
@@ -3116,16 +3355,6 @@ Object.define(Mode.prototype, {
       return this.findAllChilds().flatMap(function(v) {
         return v.object3;
       });
-    }
-  },
-  getComponents: {
-    value: function() {
-      return this.getResvUint16(0);
-    }
-  },
-  setComponents: {
-    value: function() {
-      return this.setResvUint16(0, arguments[0]);
     }
   },
   keyTypeGLCode: {
@@ -3222,18 +3451,6 @@ Object.define(Mode.prototype, {
 });
 
 Object.define(Mode.prototype, {
-  gl: {
-    get: Mode.prototype.getGL
-  },
-  buffer: {
-    get: Mode.prototype.getBuffer
-  },
-  program: {
-    get: Mode.prototype.getProgram
-  },
-  objects: {
-    get: Mode.prototype.findObjects
-  },
   mode: {
     get: Mode.prototype.keyTypeGLCode,
     set: Mode.prototype.setTypeGLCode
@@ -3250,10 +3467,6 @@ Object.define(Mode.prototype, {
     get: Mode.prototype.getModeOffset,
     set: Mode.prototype.setModeOffset
   },
-  numCmponents: {
-    get: Mode.prototype.getComponents,
-    set: Mode.prototype.setComponents
-  },
   attributes: {
     get: Mode.prototype.getAttributes,
     set: Mode.prototype.setAttributes
@@ -3261,9 +3474,12 @@ Object.define(Mode.prototype, {
 });
 
 Object.define(Buffer.prototype, {
+  gl: {
+    get: Buffer.prototype.getContext
+  },
   target: {
-    get: Buffer.prototype.keyBindTarget,
-    set: Buffer.prototype.setBindTarget
+    get: Buffer.prototype.keyTarget,
+    set: Buffer.prototype.setTarget
   },
   bound: {
     get: Buffer.prototype.getBindStatus,
@@ -3272,6 +3488,10 @@ Object.define(Buffer.prototype, {
   usage: {
     get: Buffer.prototype.keyUsage,
     set: Buffer.prototype.setUsage
+  },
+  status: {
+    get: Buffer.prototype.getDataStatus,
+    set: Buffer.prototype.setDataStatus
   },
   attributes: {
     get: Buffer.prototype.getTypedArray
@@ -3372,6 +3592,9 @@ Object.define(Object3.prototype, {
 });
 
 Object.define(Object3.prototype, {
+  vertexCount: {
+    get: Object3.prototype.getVertexCount
+  },
   vertices: {
     get: Object3.prototype.getVertices,
     set: Object3.prototype.setVertexArray
@@ -3496,9 +3719,7 @@ Object.symbol(Object3.prototype, {
   }
 });
 
-Object.hidden(Draw, "parent", "link", "array", "headers", "protoClass", "length", "children", "byteOffset", "byteLength");
-
-Object.hidden(Mode, "array", "byteLength", "byteOffset", "headers", "length", "protoClass");
+Object.hidden(Draw, "link", "array", "headers", "protoClass", "length", "children", "byteOffset", "byteLength");
 
 Object.hidden(Object3, "array", "byteLength", "byteOffset", "headers", "length", "link", "protoClass");
 

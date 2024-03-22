@@ -116,10 +116,10 @@
             camera.toPerspective( innerWidth, innerHeight );
 
             gl.add( program );
-            gl.add( buff );
-            gl.add( camera );
+            //gl.add( buff );
+            //gl.add( camera );
 
-            buff.load();
+            //buff.load();
 
             log( gl );
             
@@ -151,6 +151,7 @@
             obj2
                 .add( obj1 )
 
+            /*
             buff
                 .drawTriangles( obj1 )
                 .drawPoints( obj1 )
@@ -163,16 +164,28 @@
 
             gl.fork();
             gl.clear();
+            */
+
+            program.draw({                
+                count : 1,
+                object : obj2,
+                shader : program.vertShader,
+                values : {
+                    a_Vertex : "position",
+                    a_Color  : "color"
+                },
+                buffer : buff,
+                mode : WebGL2RenderingContext.TRIANGLES
+            });
 
             program.vertShader.u_PointSize = 10;
             program.vertShader.u_Camera = camera;
 
             let render = function (){
 
-                console.warn( program.children )
-
                 gl.clear();
-                
+
+                /*
                 for ( let unif of program.uniforms ) if ( unif.needsUpload )
                     unif.upload();
 
@@ -186,6 +199,7 @@
                     mode.render();
 
                 camera.rotateX(0.0001);
+                */
 
             };
 

@@ -1,7 +1,7 @@
 import "./ptr_self.coffee"
 
 LE = ! new Uint8Array( Float32Array.of( 1 ).buffer )[ 0 ]
-OBJECTS = [,]
+self.OBJECTS = [,]
 SYM_LOOP = Symbol.iterator
 
 ###
@@ -481,8 +481,6 @@ OFFSET_PTRCLASS_2   = 4 * 8
 OFFSET_PTRCLASS_3   = 4 * 9
 OFFSET_PTRCLASS_4   = 4 * 10
 
-POINTER_PROTOTYPE   = [,]
-
 export class Pointer        extends Number
 
     @setBuffer  : ( buf, max = 1e20 ) ->
@@ -526,7 +524,7 @@ export class Pointer        extends Number
         if  arguments.length
             if  this.constructor is Pointer
 
-                unless proto = POINTER_PROTOTYPE[ @getProtoClass() ]
+                unless proto = OBJECTS[ @getProtoClass() ]
                     console.error [ "PROTOCLASS_NOT_FOUND", this * 1 ]
                 try Object.setPrototypeOf this, proto::
                 
@@ -648,12 +646,38 @@ Object.symbol Pointer::,
             else reader.call( dvw , i += stride , LE )
             return { done , value }
 
+self.RESV_CLASS_BYTES = {}
+    
 Object.define Pointer,
+
+    resvStoreIndex     : value : ->
+        return -1 + OBJECTS.push null unless arguments[0]
+
+        if -1 is i = OBJECTS.indexOf arguments[0]
+            i += OBJECTS.push arguments[0]
+
+        i
+
+    storeObject     : value : ->
+        OBJECTS[ arguments[0] ] = arguments[1]
+
+    allocHeadByte   : value : () ->
+        unless offset = RESV_CLASS_BYTES[ this ]
+            offset = RESV_CLASS_BYTES[ this ] = OFFSET_RESVERVEDS
+
+        bpe = arguments[0].BYTES_PER_ELEMENT
+        
+        if  mod = offset % bpe
+            offset = RESV_CLASS_BYTES[ this ] += mod 
+        RESV_CLASS_BYTES[ this ] += bpe ; offset
+
+    classExtender   : value : ->
+        "(class #{arguments[0]} extends #{this.name} {})"
 
     registerClass   : value : ->
 
-        if -1 is POINTER_PROTOTYPE.indexOf this
-            @protoClass = -1 + POINTER_PROTOTYPE.push this
+        if -1 is OBJECTS.indexOf this
+            @protoClass = -1 + OBJECTS.push this
         
         return this if @byteLength
 
@@ -668,6 +692,58 @@ Object.define Pointer,
     BYTES_PER_ELEMENT : get : -> ( this.typedArray . BYTES_PER_ELEMENT )
 
     LENGTH_OF_POINTER : get : -> ( this.byteLength / this.BYTES_PER_ELEMENT )  
+
+
+    
+#? new ones    
+
+#* RESV in HEAD :: Uint8
+Object.define Pointer::,
+
+    objHeadUint8    : value : -> OBJECTS[ dvw.getUint8 this + arguments[0] ]
+    
+    ptrHeadUint8    : value : -> new Pointer dvw.getUint8 this + arguments[0]
+    
+    keyHeadUint8    : value : -> dvw.keyUint8 this + arguments[0]
+    
+    getHeadUint8    : value : -> dvw.getUint8 this + arguments[0]
+    
+    setHeadUint8    : value : -> dvw.setUint8 this + arguments[0], arguments[1] ; this
+    
+    addHeadUint8    : value : -> dvw.setUint8 this + arguments[0], arguments[1] + ( val = dvw.getUint8 this + arguments[0] ) ; val
+
+
+#* RESV in HEAD :: Uint16
+Object.define Pointer::,
+
+    objHeadUint16   : value : -> OBJECTS[ dvw.getUint16 this + arguments[0], LE ]
+    
+    ptrHeadUint16   : value : -> new Pointer dvw.getUint16 this + arguments[0], LE
+    
+    keyHeadUint16   : value : -> dvw.keyUint16 this + arguments[0], LE
+    
+    getHeadUint16   : value : -> dvw.getUint16 this + arguments[0], LE
+    
+    setHeadUint16   : value : -> dvw.setUint16 this + arguments[0], arguments[1], LE ; this
+    
+    addHeadUint16   : value : -> dvw.setUint16 this + arguments[0], arguments[1] + ( val = dvw.getUint16 this + arguments[0], LE ), LE ; val
+
+
+#* RESV in HEAD :: Uint32
+Object.define Pointer::,
+
+    objHeadUint32   : value : -> OBJECTS[ dvw.getUint32 this + arguments[0], LE ]
+    
+    ptrHeadUint32   : value : -> new Pointer dvw.getUint32 this + arguments[0], LE
+    
+    keyHeadUint32   : value : -> dvw.keyUint32 this + arguments[0], LE
+    
+    getHeadUint32   : value : -> dvw.getUint32 this + arguments[0], LE
+    
+    setHeadUint32   : value : -> dvw.setUint32 this + arguments[0], arguments[1], LE ; this
+    
+    addHeadUint32   : value : -> dvw.setUint32 this + arguments[0], arguments[1] + ( val = dvw.getUint32 this + arguments[0], LE ), LE ; val
+
 
 Object.define Pointer::,
 
@@ -721,6 +797,8 @@ Object.define Pointer::,
 
     setByteLength   : value : -> dvw.setUint32 this + OFFSET_BYTELENGTH, arguments[0], LE ; @
 
+    objProtoClass   : value : -> OBJECTS[ @getProtoClass() ]
+    
     getProtoClass   : value : -> dvw.getUint32 this + OFFSET_PROTOCLASS, LE
 
     setProtoClass   : value : -> dvw.setUint32 this + OFFSET_PROTOCLASS, arguments[0], LE ; @
@@ -896,6 +974,8 @@ Object.define Pointer::,
     byteLength      : get   : Pointer::getByteLength , set : Pointer::setByteLength
     
     protoClass      : get   : Pointer::getProtoClass , set : Pointer::setProtoClass
+
+    class           : get   : Pointer::objProtoClass
 
     link            : get   : Pointer::getLinkedNode , set : Pointer::setLinkedNode
     

@@ -535,42 +535,153 @@ export class            GL            extends Pointer
 
 export class            Variable      extends Pointer
     
-    @registerClass()
+Variable.registerClass()
 
 Object.define Variable::,
 
-    value   :
+    value           : 
         get : -> @getValue()
         set : -> @setValue arguments[0]
 
-    location        : get   : -> @link.bind
+    location        : get   : -> @getLinkedNode().location
 
     program         : get   : -> @getParentPtrO()
 
     gl              : get   : -> @getParentPtrP().gl
 
+    type            : get   : -> @constructor.typedValue
+
+    variable        : get   : -> @getLinkedNode().variable
+
+    name            : get   : -> @getLinkedNode().name
+
+    size            : get   : -> @getLinkedNode().size
+
 export class            Attribute2    extends Variable
 
-    @registerClass()
+Attribute2.registerClass()
+
+Object.define Attribute2::,
+
+    bindFunctions       : value : ->
+
+        stride = 0
+        length = 0
+        for attrib in @parent.children
+            continue unless attrib instanceof Attribute2
+            stride += attrib.constructor.byteLength
+            length += attrib.constructor.byteLength / attrib.constructor.typedArray.BYTES_PER_ELEMENT
+
+        offset = 0
+        for attrib in @parent.children
+            continue unless attrib instanceof Attribute2
+
+            attrib.stride        = stride 
+            attrib.offset        = offset
+            attrib.numComponents = length
+            
+            offset += attrib.constructor.byteLength
+
+        for attrib in @parent.children
+            continue unless attrib instanceof Attribute2
+
+            unless i = attrib.getFniEnable()
+                attrib.setFniEnable i = Pointer.resvStoreIndex()
+            
+            unless j = attrib.getFniPoints()
+                attrib.setFniPoints j = Pointer.resvStoreIndex()
+
+            Pointer.storeObject i , @gl.enableVertexAttribArray.bind @gl, attrib.location
+            Pointer.storeObject j , @gl.vertexAttribPointer.bind(
+                @gl, attrib.location, attrib.numComponents, attrib.type,
+                attrib.normalize, attrib.stride, attrib.offset
+            )
+
+
+HOFFSET_ATTRIB_UPLOADED   = Attribute2.allocHeadByte Uint8Array
+HOFFSET_ATTRIB_COMPONENTS = Attribute2.allocHeadByte Uint8Array
+HOFFSET_ATTRIB_NORMALIZE  = Attribute2.allocHeadByte Uint8Array
+HOFFSET_ATTRIB_STRIDE     = Attribute2.allocHeadByte Uint8Array
+HOFFSET_ATTRIB_OFFSET     = Attribute2.allocHeadByte Uint8Array
+HOFFSET_ATTRIB_ENABLED    = Attribute2.allocHeadByte Uint8Array
+HOFFSET_ATTRIB_FNI_ENABLE = Attribute2.allocHeadByte Uint16Array
+HOFFSET_ATTRIB_FNI_POINTS = Attribute2.allocHeadByte Uint16Array
+
+Object.define Attribute2::,
+
+    getUploaded         : value : -> @getHeadUint8  HOFFSET_ATTRIB_UPLOADED
+
+    setUploaded         : value : -> @setHeadUint8  HOFFSET_ATTRIB_UPLOADED  , arguments[0]
+
+    getNumComponents    : value : -> @getHeadUint8  HOFFSET_ATTRIB_COMPONENTS
+
+    setNumComponents    : value : -> @setHeadUint8  HOFFSET_ATTRIB_COMPONENTS, arguments[0]
+
+    getNormalize        : value : -> @getHeadUint8  HOFFSET_ATTRIB_NORMALIZE
+
+    setNormalize        : value : -> @setHeadUint8  HOFFSET_ATTRIB_NORMALIZE , arguments[0]
+
+    getStride           : value : -> @getHeadUint8  HOFFSET_ATTRIB_STRIDE
+
+    setStride           : value : -> @setHeadUint8  HOFFSET_ATTRIB_STRIDE    , arguments[0]
+
+    getOffset           : value : -> @getHeadUint8  HOFFSET_ATTRIB_OFFSET
+
+    setOffset           : value : -> @setHeadUint8  HOFFSET_ATTRIB_OFFSET    , arguments[0]
+
+    getEnabled          : value : -> @getHeadUint8  HOFFSET_ATTRIB_ENABLED
+
+    setEnabled          : value : -> @setHeadUint8  HOFFSET_ATTRIB_ENABLED   , arguments[0]
+
+    fnCallEnable        : value : -> @objHeadUint16 HOFFSET_ATTRIB_FNI_ENABLE
+    
+    getFniEnable        : value : -> @getHeadUint16 HOFFSET_ATTRIB_FNI_ENABLE
+
+    setFniEnable        : value : -> @setHeadUint16 HOFFSET_ATTRIB_FNI_ENABLE , arguments[0]
+    
+    fnCallPoints        : value : -> @objHeadUint16 HOFFSET_ATTRIB_FNI_POINTS
+    
+    getFniPoints        : value : -> @getHeadUint16 HOFFSET_ATTRIB_FNI_POINTS
+
+    setFniPoints        : value : -> @setHeadUint16 HOFFSET_ATTRIB_FNI_POINTS , arguments[0]
+
+Object.define Attribute2::,
+
+    numComponents       : get   : Attribute2::getNumComponents  , set : Attribute2::setNumComponents
+
+    normalize           : get   : Attribute2::getNormalize      , set : Attribute2::setNormalize
+    
+    stride              : get   : Attribute2::getStride         , set : Attribute2::setStride
+    
+    offset              : get   : Attribute2::getOffset         , set : Attribute2::setOffset
+    
+    enabled             : get   : Attribute2::getEnabled        , set : Attribute2::setEnabled
+    
+    uploaded            : get   : Attribute2::getUploaded       , set : Attribute2::setUploaded
+
+    fnEnable            : get   : Attribute2::fnCallEnable
+
+    fnPoints            : get   : Attribute2::fnCallPoints
 
 export class            Uniform2      extends Variable
 
     @registerClass()
 
-
 Attribute2[ WebGL2RenderingContext.FLOAT_VEC2 ] =
 
     class FLOAT_VEC2 extends Attribute2
 
-        @byteLength : 4 * 2
+        @byteLength     : 4 * 2
 
-        @typedArray : Float32Array
+        @typedValue     : WebGL2RenderingContext.FLOAT
+
+        @typedArray     : Float32Array
         
-        getValue : -> @getTypedArray()
+        getValue        : -> @getTypedArray()
 
-        setValue : -> @getValue().set arguments[0]
+        setValue        : -> @getValue().set arguments[0]
 
-        upload   : -> @gl.uniform2f @bind, ...@array
+        upload          : -> @gl.uniform2f @location, ...@array
 
         @registerClass()
 
@@ -578,9 +689,9 @@ Attribute2[ WebGL2RenderingContext.FLOAT_VEC3 ] =
 
     class FLOAT_VEC3 extends FLOAT_VEC2
 
-        @byteLength : 4 * 3
+        @byteLength     : 4 * 3
 
-        upload      : -> @gl.uniform3f @bind, ...@array
+        upload          : -> @gl.uniform3f @location, ...@array
 
         @registerClass()
 
@@ -588,22 +699,23 @@ Attribute2[ WebGL2RenderingContext.FLOAT_VEC4 ] =
 
     class FLOAT_VEC4 extends FLOAT_VEC2
 
-        @byteLength : 4 * 4
+        @byteLength     : 4 * 4
 
-        upload      : -> @gl.uniform4f @bind, ...@array
+        upload          : -> @gl.uniform4f @location, ...@array
         
         @registerClass()
-
 
 Uniform2[ WebGL2RenderingContext.FLOAT ] =
     
     class FLOAT extends Uniform2
+
+        @typedValue     : WebGL2RenderingContext.FLOAT
         
-        getValue : -> @getResvFloat32 1
+        getValue        : -> @getResvFloat32 1
 
-        setValue : -> @setResvFloat32 1, arguments[0]
+        setValue        : -> @setResvFloat32 1, arguments[0]
 
-        upload   : -> @gl.uniform1f @bind, @getValue()
+        upload          : -> @gl.uniform1f @location, @getValue()
 
         @registerClass()
 
@@ -611,18 +723,55 @@ Uniform2[ WebGL2RenderingContext.FLOAT_MAT4 ] =
 
     class FLOAT_MAT4 extends Uniform2
 
-        @byteLength : 4 * 16
+        @byteLength     : 4 * 16
 
-        @typedArray : Float32Array
+        @typedValue     : WebGL2RenderingContext.FLOAT
+
+        @typedArray     : Float32Array
         
-        getValue : -> @getTypedArray()
+        getValue        : -> @getTypedArray()
 
-        setValue : -> @getValue().set arguments[0]
+        setValue        : -> @getValue().set arguments[0]
 
-        upload   : -> @gl.uniformMatrix4fv @bind, off, @getValue()
+        upload          : -> @gl.uniformMatrix4fv @location, off, @getValue()
 
         @registerClass()
 
+Object.define           Mode::      , 
+
+    is                  : value : ->
+        0 is @getTypeGLCode() - arguments[0]
+
+    malloc              : value : ->
+
+        obj3 = arguments[ 0 ]
+        vertices = obj3.getVertices()
+        components = @getComponents()
+
+        count = vertices.length / 3
+        length = count * components
+        byteLength = length * vertices.BYTES_PER_ELEMENT
+        mallocOffset = @addAllocBytes byteLength
+        destOffset = @getModeOffset() + mallocOffset
+
+        @addModeLength length 
+        @addDrawLength count
+
+        draw = new Draw()
+
+        draw . setParentPtri this
+        draw . setLinkedPtri obj3
+        draw . setDstOffset destOffset
+        draw . setStart destOffset / 4
+        draw . setCount length
+        draw . setModeBegin mallocOffset / 4
+        draw . setModeEnd draw.getModeBegin() + length
+
+        draw
+
+    render              : value : ->
+        @gl.drawArrays @mode , @first , @count
+        log "draw call  ->  #{@mode.constructor.name}"
 
 export class            Program       extends Pointer
 
@@ -643,20 +792,13 @@ export class            Program       extends Pointer
             return this unless @setLinkedStatus @getGLLinkStatus @getGLValidate()
 
             for node in @getGLAttributes()
-                classN = eval "(class #{node.name} extends #{Attribute2[ node.type ].name} {})"
-                classN.registerClass()
-                @add attrib = new classN()
+                @add attrib = new Attribute2[ node.type ]
                 attrib.setLinkedNode node
+                attrib.bindFunctions this
 
             for node in @getGLUniforms()
-                classN = eval "(class #{node.name} extends #{Uniform2[ node.type ].name} {})"
-                classN.registerClass()
-                @add uniform = new classN()
+                @add uniform = new Uniform2[ node.type ]
                 uniform.setLinkedNode node
-
-            for attr in @getAttributes()
-                attr    .getGLLocation()
-                attr    .bindFunctions()
 
             return this
 
@@ -675,6 +817,46 @@ export class            Program       extends Pointer
             @getParentPtrO().deleteProgram @getGLProgram()
             @setLinkedStatus @setInUseStatus 0 ; this
 
+        getBuffer       : ->
+            if !buffer = arguments[0] ? @parent.buffers[0]
+                buffer = new Buffer()
+
+            if !buffer . link
+                buffer . parent = this 
+                buffer . bind()
+
+            ;   buffer
+
+        findKey         : ->
+            for child in @children
+                return child if child.name is arguments[0]
+            null
+
+        draw            : ->
+            options = arguments[0]
+
+            buffer  = @getBuffer options.buffer
+            mode    = buffer.getMode options.mode ?= WebGL2RenderingContext.POINTS
+            shader  = options.shader ?= @getVertShader()
+
+            vertexCount = options.object.vertexCount
+            length = 0
+            byteLength = 0
+            numComponents = 0
+
+            console.log vertexCount
+
+            for key, prop of options.values
+                pointer = @findKey key
+                console.log key, prop, pointer
+
+            #draw    = mode.malloc options.object, options.attributes
+
+            console.log buffer
+            console.log mode
+            console.log shader
+            console.log this
+
         getGLProgram    : -> @getLinkedNode() or @setGLProgram @create()
         
         setGLProgram    : -> @setLinkedNode( arguments[0] )
@@ -684,15 +866,17 @@ export class            Program       extends Pointer
         getGLUniform    : ->
             Object.assign(
                 info = @getParentPtrO().getActiveUniform( @getGLProgram(), arguments[0] ),
-                kind : GLType[ info.type ] 
-                bind : @getParentPtrO().getUniformLocation @getGLProgram(), info.name
+                variable : GLType[ info.type ] 
+                location : @getParentPtrO().getUniformLocation @getGLProgram(), info.name
             )
 
         getGLAttribute  : ->
             Object.assign(
                 info = @getParentPtrO().getActiveAttrib( @getGLProgram(), arguments[0] ),
-                kind : GLType[ info.type ] 
-                bind : @getParentPtrO().getAttribLocation( @getGLProgram(), info.name )
+                variable : GLType[ info.type ] 
+                numComponents : GLType[ info.type ].byteLength
+                a: GLType[ info.type ].constructor.typedArray
+                location : @getParentPtrO().getAttribLocation( @getGLProgram(), info.name )
             )
 
         getGLUniforms   : -> @getGLUniform i for i in [ 0 ... @getGLParameter @ACTIVE_UNIFORMS ]
@@ -784,7 +968,7 @@ export class            Program       extends Pointer
         glFragShader    : get   : Program::getGLFragShader
 
         glProgram       : get   : Program::getGLProgram
-        
+
         shaders         : get   : Program::getAllShaders
 
         isLinked        : get   : Program::getLinkedStatus , set : Program::setLinkedNode
@@ -1278,39 +1462,36 @@ export class            Buffer        extends Pointer
 
     create              : ->
         return this if @getLinkedNode()
-        if  buffer = @getGL().createBuffer()
-            @setBindTarget arguments[0] or @ARRAY_BUFFER
-        ; buffer
+        @setLinkedNode @gl.createBuffer() ; this
 
     bind                : ->
         return this if @getBindStatus()
-        @getGL().bindBuffer @getBindTarget() , @getGLBuffer()
-        @getGL().bufferData @getBindTarget() , @getTypedArray() , @getUsage() or @setUsage @STATIC_DRAW
-        @setBindStatus 1 ; this
 
-    load                : ->
-        @create() ; @bind() ; this
+        unless @getLinkedNode()
+            @create().setTarget @ARRAY_BUFFER
+                .setUsage @STATIC_DRAW
+
+        @gl.bindBuffer @getTarget() , @getLinkedNode()
+        @setBindStatus 1
+            .upload()
+
+        this
+
+    upload              : ->
+        @setDataStatus 1 
+            .getContext()
+            .bufferData @getTarget(), @getTypedArray(), @getUsage()
+        
+        this
 
     mode                : ->
-        type = arguments[ 0 ]
-        
-        count = 1000
-        numComponents = 7
-        
-        BYTES_PER_ELEMENT = 4
-        BYTES_PER_ATTRIBUTE = BYTES_PER_ELEMENT * numComponents 
-
-        byteOffset = @addModeOffset BYTES_PER_ATTRIBUTE * count
-        length = count * numComponents
-        first = byteOffset / BYTES_PER_ATTRIBUTE
-
+        byte = 4 * 7 * 1e5
         mode = new Mode()
 
         mode . setParentPtri this
-        mode . setTypeGLCode type
-        mode . setComponents numComponents
-        mode . setModeOffset byteOffset
-        mode . setFirstIndex first
+        mode . setTypeGLCode arguments[0]
+        mode . setModeOffset offset = @addModeOffset byte
+        mode . setFirstIndex offset / 4
 
         mode
 
@@ -1344,9 +1525,9 @@ export class            Buffer        extends Pointer
     drawTriangleStrip   : ->
         @drawArrays arguments[0], WebGL2RenderingContext.TRIANGLE_STRIP
 
-    delete              : -> @setBindStatus @getParentPtrO().deleteBuffer @getLinkedNode() ; @
+    delete              : -> @setBindStatus @gl.deleteBuffer @getLinkedNode() ; @
 
-    getGL               : -> @getParentPtrO()
+    getContext          : -> @parent.gl
 
     getModes            : -> @findAllChilds().filter (v) -> v instanceof Mode
 
@@ -1354,27 +1535,31 @@ export class            Buffer        extends Pointer
 
     setGLBuffer         : -> @setLinkedNode arguments[0]
 
-    getGLIsBuffer       : -> @getParentPtrO().isBuffer @getLinkedNode()
+    getGLIsBuffer       : -> @gl.isBuffer @getLinkedNode()
 
-    getGLParameter      : -> @getParentPtrO().getParameter arguments[0]
+    getGLParameter      : -> @gl.getParameter arguments[0]
 
     getGLBindings       : ->
 
-        ARRAY_BUFFER    : @getGLParameter @getParentPtrO().ARRAY_BUFFER_BINDING
+        ARRAY_BUFFER    : @getGLParameter @gl.ARRAY_BUFFER_BINDING
 
-        ELEMENT_BUFFER  : @getGLParameter @getParentPtrO().ELEMENT_ARRAY_BUFFER_BINDING
+        ELEMENT_BUFFER  : @getGLParameter @gl.ELEMENT_ARRAY_BUFFER_BINDING
 
     isArrayBuffer       : -> @ELEMENT_BUFFER isnt @getBindTarget()
 
-    getBindStatus       : -> @getResvUint16 0
+    getBindStatus       : -> @getResvUint8 0
 
-    setBindStatus       : -> @setResvUint16 0 , arguments[0] ; this
+    setBindStatus       : -> @setResvUint8 0 , arguments[0] ; this
 
-    keyBindTarget       : -> @keyResvUint16 1
+    getDataStatus       : -> @getResvUint8 1
 
-    getBindTarget       : -> @getResvUint16 1
+    setDataStatus       : -> @setResvUint8 1 , arguments[0] ; this
 
-    setBindTarget       : -> @setResvUint16 1 , arguments[0] ; arguments[0]
+    keyTarget           : -> @keyResvUint16 1
+
+    getTarget           : -> @getResvUint16 1
+
+    setTarget           : -> @setResvUint16 1 , arguments[0] ; this
 
     keyUsage            : -> @keyResvUint16 2
 
@@ -1548,11 +1733,7 @@ Object.define           Draw        . registerClass(),
 
     typedArray          : value : Uint32Array
 
-Object.define           Mode        . registerClass(),
-
-    byteLength          : value : 4 * 0
-
-    typedArray          : value : Uint32Array
+Mode.registerClass()
 
 Object.hidden           Buffer      . registerClass(),
 
@@ -1795,41 +1976,6 @@ Object.define           Draw::      ,
 
     matrix              : get   : Draw::getMatrix
 
-Object.define           Mode::      , 
-
-    is                  : value : ->
-        0 is @getTypeGLCode() - arguments[0]
-
-    malloc              : value : ->
-
-        obj3 = arguments[ 0 ]
-        vertices = obj3.getVertices()
-        components = @getComponents()
-
-        count = vertices.length / 3
-        length = count * components
-        byteLength = length * vertices.BYTES_PER_ELEMENT
-        mallocOffset = @addAllocBytes byteLength
-        destOffset = @getModeOffset() + mallocOffset
-
-        @addModeLength length 
-        @addDrawLength count
-
-        draw = new Draw()
-
-        draw . setParentPtri this
-        draw . setLinkedPtri obj3
-        draw . setDstOffset destOffset
-        draw . setStart destOffset / 4
-        draw . setCount length
-        draw . setModeBegin mallocOffset / 4
-        draw . setModeEnd draw.getModeBegin() + length
-
-        draw
-
-    render              : value : ->
-        @gl.drawArrays @mode , @first , @count
-        log "draw call  ->  #{@mode.constructor.name}"
 
 Object.define           Mode::      , 
 
@@ -1840,10 +1986,6 @@ Object.define           Mode::      ,
     getProgram          : value : -> @buffer.parent.program
 
     findObjects         : value : -> @findAllChilds().flatMap (v) -> v.object3
-
-    getComponents       : value : -> @getResvUint16 0
-
-    setComponents       : value : -> @setResvUint16 0, arguments[0]
 
     keyTypeGLCode       : value : -> @keyResvUint16 1, KEYEXTEND_OBJECT3D
 
@@ -1883,14 +2025,6 @@ Object.define           Mode::      ,
 
 Object.define           Mode::      , 
 
-    gl                  : get   : Mode::getGL
-
-    buffer              : get   : Mode::getBuffer
-
-    program             : get   : Mode::getProgram
-
-    objects             : get   : Mode::findObjects
-
     mode                : get   : Mode::keyTypeGLCode , set   : Mode::setTypeGLCode
 
     first               : get   : Mode::getFirstIndex , set   : Mode::setFirstIndex
@@ -1899,17 +2033,19 @@ Object.define           Mode::      ,
     
     offset              : get   : Mode::getModeOffset , set   : Mode::setModeOffset 
     
-    numCmponents        : get   : Mode::getComponents , set   : Mode::setComponents
-
     attributes          : get   : Mode::getAttributes , set   : Mode::setAttributes
 
 Object.define           Buffer::    , 
 
-    target              : get   : Buffer::keyBindTarget   , set : Buffer::setBindTarget 
+    gl                  : get   : Buffer::getContext
+
+    target              : get   : Buffer::keyTarget       , set : Buffer::setTarget 
 
     bound               : get   : Buffer::getBindStatus   , set : Buffer::setBindStatus
 
     usage               : get   : Buffer::keyUsage        , set : Buffer::setUsage
+
+    status              : get   : Buffer::getDataStatus   , set : Buffer::setDataStatus
 
     attributes          : get   : Buffer::getTypedArray
 
@@ -1967,6 +2103,8 @@ Object.define           Object3::   ,
         return @vertices.subarray begin, end
 
 Object.define           Object3::   , 
+
+    vertexCount         : get   : Object3::getVertexCount           
     
     vertices            : get   : Object3::getVertices   , set : Object3::setVertexArray
 
@@ -2020,14 +2158,10 @@ Object.symbol           Object3::   ,
 
 Object.hidden           Draw        , 
 
-    "parent", "link", "array",
+    "link", "array",
     "headers", "protoClass", "length",  
     "children", "byteOffset", "byteLength", 
 
-Object.hidden           Mode        , 
-
-    "array", "byteLength", "byteOffset", "headers", 
-    "length", "protoClass"
 
 Object.hidden           Object3     , 
 
