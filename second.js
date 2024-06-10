@@ -1,5 +1,5 @@
 //`import font from "./ibmplex.json" with { type: "json" }`
-var CHARCODE_VERTICES, a_ModelMatrix, a_Position, arrClearColor, bytesPerInstance, charMalloc, error, fshader, gl, glClear, glClearColor, glDrawPoints, glDrawTriangles, glVerticesOffset, i, i_Position, init, instanceCount, j, lengthPerInstance, log, maxInstanceCount, modelMatrix, positionsBuffer, positionsBufferArray, program, redefine, render, u_Color, u_ViewMatrix, verticesBuffer, verticesBufferArray, viewMatrix, vshader, warn, xyz1, xyz2, xyz3;
+var BYTES_PER_INSTANCE, BYTES_PER_VERTEX, CHARCODE_VERTICES, a_ModelMatrix, a_Position, arrClearColor, charMalloc, drawPoints, drawTriangles, error, fshader, gl, glClear, glClearColor, i, i_Position, init, instanceCount, instancesGLBuffer, j, lengthPerInstance, log, maxInstanceCount, model1, model1instance1, model1instance2, model1instance3, model1instance4, model1instance5, modelMatrix, pointCount, positionsBufferArray, program, render, u_Color, u_ViewMatrix, verticesBufferArray, verticesGLBuffer, verticesOffset, viewMatrix, vshader, warn;
 
 ({log, warn, error} = console);
 
@@ -190,9 +190,9 @@ CHARCODE_VERTICES = JSON.parse(sessionStorage.font);
 
 gl = document.getElementById("gl").getContext("webgl2");
 
-verticesBuffer = gl.createBuffer();
+verticesGLBuffer = gl.createBuffer();
 
-positionsBuffer = gl.createBuffer();
+instancesGLBuffer = gl.createBuffer();
 
 program = gl.createProgram();
 
@@ -220,15 +220,21 @@ arrClearColor = Float32Array.of(0.05, .2, 0.3, 1);
 
 verticesBufferArray = new Float32Array(new ArrayBuffer(1e6));
 
+pointCount = 0;
+
 instanceCount = 0;
+
+verticesOffset = 0;
 
 lengthPerInstance = 3;
 
-bytesPerInstance = 12;
+BYTES_PER_VERTEX = 12;
+
+BYTES_PER_INSTANCE = 12;
 
 maxInstanceCount = 100;
 
-positionsBufferArray = new Float32Array(new ArrayBuffer(maxInstanceCount * bytesPerInstance));
+positionsBufferArray = new Float32Array(new ArrayBuffer(maxInstanceCount * BYTES_PER_INSTANCE));
 
 u_ViewMatrix = gl.getUniformLocation(program, "u_ViewMatrix");
 
@@ -248,78 +254,77 @@ glClearColor = gl.clearColor.apply.bind(gl.clearColor, gl, arrClearColor);
 
 glClear = gl.clear.bind(gl, gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-glVerticesOffset = 0;
+drawTriangles = function() {};
 
-glDrawTriangles = 0;
+drawPoints = function() {};
 
-glDrawPoints = 0;
-
-redefine = function() {
-  //rebind every time
-  glDrawTriangles = gl.drawArraysInstanced.bind(gl, gl.TRIANGLES, 0, glVerticesOffset / 12, instanceCount);
-  return glDrawPoints = gl.drawArraysInstanced.bind(gl, gl.POINTS, 0, glVerticesOffset / 12, instanceCount);
-};
-
-Object.defineProperty(verticesBufferArray, "resize", {
-  value: function(byteLength) {
-    var byteOffset;
-    byteOffset = glVerticesOffset;
-    glVerticesOffset += byteLength;
-    gl.bindBuffer(gl.ARRAY_BUFFER, verticesBuffer);
-    //resize allocated on glBuffer
-    gl.bufferData(gl.ARRAY_BUFFER, this.byteLength, gl.STATIC_DRAW);
-    redefine();
-    return byteOffset;
-  }
-});
-
-Object.defineProperty(positionsBufferArray, "instance", {
-  value: function() {
-    var begin, byteOffset, end, length, subarray;
-    gl.bindBuffer(gl.ARRAY_BUFFER, positionsBuffer);
-    byteOffset = bytesPerInstance * instanceCount++;
-    begin = byteOffset / 4;
-    length = bytesPerInstance / 4;
-    end = begin + length;
-    subarray = this.subarray(begin, end);
-    gl.bindBuffer(gl.ARRAY_BUFFER, positionsBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, byteOffset + bytesPerInstance, gl.DYNAMIC_DRAW);
-    return Object.defineProperty(subarray, "upload", {
-      value: function(arr) {
-        if (arr) {
-          this.set(arr);
-        }
-        gl.bindBuffer(gl.ARRAY_BUFFER, positionsBuffer);
-        gl.bufferSubData(gl.ARRAY_BUFFER, this.byteOffset, this);
-        gl.enableVertexAttribArray(i_Position);
-        gl.vertexAttribPointer(i_Position, 3, gl.FLOAT, false, 12, 0); // location // size (num values to pull from buffer per iteration) // type of data in buffer // normalize // stride (0 = compute from size and type above) // offset in buffer
-        gl.vertexAttribDivisor(i_Position, 1);
-        redefine();
-        return this;
-      }
-    });
-  }
-});
-
-Object.defineProperty(verticesBufferArray, "malloc", {
-  value: function(pointCount) {
+Object.defineProperty(verticesBufferArray, "upload", {
+  value: function(vertexArray) {
     var begin, byteLength, byteOffset, length, subarray;
-    length = pointCount * 3;
+    pointCount += vertexArray.length / 3;
+    length = vertexArray.length;
+    byteOffset = verticesOffset;
     byteLength = length * 4;
-    byteOffset = this.resize(byteLength);
     begin = byteOffset / 4;
     subarray = this.subarray(begin, begin + length);
-    return Object.defineProperty(subarray, "upload", {
-      value: function(values = []) {
-        this.set(values);
-        gl.bindBuffer(gl.ARRAY_BUFFER, verticesBuffer);
-        gl.bufferSubData(gl.ARRAY_BUFFER, this.byteOffset, this);
-        gl.enableVertexAttribArray(a_Position);
-        gl.vertexAttribPointer(a_Position, 3, gl.FLOAT, false, 12, this.byteOffset); // location // size (num values to pull from buffer per iteration) // type of data in buffer // normalize // stride (0 = compute from size and type above) // offset in buffer
-        redefine();
-        return this;
-      }
-    });
+    verticesOffset = byteLength + verticesOffset;
+    subarray.set(vertexArray);
+    gl.bindBuffer(gl.ARRAY_BUFFER, verticesGLBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, verticesOffset, gl.STATIC_DRAW);
+    gl.bufferSubData(gl.ARRAY_BUFFER, byteOffset, subarray);
+    gl.enableVertexAttribArray(a_Position);
+    gl.vertexAttribPointer(a_Position, 3, gl.FLOAT, false, BYTES_PER_VERTEX, byteOffset); // location // size (num values to pull from buffer per iteration) // type of data in buffer // normalize // stride (0 = compute from size and type above) // offset in buffer
+    (function(vertices) {
+      return Object.defineProperty(vertices, "instance", {
+        get: function() {
+          var instanceBegin, instanceByteOffset, instanceEnd, instanceLength, instanceSubarray;
+          gl.bindBuffer(gl.ARRAY_BUFFER, instancesGLBuffer);
+          instanceByteOffset = BYTES_PER_INSTANCE * instanceCount++;
+          instanceLength = BYTES_PER_INSTANCE / 4;
+          instanceBegin = instanceByteOffset / 4;
+          instanceEnd = instanceBegin + instanceLength;
+          instanceSubarray = positionsBufferArray.subarray(instanceBegin, instanceEnd);
+          gl.bindBuffer(gl.ARRAY_BUFFER, instancesGLBuffer);
+          gl.bufferData(gl.ARRAY_BUFFER, BYTES_PER_INSTANCE * (instanceCount + 4), gl.DYNAMIC_READ);
+          drawTriangles = gl.drawArraysInstanced.bind(gl, gl.TRIANGLES, 0, pointCount, instanceCount);
+          drawPoints = gl.drawArraysInstanced.bind(gl, gl.POINTS, 0, pointCount, instanceCount);
+          Object.defineProperties(instanceSubarray, {
+            translateX: {
+              value: function(d) {
+                this[0] += d;
+                return this.reload();
+              }
+            },
+            translateY: {
+              value: function(d) {
+                this[1] += d;
+                return this.reload();
+              }
+            },
+            translateZ: {
+              value: function(d) {
+                this[2] += d;
+                return this.reload();
+              }
+            },
+            reload: {
+              value: function(arr) {
+                if (arr) {
+                  this.set(arr);
+                }
+                gl.bindBuffer(gl.ARRAY_BUFFER, instancesGLBuffer);
+                gl.bufferSubData(gl.ARRAY_BUFFER, this.byteOffset, this);
+                gl.enableVertexAttribArray(i_Position);
+                gl.vertexAttribPointer(i_Position, 3, gl.FLOAT, false, BYTES_PER_INSTANCE, 0); // location // size (num values to pull from buffer per iteration) // type of data in buffer // normalize // stride (0 = compute from size and type above) // offset in buffer
+                return gl.vertexAttribDivisor(i_Position, 1);
+              }
+            }
+          });
+          return instanceSubarray;
+        }
+      });
+    })(subarray);
+    return subarray;
   }
 });
 
@@ -438,7 +443,7 @@ init = function() {
 };
 
 charMalloc = function(char) {
-  var charBuffer, pointCount, vertices;
+  var charBuffer, vertices;
   vertices = CHARCODE_VERTICES[char.charCodeAt(0)];
   pointCount = vertices.length / 3;
   charBuffer = verticesBufferArray.malloc(pointCount);
@@ -449,19 +454,27 @@ charMalloc = function(char) {
 init();
 
 //_e00 = charMalloc("f")
-verticesBufferArray.malloc(3).upload([4, -2, 0, -4, -2, 0, 0, 2, 0]);
+model1 = verticesBufferArray.upload([4, -2, 0, -4, -2, 0, 0, 2, 0]);
 
-xyz1 = positionsBufferArray.instance();
+model1instance1 = model1.instance;
 
-xyz2 = positionsBufferArray.instance();
+model1instance2 = model1.instance;
 
-xyz3 = positionsBufferArray.instance();
+model1instance3 = model1.instance;
 
-xyz1.upload([0, -1, 0]);
+model1instance4 = model1.instance;
 
-xyz2.upload([20, -2, 0]);
+model1instance5 = model1.instance;
 
-xyz3.upload([0, 1, 0]);
+model1instance1.reload([1, 0, 0]);
+
+model1instance2.reload([0, 2, 0]);
+
+model1instance3.reload([5, -2, 0]);
+
+model1instance4.reload([2, -2, 0]);
+
+model1instance5.reload([0, 0, 0]);
 
 i = 0;
 
@@ -469,20 +482,20 @@ j = 1;
 
 render = function() {
   glClear();
-  glDrawTriangles();
-  glDrawPoints();
+  gl.bindBuffer(gl.ARRAY_BUFFER, verticesGLBuffer);
+  drawTriangles();
+  drawPoints();
+  model1instance1.translateX(0.1);
+  model1instance2.translateY(-0.01);
+  model1instance3.translateX(0.1);
+  model1instance4.translateY(0.03);
+  model1instance5.translateX(-0.1);
   viewMatrix.dx += 0.02 * j;
   //viewMatrix.dy -= 0.05 * j
 
   //viewMatrix.dz -= 0.01 * j
   //viewMatrix.rz += 0.01 * j
   viewMatrix.upload();
-  xyz1[1] += 0.01 * j;
-  xyz2[1] -= 0.2 * j;
-  xyz3[1] += 0.2 * j;
-  xyz1.upload(xyz1);
-  xyz2.upload(xyz2);
-  xyz3.upload(xyz3);
   if (!(++i % 120)) {
     j *= -1;
   }

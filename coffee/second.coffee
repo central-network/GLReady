@@ -193,8 +193,8 @@ export class M4                 extends Float32Array
 CHARCODE_VERTICES = JSON.parse sessionStorage.font
 
 gl = document.getElementById("gl").getContext "webgl2"
-verticesBuffer = gl.createBuffer()
-positionsBuffer = gl.createBuffer()
+verticesGLBuffer = gl.createBuffer()
+instancesGLBuffer = gl.createBuffer()
 program = gl.createProgram()
 
 vshader = gl.createShader gl.VERTEX_SHADER
@@ -216,11 +216,15 @@ gl.useProgram program
 arrClearColor   = Float32Array.of 0.05, .2, 0.3, 1
 verticesBufferArray      = new Float32Array new ArrayBuffer 1e6
 
+pointCount = 0
 instanceCount = 0
+verticesOffset = 0
+
 lengthPerInstance = 3
-bytesPerInstance = 12
+BYTES_PER_VERTEX = 12
+BYTES_PER_INSTANCE = 12
 maxInstanceCount = 100
-positionsBufferArray = new Float32Array new ArrayBuffer maxInstanceCount * bytesPerInstance
+positionsBufferArray = new Float32Array new ArrayBuffer maxInstanceCount * BYTES_PER_INSTANCE
 
 u_ViewMatrix    = gl.getUniformLocation program, "u_ViewMatrix"
 u_Color         = gl.getUniformLocation program, 'u_Color'
@@ -236,99 +240,91 @@ glClearColor    = gl.clearColor.apply.bind gl.clearColor, gl, arrClearColor
 glClear         = gl.clear.bind gl, gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT
 
 
-glVerticesOffset  = 0
-glDrawTriangles = 0
-glDrawPoints = 0
+drawTriangles   = ->
+drawPoints      = ->
 
+Object.defineProperty verticesBufferArray, "upload", value : ( vertexArray ) ->    
 
-redefine = ->
-    #rebind every time
-    glDrawTriangles = gl.drawArraysInstanced.bind(
-        gl, gl.TRIANGLES, 0, glVerticesOffset / 12, instanceCount
-    )
-
-    glDrawPoints = gl.drawArraysInstanced.bind(
-        gl, gl.POINTS, 0, glVerticesOffset / 12, instanceCount
-    )
-
-Object.defineProperty verticesBufferArray, "resize", value : ( byteLength ) ->
-    byteOffset = glVerticesOffset
-    glVerticesOffset += byteLength
-
-    gl.bindBuffer gl.ARRAY_BUFFER, verticesBuffer
-
-    #resize allocated on glBuffer
-    gl.bufferData(
-        gl.ARRAY_BUFFER, @byteLength, gl.STATIC_DRAW
-    )
-
-    redefine()
-
-    byteOffset
+    pointCount += vertexArray.length / 3
+    length      = vertexArray.length
     
-
-Object.defineProperty positionsBufferArray, "instance", value : ->
-
-    gl.bindBuffer gl.ARRAY_BUFFER, positionsBuffer
-
-    byteOffset  = bytesPerInstance * instanceCount++
-    begin       = byteOffset / 4
-    length      = bytesPerInstance / 4
-    end         = begin + length
-    subarray    = @subarray begin, end
-
-    gl.bindBuffer gl.ARRAY_BUFFER, positionsBuffer
-    gl.bufferData gl.ARRAY_BUFFER, byteOffset + bytesPerInstance, gl.DYNAMIC_DRAW
-
-    Object.defineProperty subarray, "upload", 
-        value : ( arr ) ->
-            @set arr if arr
-
-            gl.bindBuffer gl.ARRAY_BUFFER, positionsBuffer
-            gl.bufferSubData gl.ARRAY_BUFFER, @byteOffset, this
-            gl.enableVertexAttribArray i_Position
-            gl.vertexAttribPointer(
-                i_Position,  # location
-                3,           # size (num values to pull from buffer per iteration)
-                gl.FLOAT,    # type of data in buffer
-                false,       # normalize
-                12,          # stride (0 = compute from size and type above)
-                0,        # offset in buffer
-            )
-
-            gl.vertexAttribDivisor i_Position, 1
-            redefine()
-
-            this
-        
-
-
-Object.defineProperty verticesBufferArray, "malloc", value : ( pointCount ) ->    
-    length      = pointCount * 3
+    byteOffset  = verticesOffset
     byteLength  = length * 4
-    byteOffset  = @resize byteLength
+
     begin       = byteOffset / 4
     subarray    = @subarray begin, begin + length
 
-    Object.defineProperty subarray, "upload",
-        value : ( values = [] ) ->
-            @set values
+    verticesOffset =
+        byteLength + verticesOffset
 
-            gl.bindBuffer gl.ARRAY_BUFFER, verticesBuffer
-            gl.bufferSubData gl.ARRAY_BUFFER, @byteOffset, this
+    subarray.set vertexArray
 
-            gl.enableVertexAttribArray a_Position
-            gl.vertexAttribPointer(
-                a_Position,  # location
-                3,           # size (num values to pull from buffer per iteration)
-                gl.FLOAT,    # type of data in buffer
-                false,       # normalize
-                12,          # stride (0 = compute from size and type above)
-                @byteOffset,           # offset in buffer
+    gl.bindBuffer    gl.ARRAY_BUFFER, verticesGLBuffer
+    gl.bufferData    gl.ARRAY_BUFFER, verticesOffset, gl.STATIC_DRAW
+    gl.bufferSubData gl.ARRAY_BUFFER, byteOffset, subarray
+
+    gl.enableVertexAttribArray a_Position
+    gl.vertexAttribPointer(
+        a_Position,  # location
+        3,           # size (num values to pull from buffer per iteration)
+        gl.FLOAT,    # type of data in buffer
+        false,       # normalize
+        BYTES_PER_VERTEX, # stride (0 = compute from size and type above)
+        byteOffset  # offset in buffer
+    )
+
+    ( (vertices) ->
+
+        Object.defineProperty vertices, "instance", get : ->
+
+            gl.bindBuffer gl.ARRAY_BUFFER, instancesGLBuffer
+
+            instanceByteOffset  = BYTES_PER_INSTANCE * instanceCount++
+            instanceLength      = BYTES_PER_INSTANCE / 4
+            instanceBegin       = instanceByteOffset / 4
+            instanceEnd         = instanceBegin + instanceLength
+            instanceSubarray    = positionsBufferArray.subarray instanceBegin, instanceEnd
+        
+            gl.bindBuffer gl.ARRAY_BUFFER, instancesGLBuffer
+            gl.bufferData gl.ARRAY_BUFFER, BYTES_PER_INSTANCE * (instanceCount + 4), gl.DYNAMIC_READ
+
+            drawTriangles   = gl.drawArraysInstanced.bind(
+                gl, gl.TRIANGLES, 0, pointCount, instanceCount
             )
-            redefine()
 
-            this
+            drawPoints      = gl.drawArraysInstanced.bind(
+                gl, gl.POINTS, 0, pointCount, instanceCount
+            )
+
+            Object.defineProperties instanceSubarray,
+            
+                translateX : value : ( d ) -> @[0] += d ; @reload()
+                translateY : value : ( d ) -> @[1] += d ; @reload()
+                translateZ : value : ( d ) -> @[2] += d ; @reload()
+
+                reload : value : ( arr ) ->
+                    if  arr
+                        @set arr
+        
+                    gl.bindBuffer gl.ARRAY_BUFFER, instancesGLBuffer
+                    gl.bufferSubData gl.ARRAY_BUFFER, @byteOffset, this
+
+                    gl.enableVertexAttribArray i_Position
+                    gl.vertexAttribPointer(
+                        i_Position,  # location
+                        3,           # size (num values to pull from buffer per iteration)
+                        gl.FLOAT,    # type of data in buffer
+                        false,       # normalize
+                        BYTES_PER_INSTANCE, # stride (0 = compute from size and type above)
+                        0  # offset in buffer
+                    )
+        
+                    gl.vertexAttribDivisor i_Position, 1
+
+            return instanceSubarray
+    ) (subarray)
+                       
+    subarray
 
 Object.defineProperties modelMatrix, {
     dx: { writable:1, value:  0 },
@@ -410,30 +406,42 @@ charMalloc = ( char ) ->
     charBuffer
 
 
+
 init()
 
 #_e00 = charMalloc("f")
-verticesBufferArray.malloc(3).upload([
+model1 = verticesBufferArray.upload([
     4, -2, 0,
     -4, -2, 0,
     0, 2, 0,
 ])
 
-xyz1 = positionsBufferArray.instance()
-xyz2 = positionsBufferArray.instance()
-xyz3 = positionsBufferArray.instance()
+model1instance1 = model1.instance
+model1instance2 = model1.instance
+model1instance3 = model1.instance
+model1instance4 = model1.instance
+model1instance5 = model1.instance
 
-xyz1.upload([ 0, -1, 0])
-xyz2.upload([ 20, -2, 0])
-xyz3.upload([ 0,  1, 0])
+model1instance1.reload [ 1, 0, 0]
+model1instance2.reload [ 0, 2, 0]
+model1instance3.reload [ 5, -2, 0]
+model1instance4.reload [ 2, -2, 0]
+model1instance5.reload [ 0, 0, 0]
 
 
 i = 0
 j = 1
 render = ->
     glClear()
-    glDrawTriangles()
-    glDrawPoints()
+    gl.bindBuffer gl.ARRAY_BUFFER, verticesGLBuffer
+    drawTriangles()
+    drawPoints()
+
+    model1instance1.translateX(0.1)
+    model1instance2.translateY(-0.01)
+    model1instance3.translateX(0.1)
+    model1instance4.translateY(0.03)
+    model1instance5.translateX(-0.1)
 
     
     viewMatrix.dx += 0.02 * j
@@ -442,14 +450,6 @@ render = ->
     #viewMatrix.dz -= 0.01 * j
     #viewMatrix.rz += 0.01 * j
     viewMatrix.upload()
-
-    xyz1[1] += 0.01 * j
-    xyz2[1] -= 0.2 * j
-    xyz3[1] += 0.2 * j
-
-    xyz1.upload(xyz1)
-    xyz2.upload(xyz2)
-    xyz3.upload(xyz3)
 
     unless ++i % 120
         j *= -1
