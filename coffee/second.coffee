@@ -216,7 +216,7 @@ gl.useProgram program
 arrClearColor   = Float32Array.of 0.05, .2, 0.3, 1
 verticesBufferArray      = new Float32Array new ArrayBuffer 1e6
 
-instanceCount = 1
+instanceCount = 0
 lengthPerInstance = 3
 bytesPerInstance = 12
 maxInstanceCount = 100
@@ -265,20 +265,6 @@ Object.defineProperty verticesBufferArray, "resize", value : ( byteLength ) ->
     redefine()
 
     byteOffset
-
-Object.defineProperty verticesBufferArray, "enable", value : ->
-
-    gl.enableVertexAttribArray a_Position
-    gl.vertexAttribPointer(
-        a_Position,  # location
-        3,           # size (num values to pull from buffer per iteration)
-        gl.FLOAT,    # type of data in buffer
-        false,       # normalize
-        12,          # stride (0 = compute from size and type above)
-        0,           # offset in buffer
-    )
-
-    0
     
 
 Object.defineProperty positionsBufferArray, "instance", value : ->
@@ -299,7 +285,7 @@ Object.defineProperty positionsBufferArray, "instance", value : ->
             @set arr if arr
 
             gl.bindBuffer gl.ARRAY_BUFFER, positionsBuffer
-            gl.bufferSubData gl.ARRAY_BUFFER, @byteOffset, positionsBufferArray, begin, length
+            gl.bufferSubData gl.ARRAY_BUFFER, @byteOffset, this
             gl.enableVertexAttribArray i_Position
             gl.vertexAttribPointer(
                 i_Position,  # location
@@ -310,6 +296,7 @@ Object.defineProperty positionsBufferArray, "instance", value : ->
                 0,        # offset in buffer
             )
 
+            gl.vertexAttribDivisor i_Position, 1
             redefine()
 
             this
@@ -317,22 +304,18 @@ Object.defineProperty positionsBufferArray, "instance", value : ->
 
 
 Object.defineProperty verticesBufferArray, "malloc", value : ( pointCount ) ->    
-    length = pointCount * 3
-    byteLength = length * 4
+    length      = pointCount * 3
+    byteLength  = length * 4
+    byteOffset  = @resize byteLength
+    begin       = byteOffset / 4
+    subarray    = @subarray begin, begin + length
 
-    dstByteOffset = @resize byteLength
-
-    begin = dstByteOffset / 4
-    array = @subarray begin, begin + length
-
-    Object.defineProperty array, "dstByteOffset",
-        value : dstByteOffset
-
-    Object.defineProperty array, "upload",
+    Object.defineProperty subarray, "upload",
         value : ( values = [] ) ->
             @set values
+
             gl.bindBuffer gl.ARRAY_BUFFER, verticesBuffer
-            gl.bufferSubData gl.ARRAY_BUFFER, @dstByteOffset, verticesBufferArray, begin, length
+            gl.bufferSubData gl.ARRAY_BUFFER, @byteOffset, this
 
             gl.enableVertexAttribArray a_Position
             gl.vertexAttribPointer(
@@ -340,9 +323,10 @@ Object.defineProperty verticesBufferArray, "malloc", value : ( pointCount ) ->
                 3,           # size (num values to pull from buffer per iteration)
                 gl.FLOAT,    # type of data in buffer
                 false,       # normalize
-                0,          # stride (0 = compute from size and type above)
-                0,           # offset in buffer
+                12,          # stride (0 = compute from size and type above)
+                @byteOffset,           # offset in buffer
             )
+            redefine()
 
             this
 
@@ -368,7 +352,7 @@ Object.defineProperties modelMatrix, {
             4,           # size (num values to pull from buffer per iteration)
             gl.FLOAT,    # type of data in buffer
             false,       # normalize
-            64,          # stride (0 = compute from size and type above)
+            16,          # stride (0 = compute from size and type above)
             0,           # offset in buffer
         )
 
@@ -377,7 +361,7 @@ Object.defineProperties modelMatrix, {
 Object.defineProperties viewMatrix, {
     dx: { writable:1, value:  0 },
     dy: { writable:1, value:  0 },
-    dz: { writable:1, value:-10 },
+    dz: { writable:1, value:-30 },
     
     rx: { writable:1, value:  0 },
     ry: { writable:1, value:  Math.PI },
@@ -413,7 +397,6 @@ init = ->
             innerHeight * devicePixelRatio
         )
         
-    gl.vertexAttribDivisor i_Position, 1
     glViewport()
     glClearColor()
     glClear()
@@ -424,8 +407,6 @@ charMalloc = ( char ) ->
     pointCount = vertices.length / 3
     charBuffer = verticesBufferArray.malloc pointCount
     charBuffer . upload vertices
-    verticesBufferArray . enable()
-
     charBuffer
 
 
@@ -433,17 +414,18 @@ init()
 
 #_e00 = charMalloc("f")
 verticesBufferArray.malloc(3).upload([
-    4, -2, -1,
-    -4, -2, 1,
-    0, 2, -2,
+    4, -2, 0,
+    -4, -2, 0,
+    0, 2, 0,
 ])
 
 xyz1 = positionsBufferArray.instance()
 xyz2 = positionsBufferArray.instance()
 xyz3 = positionsBufferArray.instance()
-xyz1.upload([7, -1, 0])
-xyz2.upload([5, -2, 0])
-xyz3.upload([-5, 1, 0])
+
+xyz1.upload([ 0, -1, 0])
+xyz2.upload([ 20, -2, 0])
+xyz3.upload([ 0,  1, 0])
 
 
 i = 0
@@ -454,24 +436,22 @@ render = ->
     glDrawPoints()
 
     
-    viewMatrix.dx += 0.1 * j
-    viewMatrix.dy -= 0.1 * j
+    viewMatrix.dx += 0.02 * j
+    #viewMatrix.dy -= 0.05 * j
 
     #viewMatrix.dz -= 0.01 * j
     #viewMatrix.rz += 0.01 * j
     viewMatrix.upload()
 
-    xyz1[1] += 0.1 * j
-    xyz2[0] += 0.3 * j
-    xyz3[0] += 0.1 * j
-    xyz3[1] += 0.02 * j
-    xyz3[2] -= 0.05 * j
+    xyz1[1] += 0.01 * j
+    xyz2[1] -= 0.2 * j
+    xyz3[1] += 0.2 * j
 
     xyz1.upload(xyz1)
     xyz2.upload(xyz2)
     xyz3.upload(xyz3)
 
-    unless ++i % 60
+    unless ++i % 120
         j *= -1
 
     requestAnimationFrame render

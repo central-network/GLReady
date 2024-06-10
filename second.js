@@ -220,7 +220,7 @@ arrClearColor = Float32Array.of(0.05, .2, 0.3, 1);
 
 verticesBufferArray = new Float32Array(new ArrayBuffer(1e6));
 
-instanceCount = 1;
+instanceCount = 0;
 
 lengthPerInstance = 3;
 
@@ -273,14 +273,6 @@ Object.defineProperty(verticesBufferArray, "resize", {
   }
 });
 
-Object.defineProperty(verticesBufferArray, "enable", {
-  value: function() {
-    gl.enableVertexAttribArray(a_Position);
-    gl.vertexAttribPointer(a_Position, 3, gl.FLOAT, false, 12, 0); // location // size (num values to pull from buffer per iteration) // type of data in buffer // normalize // stride (0 = compute from size and type above) // offset in buffer
-    return 0;
-  }
-});
-
 Object.defineProperty(positionsBufferArray, "instance", {
   value: function() {
     var begin, byteOffset, end, length, subarray;
@@ -298,9 +290,10 @@ Object.defineProperty(positionsBufferArray, "instance", {
           this.set(arr);
         }
         gl.bindBuffer(gl.ARRAY_BUFFER, positionsBuffer);
-        gl.bufferSubData(gl.ARRAY_BUFFER, this.byteOffset, positionsBufferArray, begin, length);
+        gl.bufferSubData(gl.ARRAY_BUFFER, this.byteOffset, this);
         gl.enableVertexAttribArray(i_Position);
         gl.vertexAttribPointer(i_Position, 3, gl.FLOAT, false, 12, 0); // location // size (num values to pull from buffer per iteration) // type of data in buffer // normalize // stride (0 = compute from size and type above) // offset in buffer
+        gl.vertexAttribDivisor(i_Position, 1);
         redefine();
         return this;
       }
@@ -310,22 +303,20 @@ Object.defineProperty(positionsBufferArray, "instance", {
 
 Object.defineProperty(verticesBufferArray, "malloc", {
   value: function(pointCount) {
-    var array, begin, byteLength, dstByteOffset, length;
+    var begin, byteLength, byteOffset, length, subarray;
     length = pointCount * 3;
     byteLength = length * 4;
-    dstByteOffset = this.resize(byteLength);
-    begin = dstByteOffset / 4;
-    array = this.subarray(begin, begin + length);
-    Object.defineProperty(array, "dstByteOffset", {
-      value: dstByteOffset
-    });
-    return Object.defineProperty(array, "upload", {
+    byteOffset = this.resize(byteLength);
+    begin = byteOffset / 4;
+    subarray = this.subarray(begin, begin + length);
+    return Object.defineProperty(subarray, "upload", {
       value: function(values = []) {
         this.set(values);
         gl.bindBuffer(gl.ARRAY_BUFFER, verticesBuffer);
-        gl.bufferSubData(gl.ARRAY_BUFFER, this.dstByteOffset, verticesBufferArray, begin, length);
+        gl.bufferSubData(gl.ARRAY_BUFFER, this.byteOffset, this);
         gl.enableVertexAttribArray(a_Position);
-        gl.vertexAttribPointer(a_Position, 3, gl.FLOAT, false, 0, 0); // location // size (num values to pull from buffer per iteration) // type of data in buffer // normalize // stride (0 = compute from size and type above) // offset in buffer
+        gl.vertexAttribPointer(a_Position, 3, gl.FLOAT, false, 12, this.byteOffset); // location // size (num values to pull from buffer per iteration) // type of data in buffer // normalize // stride (0 = compute from size and type above) // offset in buffer
+        redefine();
         return this;
       }
     });
@@ -378,7 +369,7 @@ Object.defineProperties(modelMatrix, {
         this.set(mat4);
       }
       gl.enableVertexAttribArray(this.location);
-      return gl.vertexAttribPointer(this.location, 4, gl.FLOAT, false, 64, 0); // location // size (num values to pull from buffer per iteration) // type of data in buffer // normalize // stride (0 = compute from size and type above) // offset in buffer
+      return gl.vertexAttribPointer(this.location, 4, gl.FLOAT, false, 16, 0); // location // size (num values to pull from buffer per iteration) // type of data in buffer // normalize // stride (0 = compute from size and type above) // offset in buffer
     }
   }
 });
@@ -394,7 +385,7 @@ Object.defineProperties(viewMatrix, {
   },
   dz: {
     writable: 1,
-    value: -10
+    value: -30
   },
   rx: {
     writable: 1,
@@ -441,7 +432,6 @@ init = function() {
     }).setAttribute("style", [`width=${CSS.px(innerWidth)}`, `height=${CSS.px(innerHeight)}`].join(";"));
     return gl.viewport(0, 0, innerWidth * devicePixelRatio, innerHeight * devicePixelRatio);
   };
-  gl.vertexAttribDivisor(i_Position, 1);
   glViewport();
   glClearColor();
   return glClear();
@@ -453,14 +443,13 @@ charMalloc = function(char) {
   pointCount = vertices.length / 3;
   charBuffer = verticesBufferArray.malloc(pointCount);
   charBuffer.upload(vertices);
-  verticesBufferArray.enable();
   return charBuffer;
 };
 
 init();
 
 //_e00 = charMalloc("f")
-verticesBufferArray.malloc(3).upload([4, -2, -1, -4, -2, 1, 0, 2, -2]);
+verticesBufferArray.malloc(3).upload([4, -2, 0, -4, -2, 0, 0, 2, 0]);
 
 xyz1 = positionsBufferArray.instance();
 
@@ -468,11 +457,11 @@ xyz2 = positionsBufferArray.instance();
 
 xyz3 = positionsBufferArray.instance();
 
-xyz1.upload([7, -1, 0]);
+xyz1.upload([0, -1, 0]);
 
-xyz2.upload([5, -2, 0]);
+xyz2.upload([20, -2, 0]);
 
-xyz3.upload([-5, 1, 0]);
+xyz3.upload([0, 1, 0]);
 
 i = 0;
 
@@ -482,20 +471,19 @@ render = function() {
   glClear();
   glDrawTriangles();
   glDrawPoints();
-  viewMatrix.dx += 0.1 * j;
-  viewMatrix.dy -= 0.1 * j;
+  viewMatrix.dx += 0.02 * j;
+  //viewMatrix.dy -= 0.05 * j
+
   //viewMatrix.dz -= 0.01 * j
   //viewMatrix.rz += 0.01 * j
   viewMatrix.upload();
-  xyz1[1] += 0.1 * j;
-  xyz2[0] += 0.3 * j;
-  xyz3[0] += 0.1 * j;
-  xyz3[1] += 0.02 * j;
-  xyz3[2] -= 0.05 * j;
+  xyz1[1] += 0.01 * j;
+  xyz2[1] -= 0.2 * j;
+  xyz3[1] += 0.2 * j;
   xyz1.upload(xyz1);
   xyz2.upload(xyz2);
   xyz3.upload(xyz3);
-  if (!(++i % 60)) {
+  if (!(++i % 120)) {
     j *= -1;
   }
   return requestAnimationFrame(render);
