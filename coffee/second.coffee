@@ -12,7 +12,7 @@ export class M4                 extends Float32Array
 
     #? https://webgl2fundamentals.org/webgl/lessons/webgl-3d-perspective.html
 
-    Object.defineProperty this, "identity", get : ->
+    Object.defineProperty this, "Identity", value : ->
         new M4 [
             1,  0,  0,  0,
             0,  1,  0,  0,
@@ -22,7 +22,7 @@ export class M4                 extends Float32Array
 
     Object.defineProperty this::, "position", get : ->
         @subarray 12, 15
-        
+    
     @Camera     : class Camera extends this
         constructor : ( yFov, rAspect, zNear, zFar ) ->
 
@@ -193,7 +193,8 @@ export class M4                 extends Float32Array
 CHARCODE_VERTICES = JSON.parse sessionStorage.font
 
 gl = document.getElementById("gl").getContext "webgl2"
-buffer = gl.createBuffer()
+verticesBuffer = gl.createBuffer()
+positionsBuffer = gl.createBuffer()
 program = gl.createProgram()
 
 vshader = gl.createShader gl.VERTEX_SHADER
@@ -211,39 +212,62 @@ gl.attachShader program, fshader
 gl.linkProgram program
 gl.useProgram program
 
-arrClearColor   = Float32Array.of 0.05, .2, 0.3, 1
-drawBuffer      = new Float32Array new ArrayBuffer 1e6
 
-viewMatrix      = new M4.Camera 90, innerWidth/innerHeight, 0.1, 1e4
+arrClearColor   = Float32Array.of 0.05, .2, 0.3, 1
+verticesBufferArray      = new Float32Array new ArrayBuffer 1e6
+
+instanceCount = 1
+lengthPerInstance = 3
+bytesPerInstance = 12
+maxInstanceCount = 100
+positionsBufferArray = new Float32Array new ArrayBuffer maxInstanceCount * bytesPerInstance
 
 u_ViewMatrix    = gl.getUniformLocation program, "u_ViewMatrix"
 u_Color         = gl.getUniformLocation program, 'u_Color'
+
+i_Position      = gl.getAttribLocation  program, 'i_Position'
 a_Position      = gl.getAttribLocation  program, 'a_Position'
+a_ModelMatrix   = gl.getAttribLocation  program, "a_ModelMatrix"
+
+viewMatrix      = new M4.Camera 90, innerWidth/innerHeight, 0.1, 1e4
+modelMatrix     = new M4.Identity()
 
 glClearColor    = gl.clearColor.apply.bind gl.clearColor, gl, arrClearColor
 glClear         = gl.clear.bind gl, gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT
 
-glBindBuffer    = gl.bindBuffer.bind gl, gl.ARRAY_BUFFER, buffer
-glBufferOffset  = 0
-glDrawTriangles = 0
 
-Object.defineProperty drawBuffer, "resize", value : ( byteLength ) ->
-    byteOffset = glBufferOffset
-    glBufferOffset += byteLength
+glVerticesOffset  = 0
+glDrawTriangles = 0
+glDrawPoints = 0
+
+
+redefine = ->
+    #rebind every time
+    glDrawTriangles = gl.drawArraysInstanced.bind(
+        gl, gl.TRIANGLES, 0, glVerticesOffset / 12, instanceCount
+    )
+
+    glDrawPoints = gl.drawArraysInstanced.bind(
+        gl, gl.POINTS, 0, glVerticesOffset / 12, instanceCount
+    )
+
+Object.defineProperty verticesBufferArray, "resize", value : ( byteLength ) ->
+    byteOffset = glVerticesOffset
+    glVerticesOffset += byteLength
+
+    gl.bindBuffer gl.ARRAY_BUFFER, verticesBuffer
 
     #resize allocated on glBuffer
     gl.bufferData(
         gl.ARRAY_BUFFER, @byteLength, gl.STATIC_DRAW
     )
 
-    #rebind every time
-    glDrawTriangles = gl.drawArrays.bind(
-        gl, gl.TRIANGLES, 0, glBufferOffset / 12
-    )
+    redefine()
 
     byteOffset
 
-Object.defineProperty drawBuffer, "enable", value : ->
+Object.defineProperty verticesBufferArray, "enable", value : ->
+
     gl.enableVertexAttribArray a_Position
     gl.vertexAttribPointer(
         a_Position,  # location
@@ -256,15 +280,50 @@ Object.defineProperty drawBuffer, "enable", value : ->
 
     0
     
-    
-Object.defineProperty drawBuffer, "malloc", value : ( pointCount ) ->    
+
+Object.defineProperty positionsBufferArray, "instance", value : ->
+
+    gl.bindBuffer gl.ARRAY_BUFFER, positionsBuffer
+
+    byteOffset  = bytesPerInstance * instanceCount++
+    begin       = byteOffset / 4
+    length      = bytesPerInstance / 4
+    end         = begin + length
+    subarray    = @subarray begin, end
+
+    gl.bindBuffer gl.ARRAY_BUFFER, positionsBuffer
+    gl.bufferData gl.ARRAY_BUFFER, byteOffset + bytesPerInstance, gl.DYNAMIC_DRAW
+
+    Object.defineProperty subarray, "upload", 
+        value : ( arr ) ->
+            @set arr if arr
+
+            gl.bindBuffer gl.ARRAY_BUFFER, positionsBuffer
+            gl.bufferSubData gl.ARRAY_BUFFER, @byteOffset, positionsBufferArray, begin, length
+            gl.enableVertexAttribArray i_Position
+            gl.vertexAttribPointer(
+                i_Position,  # location
+                3,           # size (num values to pull from buffer per iteration)
+                gl.FLOAT,    # type of data in buffer
+                false,       # normalize
+                12,          # stride (0 = compute from size and type above)
+                0,        # offset in buffer
+            )
+
+            redefine()
+
+            this
+        
+
+
+Object.defineProperty verticesBufferArray, "malloc", value : ( pointCount ) ->    
     length = pointCount * 3
     byteLength = length * 4
 
     dstByteOffset = @resize byteLength
 
     begin = dstByteOffset / 4
-    array = @slice begin, begin + length
+    array = @subarray begin, begin + length
 
     Object.defineProperty array, "dstByteOffset",
         value : dstByteOffset
@@ -272,7 +331,48 @@ Object.defineProperty drawBuffer, "malloc", value : ( pointCount ) ->
     Object.defineProperty array, "upload",
         value : ( values = [] ) ->
             @set values
-            gl.bufferSubData gl.ARRAY_BUFFER, @dstByteOffset, @
+            gl.bindBuffer gl.ARRAY_BUFFER, verticesBuffer
+            gl.bufferSubData gl.ARRAY_BUFFER, @dstByteOffset, verticesBufferArray, begin, length
+
+            gl.enableVertexAttribArray a_Position
+            gl.vertexAttribPointer(
+                a_Position,  # location
+                3,           # size (num values to pull from buffer per iteration)
+                gl.FLOAT,    # type of data in buffer
+                false,       # normalize
+                0,          # stride (0 = compute from size and type above)
+                0,           # offset in buffer
+            )
+
+            this
+
+Object.defineProperties modelMatrix, {
+    dx: { writable:1, value:  0 },
+    dy: { writable:1, value:  0 },
+    dz: { writable:1, value:  0 },
+    
+    rx: { writable:1, value:  0 },
+    ry: { writable:1, value:  0 },
+    rz: { writable:1, value:  0 },
+
+    sx: { writable:1, value:  1 },
+    sy: { writable:1, value:  1 },
+    sz: { writable:1, value:  1 },
+    
+    location    : value : gl.getAttribLocation( program, "a_ModelMatrix" )
+    upload      : value : ( mat4 ) ->
+        @set mat4 if mat4
+        gl.enableVertexAttribArray @location
+        gl.vertexAttribPointer(
+            @location,  # location
+            4,           # size (num values to pull from buffer per iteration)
+            gl.FLOAT,    # type of data in buffer
+            false,       # normalize
+            64,          # stride (0 = compute from size and type above)
+            0,           # offset in buffer
+        )
+
+}
 
 Object.defineProperties viewMatrix, {
     dx: { writable:1, value:  0 },
@@ -313,38 +413,67 @@ init = ->
             innerHeight * devicePixelRatio
         )
         
+    gl.vertexAttribDivisor i_Position, 1
     glViewport()
     glClearColor()
-    glBindBuffer()
     glClear()
 
-i = 0
-render = ->
-    glClear()
-    glDrawTriangles()
-
-    viewMatrix.dx += 0.01
-    viewMatrix.upload()
-
-    if  i++ < 1000
-        requestAnimationFrame render
 
 charMalloc = ( char ) ->
     vertices   = CHARCODE_VERTICES[ char.charCodeAt 0 ]
     pointCount = vertices.length / 3
-    charBuffer = drawBuffer.malloc pointCount
+    charBuffer = verticesBufferArray.malloc pointCount
     charBuffer . upload vertices
-    drawBuffer . enable()
+    verticesBufferArray . enable()
+
     charBuffer
 
 
 init()
 
-_e00 = charMalloc("f")
+#_e00 = charMalloc("f")
+verticesBufferArray.malloc(3).upload([
+    4, -2, -1,
+    -4, -2, 1,
+    0, 2, -2,
+])
+
+xyz1 = positionsBufferArray.instance()
+xyz2 = positionsBufferArray.instance()
+xyz3 = positionsBufferArray.instance()
+xyz1.upload([7, -1, 0])
+xyz2.upload([5, -2, 0])
+xyz3.upload([-5, 1, 0])
 
 
-viewMatrix.upload()
+i = 0
+j = 1
+render = ->
+    glClear()
+    glDrawTriangles()
+    glDrawPoints()
 
-log viewMatrix
+    
+    viewMatrix.dx += 0.1 * j
+    viewMatrix.dy -= 0.1 * j
+
+    #viewMatrix.dz -= 0.01 * j
+    #viewMatrix.rz += 0.01 * j
+    viewMatrix.upload()
+
+    xyz1[1] += 0.1 * j
+    xyz2[0] += 0.3 * j
+    xyz3[0] += 0.1 * j
+    xyz3[1] += 0.02 * j
+    xyz3[2] -= 0.05 * j
+
+    xyz1.upload(xyz1)
+    xyz2.upload(xyz2)
+    xyz3.upload(xyz3)
+
+    unless ++i % 60
+        j *= -1
+
+    requestAnimationFrame render
 
 render()

@@ -36,12 +36,14 @@
         <!-- vertex shader -->
         <script id="vshader" type="x-shader/x-vertex">
             attribute vec3 a_Position;
+            attribute vec3 i_Position;
+            attribute mat4 a_ModelMatrix;
             uniform mat4 u_ViewMatrix;
              
             void main() {
               // Multiply the position by the matrix.
               //gl_Position = u_ViewMatrix * vec4(a_Position, 1.);
-                gl_Position = u_ViewMatrix * vec4(a_Position, 1.0);
+                gl_Position = u_ViewMatrix * vec4(a_Position + i_Position, 1.0);
               gl_PointSize = 10.;
             }
         </script>
