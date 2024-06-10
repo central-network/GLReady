@@ -9,7 +9,7 @@ export default Bind = (function() {
       });
     }
 
-    constructor(canvas, buffer = new SharedArrayBuffer(80)) {
+    constructor(canvas, buffer = new SharedArrayBuffer(80 * 4)) {
       var byteOffset, document, events, values;
       super();
       if (!isNaN(buffer.byteOffset)) {

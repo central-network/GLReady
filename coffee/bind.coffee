@@ -5,7 +5,7 @@ export default class Bind extends EventTarget
     #don't split in/out, no need to check is reached top
     linearInOut : ( v ) -> [ ...[ 0 ... 10 ], ...[ 10 .. 0 ] ].map (d) -> v * d/10
 
-    constructor : ( canvas, buffer = new SharedArrayBuffer 80 ) ->
+    constructor : ( canvas, buffer = new SharedArrayBuffer 80 * 4 ) ->
 
         super()
 
