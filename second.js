@@ -304,6 +304,7 @@ Object.defineProperty(verticesBufferArray, "upload", {
       return Object.defineProperty(vertices, "instance", {
         get: function() {
           var instanceBegin, instanceByteOffset, instanceEnd, instanceLength, instanceSubarray;
+          ++this.clone;
           instanceByteOffset = BYTES_PER_INSTANCE * instanceCount++;
           instanceLength = BYTES_PER_INSTANCE / 4;
           instanceBegin = instanceByteOffset / 4;
@@ -461,13 +462,13 @@ charMalloc = function(char) {
 init();
 
 //_e00 = charMalloc("f")
-model1 = verticesBufferArray.upload([-10, 0, 0, -5, 0, 0, 0, -5, 0]);
+model1 = verticesBufferArray.upload(CHARCODE_VERTICES["a".charCodeAt(0)]);
 
 model1instance1 = model1.instance;
 
 model1instance2 = model1.instance;
 
-model2 = verticesBufferArray.upload([10, 15, 0, 10, -15, 0, 15, 0, 0]);
+model2 = verticesBufferArray.upload(CHARCODE_VERTICES["f".charCodeAt(0)]);
 
 model2instance1 = model2.instance;
 
@@ -481,15 +482,10 @@ j = 1;
 
 render = function() {
   glClear();
-  gl.bindBuffer(gl.ARRAY_BUFFER, bufferInstancesInfo);
-  gl.vertexAttribPointer(i_Position, 3, gl.FLOAT, false, 0, 0); // location // size (num values to pull from buffer per iteration) // type of data in buffer // normalize // stride (0 = compute from size and type above) // offset in buffer
   model1instance1.translateY(+0.3 * j / 2);
   model1instance2.translateX(-0.5 * j);
   model1instance2.translateX(-0.3 * j);
   model1instance2.translateZ(0.3 * j);
-  gl.bufferSubData(gl.ARRAY_BUFFER, 0, arrayInstancesInfo, 0, 6);
-  gl.vertexAttribPointer(i_Position, 3, gl.FLOAT, false, 12, 0);
-  gl.drawArraysInstanced(gl.POINTS, 0, 3, 2);
   model2instance1.translateZ(0.1 * j * 2);
   model2instance1.translateY(0.1 * j * 2);
   model2instance1.translateX(0.1 * j * 2);
@@ -497,15 +493,17 @@ render = function() {
   model2instance2.translateY(-0.2 * j * 2);
   model2instance2.translateZ(0.2 * j * 2);
   model2instance3.translateX(0.3 * j);
+  gl.bindBuffer(gl.ARRAY_BUFFER, bufferInstancesInfo);
+  gl.bufferSubData(gl.ARRAY_BUFFER, 0, arrayInstancesInfo, 0, 6);
+  gl.vertexAttribPointer(i_Position, 3, gl.FLOAT, false, 12, 0);
+  gl.drawArraysInstanced(gl.TRIANGLES, model1.start, model1.count, model1.clone);
   gl.bufferSubData(gl.ARRAY_BUFFER, 24, arrayInstancesInfo, 6, 9);
   gl.vertexAttribPointer(i_Position, 3, gl.FLOAT, false, 12, 24);
-  gl.drawArraysInstanced(gl.TRIANGLES, 3, 3, 3);
+  gl.drawArraysInstanced(gl.TRIANGLES, model2.start, model2.count, model2.clone);
   viewMatrix.dx += 0.01 * j;
   viewMatrix.ry -= 0.01 * j / 2;
   viewMatrix.rx -= 0.01 * j;
   viewMatrix.rz += 0.005 * j;
-  //viewMatrix.dz -= 0.01 * j
-  //viewMatrix.rz += 0.01 * j
   viewMatrix.upload();
   if (!(++i % 120)) {
     j *= -1;
