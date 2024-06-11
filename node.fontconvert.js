@@ -24,7 +24,11 @@ fs.readdirSync(dir).filter(function(file) {
   fcontent = fs.readFileSync(dir + file).toString();
   return chars[charcode] = fcontent.substring(fcontent.indexOf("v "), fcontent.indexOf("vt ")).replace(/v /g, "").split(/\n/).flatMap(function(line) {
     var x, y, z;
-    [x, z, y] = line.split(" ").map(parseFloat);
+    [y, z, x] = line.split(" ").map(function(v) {
+      return parseFloat(v);
+    }).filter(function(v) {
+      return !isNaN(v);
+    });
     return [x, y, z];
   });
 });

@@ -28,10 +28,11 @@ fs
             .replace( /v /g, "" )
             .split( /\n/)
             .flatMap ( line ) ->
-                [ x, z, y ] = line
+                [y,z,x] = line
                     .split( " " )
-                    .map parseFloat
-                [ x, y, z ]
+                    .map (v) -> parseFloat v
+                    .filter (v) -> !isNaN v
+                [x,y,z]
 
 fs.writeFile "ibmplex.json", JSON.stringify( chars, null, "  " ), ->
     console.log "font file created: ibmplex.json"

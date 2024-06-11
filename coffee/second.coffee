@@ -1,6 +1,10 @@
 #`import font from "./ibmplex.json" with { type: "json" }`
+#sessionStorage.setItem "font", JSON.stringify font
+
 
 {log,warn,error} = console
+
+
 
 Object.defineProperties Math,
     rad             : value : ( deg ) -> deg * Math.PI / 180
@@ -189,10 +193,10 @@ export class M4                 extends Float32Array
     zTranslate  : ( tz ) ->
         @multiply @zTranslation tz
 
-
 CHARCODE_VERTICES = JSON.parse sessionStorage.font
 
 gl = document.getElementById("gl").getContext "webgl2"
+iLE = new Uint8Array( Uint16Array.of(1).buffer )[0] is 1
 verticesGLBuffer = gl.createBuffer()
 bufferInstancesInfo = gl.createBuffer()
 program = gl.createProgram()
@@ -214,12 +218,13 @@ gl.useProgram program
 
 
 arrClearColor   = Float32Array.of 0.05, .2, 0.3, 1
+backgroundColor = arrClearColor.slice(0,3).map( (i) -> i * 0xff ).join " "
+document.body.style.backgroundColor = "rgb(#{backgroundColor})"
 
 pointCount = 0
 instanceCount = 0
 verticesOffset = 0
 
-lengthPerInstance = 3
 BYTES_PER_VERTEX = 12
 BYTES_PER_INSTANCE = 12
 maxInstanceCount = 100
@@ -240,7 +245,7 @@ i_Position      = gl.getAttribLocation  program, 'i_Position'
 a_Position      = gl.getAttribLocation  program, 'a_Position'
 a_ModelMatrix   = gl.getAttribLocation  program, "a_ModelMatrix"
 
-viewMatrix      = new M4.Camera 90, innerWidth/innerHeight, 0.1, 1e4
+viewMatrix      = new M4.Camera 90, innerWidth/innerHeight, 0.01, 1e5
 modelMatrix     = new M4.Identity()
 
 glClearColor    = gl.clearColor.apply.bind gl.clearColor, gl, arrClearColor
@@ -306,9 +311,9 @@ Object.defineProperty verticesBufferArray, "upload", value : ( array ) ->
             instanceSubarray    = arrayInstancesInfo.subarray instanceBegin, instanceEnd
 
             return ( ( instance ) ->
-                translateX : ( d, offset ) -> instance[0] += d
-                translateY : ( d, offset ) -> instance[1] += d
-                translateZ : ( d, offset ) -> instance[2] += d
+                translateX : -> instance[0] += arguments[0]
+                translateY : -> instance[1] += arguments[0]
+                translateZ : -> instance[2] += arguments[0]
             )( instanceSubarray )
 
     )(subarray)
@@ -346,15 +351,15 @@ Object.defineProperties modelMatrix, {
 Object.defineProperties viewMatrix, {
     dx: { writable:1, value:  0 },
     dy: { writable:1, value:  0 },
-    dz: { writable:1, value:-30 },
+    dz: { writable:1, value: -100 },
     
-    rx: { writable:1, value:  0 },
-    ry: { writable:1, value:  Math.PI },
-    rz: { writable:1, value:  Math.PI/2 },
+    rx: { writable:1, value: 0 },
+    ry: { writable:1, value: 0 },
+    rz: { writable:1, value: 0 },
 
-    sx: { writable:1, value:  1 },
-    sy: { writable:1, value:  1 },
-    sz: { writable:1, value:  1 },
+    sx: { writable:1, value: 1 },
+    sy: { writable:1, value: 1 },
+    sz: { writable:1, value: 1 },
     
     location: value : gl.getUniformLocation( program, "u_ViewMatrix" )
 }
@@ -411,59 +416,189 @@ charMalloc = ( char ) ->
     charBuffer
 
 
-
 init()
 
-#_e00 = charMalloc("f")
-model1 = verticesBufferArray.upload(CHARCODE_VERTICES[ "a".charCodeAt 0 ])
 
-model1instance1 = model1.instance
-model1instance2 = model1.instance
+text = {
+    letters : {}
+    lineCount : 0
+    letterCount : 0
+    letterCount : 0
+    length : 0
+    
+    charCount   : 0
+    lineWidth   : 100
+    lineHeight  : 10
+    letterSpace : 6.0
+    offsetLeft  : 0
+    
+    positions : new Float32Array new ArrayBuffer 0, maxByteLength : 400 * 12
 
-model2 = verticesBufferArray.upload(CHARCODE_VERTICES[ "f".charCodeAt 0 ])
+    rebind : -> for char, info of @letters
 
-model2instance1 = model2.instance
-model2instance2 = model2.instance
-model2instance3 = model2.instance
+        Object.defineProperty info, "vertexAttribPointer",
+            configurable: on
+            value : gl.vertexAttribPointer.bind(
+                gl, i_Position, 3, gl.FLOAT, false, 12, info.offset
+            )
+
+        Object.defineProperty info, "drawArraysInstanced",
+            configurable: on
+            value : gl.drawArraysInstanced.bind(
+                gl, gl.TRIANGLES, info.model.start, info.model.count,  info.model.clone
+            )     
+
+        Object.defineProperty info, "bufferSubData",
+            configurable: on
+            value : gl.bufferSubData.bind(
+                gl, gl.ARRAY_BUFFER, info.offset, text.positions.slice(), info.begin, info.length * 3
+            )     
+
+        info
+
+    draw : ( force = on ) ->
+        for k, l of @letters when force or l.needsUpload
+            l.bufferSubData()
+            l.vertexAttribPointer()
+            l.drawArraysInstanced()
+            l.needsUpload = 0 
+}
+
+textBufferView = new DataView text.positions.buffer
+
+writeLetter = ( letter ) ->
+
+    text.letterCount += 1
+
+    if !l = text.letters[ letter ]
+        l = text.letters[ letter ] = []
+
+        charCode = letter.charCodeAt 0
+
+        Object.defineProperty l, "begin",
+            value : text.length
+            writable: on
+
+        Object.defineProperty l, "offset",
+            value : text.length * 4
+            writable: on
+
+        Object.defineProperty l, "model",
+            value : verticesBufferArray.upload(
+                vertices = CHARCODE_VERTICES[ charCode ]
+            )
+
+        if  vertices.length % 3
+            throw [ MOD_TRIANGLE: letter ]
+
+        min = +Infinity
+        max = -Infinity
+        len = vertices.length
+        i = 0
+        
+        while i < len
+            if  null isnt val = vertices[i]
+                if  val > max 
+                    max = val
+
+                if  min > val
+                    min = val
+            i += 3
+        
+        Object.defineProperties l,
+            xMax  : value : max
+            xMin  : value : min
+            width : value : max - min
+            offsetLeft : value : (
+                (text.letterSpace / 2) -
+                ((max - min) / 2)
+            )
+
+    text.positions.buffer.resize(
+        ( text.length += 3 ) * 4
+    )
+
+    next = no
+    for char, info of text.letters
+        if  next is on
+            text.positions.copyWithin(
+                info.begin + 3, info.begin
+            )
+            next = -1
+        
+        if  next is -1
+            info.begin += 3
+            info.offset += 12
+            continue
+
+        next = char is letter
+
+            
+    letterIndex     = Object.keys( text.letters ).indexOf letter
+    instanceIndex   = -1 + l.push instance = l.model.instance
+    attributeOffset = ( l.begin + instanceIndex * 3 ) * 4
+
+    prop = ->
+        (( letter, byteOffset ) ->
+            configurable : on
+            get : textBufferView.getFloat32.bind textBufferView, byteOffset, iLE
+            set : ( value ) ->
+                l.needsUpload = !textBufferView.setFloat32 @l.offset + @i, value, iLE
+        )(letter, arguments[0])
+
+    Object.defineProperties instance,
+        i : value : instanceIndex * 12
+        l : value : l
+        x : prop attributeOffset
+        y : prop attributeOffset + 4
+        z : prop attributeOffset + 8
+
+    left = text.letterSpace * text.charCount++
+    top  = Math.trunc left / text.lineWidth
+
+    instance.x = text.offsetLeft + l.width/2
+    #instance.y = top * text.lineHeight 
+
+    text.offsetLeft += l.width + 5
+
+    log letter, text.offsetLeft, l.width/2
+
+    l.needsUpload = 1
+    instance
+
+log text.positions.slice 0
+
+writeLetter "f"
+log text.positions.slice 0
+
+writeLetter "e"
+log text.positions.slice 0
+writeLetter "f"
+log text.positions.slice 0
+writeLetter "b"
+log text.positions.slice 0
+writeLetter "c"
+log text.positions.slice 0
+writeLetter "2"
+log text.length
+
+
+log text.rebind()
+log text.positions.slice 0
 
 
 i = 0
 j = 1
 render = ->
-    glClear()
-    
-
-    model1instance1.translateY(+0.3 * j / 2)
-    model1instance2.translateX(-0.5 * j)
-    model1instance2.translateX(-0.3 * j)
-    model1instance2.translateZ(0.3 * j)
-
-    model2instance1.translateZ(0.1 * j * 2)
-    model2instance1.translateY(0.1 * j * 2)
-    model2instance1.translateX(0.1 * j * 2)
-    model2instance2.translateX(0.2 * j * 2)
-    model2instance2.translateY(-0.2 * j * 2)
-    model2instance2.translateZ(0.2 * j * 2,)
-    model2instance3.translateX(0.3 * j)
-
-    gl.bindBuffer           gl.ARRAY_BUFFER,    bufferInstancesInfo
-
-    gl.bufferSubData        gl.ARRAY_BUFFER,    0 , arrayInstancesInfo,  0,  6
-    gl.vertexAttribPointer  i_Position,         3,  gl.FLOAT, false,    12,  0  
-    gl.drawArraysInstanced  gl.TRIANGLES,       model1.start,  model1.count,  model1.clone
-
-    gl.bufferSubData        gl.ARRAY_BUFFER,    24, arrayInstancesInfo,  6,  9
-    gl.vertexAttribPointer  i_Position,         3,  gl.FLOAT, false,    12, 24
-    gl.drawArraysInstanced  gl.TRIANGLES,       model2.start, model2.count, model2.clone
-    
-    viewMatrix.dx += 0.01 * j
-    viewMatrix.ry -= 0.01 * j/2
-    viewMatrix.rx -= 0.01 * j
-    viewMatrix.rz += 0.005 * j
+    text.draw()
+        
+    viewMatrix.dx += 0.4 * j
+    #viewMatrix.dy += 0.4 * j
     viewMatrix.upload()
 
     unless ++i % 120
         j *= -1
+
 
     requestAnimationFrame render
 
