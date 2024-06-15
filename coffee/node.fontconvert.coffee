@@ -31,9 +31,15 @@ fs
                 [y,z,x] = line
                     .split( " " )
                     .map (v) -> parseFloat v
-                    .filter (v) -> !isNaN v
                 [x,y,z]
+
+        if -1 isnt i = chars[ charcode ].findIndex (v) -> isNaN v 
+            chars[ charcode ] = chars[ charcode ].slice(
+                0, i - i % 3
+            )
+
 
 fs.writeFile "ibmplex.json", JSON.stringify( chars, null, "  " ), ->
     console.log "font file created: ibmplex.json"
+    #font = JSON.parse fs.readFileSync "./ibmplex.json"
     process.exit()
