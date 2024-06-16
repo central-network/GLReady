@@ -1,13 +1,16 @@
-`import font from "./ibmplex.json" with { type: "json" }`
-sessionStorage.setItem "font", JSON.stringify font
+#`import font from "./ibmplex.json" with { type: "json" }`
+#sessionStorage.setItem "font", JSON.stringify font
+#fetch("test.dump").then( (r) -> r.blob() ).then( (b) -> b.arrayBuffer() ).then (udp) -> 
+#    sessionStorage.setItem "dump", new Uint8Array( udp ).join(" ")
 
 
 {log,warn,error} = console
 
+font = JSON.parse sessionStorage.font
+dump = Uint8Array.from sessionStorage.dump.split " "
+
 delay = -> new Promise (done) =>
     setTimeout done, arguments[0] or 1000
-
-
 
 Object.defineProperties Math,
     rad             : value : ( deg ) -> deg * Math.PI / 180
@@ -15,8 +18,8 @@ Object.defineProperties Math,
     powsum          : value : ( arr, pow = 2 ) ->
         [ ...arr ].flat().reduce (a, b) -> a + Math.pow b, pow
 
+do ->    
 
-do ->        
     class M4 extends Float32Array
 
         #? https://webgl2fundamentals.org/webgl/lessons/webgl-3d-perspective.html
@@ -198,14 +201,319 @@ do ->
         zTranslate  : ( tz ) ->
             @multiply @zTranslation tz
 
-    CHARCODE_VERTICES = JSON.parse sessionStorage.font
+    class UX extends EventTarget
 
+        @byteLength : 256
+    
+        #don't split in/out, no need to check is reached top
+        linearInOut : ( v ) -> [ ...[ 0 ... 10 ], ...[ 10 .. 0 ] ].map (d) -> v * d/10
+    
+        constructor : ( canvas, buffer = new ArrayBuffer 80 * 4 ) ->
+            super()
+
+            if  buffer instanceof M4
+                matrix = buffer
+                buffer = new ArrayBuffer 80 * 4
+                byteOffset = 0
+
+            else
+                matrix = new M4
+                if !isNaN buffer.byteOffset
+                    { buffer, byteOffset } = buffer
+                else byteOffset = 0
+    
+            @events = events = new Uint32Array buffer, byteOffset, 24       #? 96 bytes
+            @values = values = new Float32Array buffer, byteOffset + 96, 14    #? 56 bytes
+
+            Object.defineProperties this,
+
+                matrix      :
+                    value   : matrix
+    
+                press       : 
+                    set     : ->
+                        events[ @click = arguments[ 0 ] ] = 1
+    
+                release     : 
+                    set     : -> events[ arguments[ 0 ] ] = 0
+    
+                rotating    :
+                    get     : -> @looking and events[ 0 ]
+    
+                draging     :
+                    get     : -> @looking and events[ 2 ]
+    
+                running     :
+                    get     : ->  @moving and @shift
+    
+                offsetX     :
+                    set     : ->
+                        @dx = -@x + (@x = arguments[ 0 ])
+                        @ry = ( - @dx / 100 ) % Math.PI
+    
+                offsetY     :
+                    set     : ->
+                        @dy = +@y - (@y = arguments[ 0 ])
+                        @rx = ( - @dy / 100 ) % Math.PI
+    
+                deltaX      :
+                    set     : ->
+                        @sx = ( arguments[ 0 ] )
+    
+                deltaY      :
+                    set     : ->
+                        @sz = ( @sy = arguments[ 0 ] ) / 10
+
+                        viewMatrix.dz = Math.max( -300, Math.min(
+                            300, viewMatrix.dz + @sz ) )
+
+                        @matrix.upload()
+
+    
+                moving      :
+                    get     : -> events[ 12 ]
+                    set     : -> events[ 12 ] = arguments[ 0 ]
+    
+                jumping     :
+                    get     : -> events[ 19 ]
+                    set     : -> events[ 19 ] = arguments[ 0 ]
+    
+                shift       :
+                    get     : -> events[ 20 ]
+                    set     : -> events[ 20 ] = arguments[ 0 ]
+    
+                alt         :
+                    get     : -> events[ 21 ]
+                    set     : -> events[ 21 ] = arguments[ 0 ]
+    
+                ctrl        :
+                    get     : -> events[ 22 ]
+                    set     : -> events[ 22 ] = arguments[ 0 ]
+    
+                meta        :
+                    get     : -> events[ 23 ]
+                    set     : -> events[ 23 ] = arguments[ 0 ]
+    
+                forward     :
+                    get     : -> events[ 13 ]
+                    set     : -> events[ 13 ] = arguments[ 0 ]
+    
+                backward    :
+                    get     : -> events[ 14 ]
+                    set     : -> events[ 14 ] = arguments[ 0 ]
+    
+                left        :
+                    get     : -> events[ 15 ]
+                    set     : -> events[ 15 ] = arguments[ 0 ]
+    
+                right       :
+                    get     : -> events[ 16 ]
+                    set     : -> events[ 16 ] = arguments[ 0 ]
+    
+                up          :
+                    get     : -> events[ 17 ]
+                    set     : -> events[ 17 ] = arguments[ 0 ]
+    
+                down        :
+                    get     : -> events[ 18 ]
+                    set     : -> events[ 18 ] = arguments[ 0 ]
+    
+                looking     :
+                    get     : -> events[ 11 ]
+                    set     : -> events[ 11 ] = arguments[ 0 ]
+                    
+                zooming     :
+                    get     : -> events[ 10 ]
+                    set     : -> events[ 10 ] = arguments[ 0 ]
+    
+                dblclick    :
+                    get     : -> events[  9 ]
+                    set     : -> events[  9 ] = arguments[ 0 ]
+    
+                click       :
+                    get     : -> events[  8 ]
+                    set     : -> events[  8 ] = arguments[ 0 ]
+    
+                x           :
+                    get     : -> values[  0 ]
+                    set     : -> values[  0 ] = arguments[ 0 ]
+                        
+                dx          :
+                    get     : -> values[  1 ]
+                    set     : ( dx ) ->
+                        values[ 1 ] = dx
+
+                        if  @draging
+                            matrix.dx += dx
+                            @matrix.upload()
+
+                dy          :
+                    get     : -> values[ 6 ]
+                    set     : ( dy ) ->
+                        values[ 6 ] = dy
+
+                        if  @draging
+                            matrix.dy += dy
+                            @matrix.upload()
+                        
+                sx          :
+                    get     : -> values[  3 ]
+                    set     : -> values[  3 ] = arguments[ 0 ]
+                        
+                vx          :
+                    get     : -> values[  4 ]
+                    set     : ( vx ) ->
+                        values[ 4 ] = vx
+
+                        
+                y           :
+                    get     : -> values[  5 ]
+                    set     : -> values[  5 ] = arguments[ 0 ]
+                        
+
+
+                rx          :
+                    get     : -> values[ 2 ]
+                    set     : ( rx ) ->
+                        values[ 2 ] = rx
+                        
+                        if  @rotating
+                            matrix.rx += rx
+                            @matrix.upload()
+                        
+
+                ry          :
+                    get     : -> values[ 7 ]
+                    set     : ( ry ) ->
+                        values[ 7 ] = ry
+
+                        if  @rotating
+                            matrix.ry -= ry
+                            @matrix.upload()
+
+                        
+                sy          :
+                    get     : -> values[  8 ]
+                    set     : -> values[  8 ] = arguments[ 0 ]
+                        
+                vy          :
+                    get     : -> values[  9 ]
+                    set     : -> values[  9 ] = arguments[ 0 ]
+                    
+                sz          :
+                    get     : -> values[ 10 ]
+                    set     : -> values[ 10 ] = arguments[ 0 ]
+                    
+                dz          :
+                    get     : -> values[ 11 ]
+                    set     : -> values[ 11 ] = arguments[ 0 ]
+                        
+                factor      :
+                    get     : -> values[ 12 ]
+                    set     : -> values[ 12 ] = arguments[ 0 ]
+    
+                time        :
+                    get     : -> values[ 13 ]
+                    set     : ->
+                        events.fill( 0, 8, 12 )
+                        values[ 13 ] = arguments[ 0 ]
+    
+            window.addEventListener "pointerup",    @pointerup.bind @
+            window.addEventListener "pointermove",  @pointermove.bind( @ ), passive: !0
+            window.addEventListener "pointerdown",  @pointerdown.bind @
+            window.addEventListener "dblclick",     @doubleclick.bind @
+            window.addEventListener "wheel",        @wheel.bind( @ ), passive: !0
+            window.addEventListener "contextmenu",  @contextmenu.bind @
+            
+            document = canvas.ownerDocument
+            document.addEventListener "keyup",      @keyup.bind @
+            document.addEventListener "keydown",    @keydown.bind @ 
+
+            @factor = 5
+                
+            null
+
+        e           : -> this
+
+        wheel       : ( e ) -> @e({ @deltaX    , @deltaY  } = e ).zooming = 1
+        pointermove : ( e ) -> @e({ @offsetX   , @offsetY } = e ).looking = 1
+        pointerup   : ( e ) -> @e(  @release   = e.button )
+        doubleclick : ( e ) -> @e(  @dblclick  = e.button )
+        pointerdown : ( e ) -> @e(  @press     = e.button )
+    
+        contextmenu : ( e ) -> e.preventDefault()
+        keydown     : ( e ) ->
+            switch e.code 
+                when "KeyW", "ArrowUp"      then @forward   = 1
+                when "KeyS", "ArrowDown"    then @backward  = 1
+                when "KeyA", "ArrowLeft"    then @right     = 1
+                when "KeyD", "ArrowRight"   then @left      = 1
+                when "Space"                then @up        = 1
+            
+            if  @forward or @backward or @right or @left
+                @moving = 1
+    
+            if  @up
+                @jumping = 1
+    
+            @move e
+    
+        keyup       : ( e ) ->
+            switch e.code
+                when "KeyW", "ArrowUp"      then @forward   = 0
+                when "KeyS", "ArrowDown"    then @backward  = 0
+                when "KeyA", "ArrowLeft"    then @right     = 0
+                when "KeyD", "ArrowRight"   then @left      = 0
+                when "Space"                then @up        = 0
+    
+            if !@forward and !@backward and !@right and !@left
+                @moving = 0
+    
+            if !@up 
+                @jumping = 0
+    
+            @move e
+    
+        move        : ( e ) ->
+            @shift   = e.shiftKey
+            @alt     = e.altKey
+            @meta    = e.metaKey
+            @ctrl    = e.ctrlKey
+    
+            @vy = if @up then -1 else 0 
+    
+            [ @vx, @dz ] = if @right
+    
+                if @forward then [ +1, +1 ]
+                else if @backward then [ +1, -1 ]
+                else [ +1, 0 ]
+    
+            else if @left
+    
+                if @forward then [ -1, +1 ]
+                else if @backward then [ -1, -1 ]
+                else [ -1, 0 ]
+    
+            else if @backward then [ 0, -1 ]
+            else if @forward then [ 0, +1 ]
+    
+            else [ 0, 0 ]
+    
+            factor = @factor
+            factor *= 2 if @running
+    
+            @vx *= factor
+            @dz *= factor
+            @vy *= @factor
+    
+            0
+    
+    ux = null
     gl = document.getElementById("gl").getContext "webgl2"
     iLE = new Uint8Array( Uint16Array.of(1).buffer )[0] is 1
-    verticesGLBuffer = gl.createBuffer()
-    bufferInstancesInfo = gl.createBuffer()
-    program = gl.createProgram()
+    renderQueue = []
 
+    program = gl.createProgram()
     vshader = gl.createShader gl.VERTEX_SHADER
     fshader = gl.createShader gl.FRAGMENT_SHADER
 
@@ -221,7 +529,6 @@ do ->
     gl.linkProgram program
     gl.useProgram program
 
-
     arrClearColor   = Float32Array.of 0.05, .2, 0.3, 1
     backgroundColor = arrClearColor.slice(0,3).map( (i) -> i * 0xff ).join " "
     document.body.style.backgroundColor = "rgb(#{backgroundColor})"
@@ -234,14 +541,16 @@ do ->
     BYTES_PER_INSTANCE = 12
     maxInstanceCount = 100
 
-    verticesBufferArray  = new Float32Array new ArrayBuffer 1e6
-    arrayInstancesInfo = new Float32Array new ArrayBuffer maxInstanceCount * BYTES_PER_INSTANCE
+    verticesBufferArray  = new Float32Array new ArrayBuffer 1e8
+    instancesBufferArray = new Float32Array new ArrayBuffer 1e7
 
-    gl.bindBuffer gl.ARRAY_BUFFER, verticesGLBuffer
+    bindBufferVertices  = gl.bindBuffer.bind gl, gl.ARRAY_BUFFER, gl.createBuffer()
+    bindBufferVertices()
     gl.bufferData gl.ARRAY_BUFFER, verticesBufferArray.byteLength, gl.STATIC_DRAW
 
-    gl.bindBuffer gl.ARRAY_BUFFER, bufferInstancesInfo
-    gl.bufferData gl.ARRAY_BUFFER, arrayInstancesInfo.byteLength, gl.DYNAMIC_READ
+    bindBufferInstances = gl.bindBuffer.bind gl, gl.ARRAY_BUFFER, gl.createBuffer()
+    bindBufferInstances()
+    gl.bufferData gl.ARRAY_BUFFER, instancesBufferArray.byteLength, gl.DYNAMIC_READ
 
     u_ViewMatrix    = gl.getUniformLocation program, "u_ViewMatrix"
     u_Color         = gl.getUniformLocation program, 'u_Color'
@@ -250,33 +559,12 @@ do ->
     a_Position      = gl.getAttribLocation  program, 'a_Position'
     a_ModelMatrix   = gl.getAttribLocation  program, "a_ModelMatrix"
 
-    viewMatrix      = new M4.Camera 90, innerWidth/innerHeight, 0.01, 1e5
-    modelMatrix     = new M4.Identity()
-
+    viewMatrix      = new M4.Camera 90, innerWidth/innerHeight, 0.1, 1e5
+    
     glClearColor    = gl.clearColor.apply.bind gl.clearColor, gl, arrClearColor
     glClear         = gl.clear.bind gl, gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT
 
-
-    drawTriangles   = ->
-    drawPoints      = ->
-
-
-    reup = ( offset ) ->
-
-        gl.enableVertexAttribArray i_Position
-        gl.vertexAttribPointer(
-            i_Position,  # location
-            3,           # size (num values to pull from buffer per iteration)
-            gl.FLOAT,    # type of data in buffer
-            false,       # normalize
-            0, # stride (0 = compute from size and type above)
-            offset  # offset in buffer
-        )
-        
-        gl.vertexAttribDivisor i_Position, 1
-
-
-    Object.defineProperty verticesBufferArray, "upload", value : ( array ) ->    
+    Object.defineProperty verticesBufferArray, "malloc", value : ( array ) ->    
 
         pointCount  = array.length / 3
         length      = array.length
@@ -291,6 +579,8 @@ do ->
             byteLength + verticesOffset
 
         subarray.set array
+
+        bindBufferVertices()
 
         gl.bufferSubData(
             gl.ARRAY_BUFFER, byteOffset,
@@ -313,7 +603,7 @@ do ->
                 instanceLength      = BYTES_PER_INSTANCE / 4
                 instanceBegin       = instanceByteOffset / 4
                 instanceEnd         = instanceBegin + instanceLength
-                instanceSubarray    = arrayInstancesInfo.subarray instanceBegin, instanceEnd
+                instanceSubarray    = instancesBufferArray.subarray instanceBegin, instanceEnd
 
                 return ( ( instance ) ->
                     translateX : -> instance[0] += arguments[0]
@@ -325,38 +615,10 @@ do ->
                         
         subarray
 
-    Object.defineProperties modelMatrix, {
-        dx: { writable:1, value:  0 },
-        dy: { writable:1, value:  0 },
-        dz: { writable:1, value:  0 },
-        
-        rx: { writable:1, value:  0 },
-        ry: { writable:1, value:  0 },
-        rz: { writable:1, value:  0 },
-
-        sx: { writable:1, value:  1 },
-        sy: { writable:1, value:  1 },
-        sz: { writable:1, value:  1 },
-        
-        location    : value : gl.getAttribLocation( program, "a_ModelMatrix" )
-        upload      : value : ( mat4 ) ->
-            @set mat4 if mat4
-            gl.enableVertexAttribArray @location
-            gl.vertexAttribPointer(
-                @location,  # location
-                4,           # size (num values to pull from buffer per iteration)
-                gl.FLOAT,    # type of data in buffer
-                false,       # normalize
-                16,          # stride (0 = compute from size and type above)
-                0,           # offset in buffer
-            )
-
-    }
-
     Object.defineProperties viewMatrix, {
-        dx: { writable:1, value:  0 },
-        dy: { writable:1, value:  0 },
-        dz: { writable:1, value: -150 },
+        dx: { writable:1, value: 0 },
+        dy: { writable:1, value: 0 },
+        dz: { writable:1, value: -5 },
         
         rx: { writable:1, value: 0 },
         ry: { writable:1, value: 0 },
@@ -366,64 +628,24 @@ do ->
         sy: { writable:1, value: 1 },
         sz: { writable:1, value: 1 },
         
-        location: value : gl.getUniformLocation( program, "u_ViewMatrix" )
+        location : value : gl.getUniformLocation( program, "u_ViewMatrix" )
+        toJSON   : value : -> JSON.stringify { @dx,@dy,@dz, @rx,@ry,@rz, @sx,@sy,@sz }
+        store    : value : -> sessionStorage.viewMatrix = @toJSON()
+        restore  : value : -> Object.assign( @, JSON.parse sessionStorage.viewMatrix ).upload()
+        reset    : value : -> sessionStorage.removeItem "viewMatrix"
     }
         
     Object.defineProperty viewMatrix, "upload", value : ->
-        gl.uniformMatrix4fv @location, no,
+        @store gl.uniformMatrix4fv @location, no,
             @slice()
                 .translate @dx, @dy, @dz
                 .rotate @rx, @ry, @rz
                 .scale @sx, @sy, @sz
         0
 
-    init = ->
-        glViewport = ->
-            Object.assign( gl.canvas, {
-                width : innerWidth * devicePixelRatio
-                height : innerHeight * devicePixelRatio
-            }).setAttribute "style", [
-                "width=#{CSS.px innerWidth}"
-                "height=#{CSS.px innerHeight}"
-            ].join ";"
 
-            gl.viewport( 0, 0, 
-                innerWidth * devicePixelRatio, 
-                innerHeight * devicePixelRatio
-            )
-            
-        glViewport()
-        glClearColor()
-        glClear()
-
-        gl.bindBuffer gl.ARRAY_BUFFER, verticesGLBuffer
-        gl.bufferData gl.ARRAY_BUFFER, verticesBufferArray.byteLength, gl.STATIC_DRAW
-
-        gl.enableVertexAttribArray i_Position
-        gl.vertexAttribDivisor i_Position, 1
-
-        gl.enableVertexAttribArray a_Position
-        gl.vertexAttribPointer(
-            a_Position,  # location
-            3,           # size (num values to pull from buffer per iteration)
-            gl.FLOAT,    # type of data in buffer
-            false,       # normalize
-            0, # stride (0 = compute from size and type above)
-            0  # offset in buffer
-        )
-
-
-    charMalloc = ( char ) ->
-        vertices   = CHARCODE_VERTICES[ char.charCodeAt 0 ]
-        pointCount = vertices.length / 3
-        charBuffer = verticesBufferArray.malloc pointCount
-        charBuffer . upload vertices
-        charBuffer
-
-
-    init()
-
-    self.text = {
+    Object.assign self, text : {
+        vertices    : font
         letters     : {}
         chars       : []
 
@@ -435,18 +657,25 @@ do ->
         lineWidth   : 100
         lineHeight  : 10
         letterSpace : 1
+        spaceWidth  : 5
+        fontSize    : 12
+        monospace   : on
+        
 
-        width       : 0
-        height      : 0
+        width       : -300
+        height      : +300
+        depth       : -300
         length      : 0
         
-        buffer      : buf = new ArrayBuffer 1e6 * 12
+        buffer      : buf = new ArrayBuffer 1e7 * 12
         view        : new DataView buf
         positions   : new Float32Array buf 
 
         attrLocation: i_Position
 
         draw        : ( force = on ) ->
+
+            bindBufferInstances()
 
             for instances, i in this.chars
             
@@ -457,6 +686,8 @@ do ->
                     length     = instances.length * 3
                     begin      = byteOffset / 4
                     end        = begin + length
+
+                    
 
                     instances.vertexAttribPointer =
                         gl.vertexAttribPointer.bind(
@@ -482,6 +713,7 @@ do ->
                     instances.needsUpload = 0
                     instances.bufferSubData()
 
+
                 instances.vertexAttribPointer()
                 instances.drawArraysInstanced()
 
@@ -489,7 +721,10 @@ do ->
 
             0
 
-        addLetter   : ( letter ) ->
+        char        : ( letter ) ->
+
+            if !"#{letter}".trim()
+                return @width += @spaceWidth
 
             @length      += 3
             @charCount   += 1
@@ -524,38 +759,35 @@ do ->
                     setPosition : value : ( offset = 0, value ) ->
                         @needsUpload = true 
                         dview.setFloat32 @byteOffset + offset, value, iLE
-
                         
-                chars.byteOffset =
-                    @byteLength - 12
+                        
+                chars.byteOffset = this.byteLength - 12
+                vertices = @vertices[ charCode ]
+                i = vertices.length
 
-                vertices =
-                    CHARCODE_VERTICES[ charCode ]
-
-                min = +Infinity
-                max = -Infinity
-                len = vertices.length
-                i = 0
+                xMin = yMin = +Infinity
+                xMax = yMax = -Infinity
                 
-                while i < len
-                    if  null isnt val = vertices[i]
-                        if  val > max 
-                            max = val
+                while i -= 3 when null isnt ival = vertices[i]
+                    xMax = ival if ival > xMax 
+                    yMax = ival if ival > yMax
 
-                        if  min > val
-                            min = val
-                    i += 3
+                    xMin = ival if xMin > ival
+                    yMin = ival if yMin > ival
                     
                 Object.defineProperties chars,
                     charCode    : value : charCode
-                    xMax        : value : max
-                    xMin        : value : min
-                    width       : value : (max + min)
-                    left        : value : min
-                    model       : value : verticesBufferArray.upload vertices
+                    size        : value : {
+                        xMax, xMin, yMax, yMin
+                    }
+                    width       : value : xMax + xMin
+                    height      : value : yMax + yMin
+
+                    left        : value : xMin
+                    model       : value : verticesBufferArray.malloc vertices
 
                 if  vertices.length % 3
-                    throw [ MOD_TRIANGLE: letter ]
+                    throw [ MOD_TRIANGLE : letter ]
 
                 @letterCount += 1
                 
@@ -591,50 +823,153 @@ do ->
 
             this.positions.set( positions )
 
-            instance.x  = @width + chars.left
-            instance.y  = @height
-            instance.z  = 0
+            instance.x = if !@monospace then (
+                @width + chars.left
+            ) else @width + @letterSpace - chars.width/2
 
-            @width += (
-                chars.width + 
-                @letterSpace 
-            )
+            instance.y = @height
+            instance.z = @depth
+
+            @width += if !@monospace then (
+                @letterSpace + chars.width 
+            ) else @letterSpace * 8
 
             positions = null
+
             instance
             
         write       : ( text, delays = 40 ) ->
             
             if  delays > 0
                 @delay = clearTimeout( @delay ) or setTimeout =>
-                    @addLetter letter for letter in "#{text}" 
+                    @char letter for letter in "#{text}" 
                 ,delays
 
-            else for l in "#{text}" then @writeLetter l
+            else for l in "#{text}" then @char l
                 
             0
 
-    }
+    }        
+
+    init = ->
+
+        do  ### viewport ### ->
+            Object.assign( gl.canvas, {
+                width : innerWidth * devicePixelRatio
+                height : innerHeight * devicePixelRatio
+            }).setAttribute "style", [
+                "width=#{CSS.px innerWidth}"
+                "height=#{CSS.px innerHeight}"
+            ].join ";"
+
+            gl.viewport( 0, 0, 
+                innerWidth * devicePixelRatio, 
+                innerHeight * devicePixelRatio
+            )
+            
+        glClearColor()
+        glClear()
+
+        bindBufferInstances()
+        gl.enableVertexAttribArray i_Position
+        gl.vertexAttribDivisor i_Position, 1
+
+        bindBufferVertices()
+        gl.enableVertexAttribArray a_Position
+        gl.vertexAttribPointer(
+            a_Position,  # location
+            3,           # size (num values to pull from buffer per iteration)
+            gl.FLOAT,    # type of data in buffer
+            false,       # normalize
+            0, # stride (0 = compute from size and type above)
+            0  # offset in buffer
+        )
+
+        if !sessionStorage.viewMatrix
+            viewMatrix.store() 
+        viewMatrix.restore()
+
+        self.addEventListener "keydown", ({ key }) ->
+            viewMatrix.reset() if key is "Escape"
+
+        ux = new UX gl.canvas, viewMatrix
+
+    init()
 
 
+    # @url https://easings.net/#easeOutBack    
+    easing =
 
-    text.write "192.168.002.003"
+        easeOutBack     : ( x ) ->
+            c1 = 1.70158 ; c3 = c1 + 1
+            return 1 + c3 * Math.pow(x - 1, 3) + c1 * Math.pow(x - 1, 2)
 
-    viewMatrix.dx -= 20
+        easeInOutCirc   : ( x ) ->
+            if  x < 0.5
+                return (1 - Math.sqrt(1 - Math.pow(2 * x, 2))) / 2
+            return (Math.sqrt(1 - Math.pow(-2 * x + 2, 2)) + 1) / 2
 
+        easeOutCirc     : ( x ) ->
+            return Math.sqrt(1 - Math.pow(x - 1, 2))
+
+        easeOutQuint    : ( x ) ->
+            return 1 - Math.pow(1 - x, 5);
+                
+    do  writeUDPDump = ->
+
+        text.width += 125
+        zero = text.width
+
+        length = dump.length
+        offset = 0
+        length = 16 * 32
+
+        while offset < length
+            text.write (dump[ offset++ ].toString(16)).padStart(2, "0") + " ", no
+            text.write (dump[ offset++ ].toString(16)).padStart(2, "0") + " ", no
+            text.write (dump[ offset++ ].toString(16)).padStart(2, "0") + " ", no
+            text.write (dump[ offset++ ].toString(16)).padStart(2, "0") + " ", no
+            text.char " "
+
+            unless offset % 16
+                text.height -= 20
+                text.width = zero
+
+    scrollDump = ( height, step = 120, fn = "easeOutQuint" ) ->
+        
+        
+        for ls in text.chars then for l in ls
+
+            l.steps = new Float32Array step
+            i = -1
+            
+            while ++i < step then l.steps[i] =
+                easing[ fn ]( i / step ) * height + l.y
+                    
+        i = -1
+        queueIndex = -1 + renderQueue.push ->
+
+            if  ++i < step
+
+                for l in text.chars then for instance in l
+                    instance.y = instance.steps[ i ]
+
+                return 0
+
+            renderQueue.splice queueIndex, 1
+    
     i = 0
     j = 1
-    render = ->
+
+    render = ( t ) ->
         text.draw()
-            
-        viewMatrix.dx += 0.1 * j
-        #viewMatrix.dy += 0.4 * j
-        viewMatrix.upload()
 
-        unless ++i % 120
-            j *= -1
+        unless i % 240
+            scrollDump( 160 * j )
 
-
+        job t for job in renderQueue
         requestAnimationFrame render
 
-    render()
+        j *= -1 unless ++i % 240
+
+    render 0
