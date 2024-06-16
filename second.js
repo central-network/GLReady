@@ -796,7 +796,7 @@ init2dContext = function(width = 500, height, margin = "0") {
 })();
 
 (function() {
-  var BYTES_PER_INSTANCE, BYTES_PER_VERTEX, CHARCODE_VERTICES, M4, a_ModelMatrix, a_Position, arrClearColor, arrayInstancesInfo, backgroundColor, buf, bufferInstancesInfo, charMalloc, drawPoints, drawTriangles, fshader, gl, glClear, glClearColor, i, iLE, i_Position, init, instanceCount, j, maxInstanceCount, modelMatrix, pointCount, program, render, reup, text, textBufferView, u_Color, u_ViewMatrix, verticesBufferArray, verticesGLBuffer, verticesOffset, viewMatrix, vshader, writeLetter, writeText;
+  var BYTES_PER_INSTANCE, BYTES_PER_VERTEX, CHARCODE_VERTICES, M4, a_ModelMatrix, a_Position, arrClearColor, arrayInstancesInfo, backgroundColor, buf, bufferInstancesInfo, charMalloc, drawPoints, drawTriangles, fshader, gl, glClear, glClearColor, i, iLE, i_Position, init, instanceCount, j, maxInstanceCount, modelMatrix, pointCount, program, render, reup, text, u_Color, u_ViewMatrix, verticesBufferArray, verticesGLBuffer, verticesOffset, viewMatrix, vshader;
   M4 = (function() {
     var Camera;
 
@@ -1190,6 +1190,7 @@ init2dContext = function(width = 500, height, margin = "0") {
     return charBuffer;
   };
   init();
+  self.a = 1;
   text = {
     letters: {},
     chars: [],
@@ -1203,208 +1204,186 @@ init2dContext = function(width = 500, height, margin = "0") {
     width: 0,
     height: 0,
     length: 0,
-    offsetX: 0,
-    offsetY: 0,
-    offsetZ: 0,
     buffer: buf = new ArrayBuffer(0, {
       maxByteLength: 400 * 12
     }),
+    view: new DataView(buf),
     positions: new Float32Array(buf),
-    locked: 0,
-    rebind: function(index = 0) {
-      var begin, byteOffset, clone, count, end, i, instances, len1, length, m, ref, start, subdata;
-      ref = this.chars;
-      for (i = m = 0, len1 = ref.length; m < len1; i = ++m) {
-        instances = ref[i];
-        if (!(i >= index)) {
-          continue;
-        }
-        byteOffset = instances.byteOffset;
-        length = instances.length * 3;
-        begin = byteOffset / 4;
-        end = begin + length;
-        subdata = this.positions.slice(begin, end);
-        start = instances.model.start;
-        count = instances.model.count;
-        clone = instances.model.clone;
-        Object.defineProperties(instances, {
-          vertexAttribPointer: {
-            configurable: true,
-            value: gl.vertexAttribPointer.bind(gl, i_Position, 3, gl.FLOAT, false, 12, byteOffset)
-          },
-          drawArraysInstanced: {
-            configurable: true,
-            value: gl.drawArraysInstanced.bind(gl, gl.TRIANGLES, start, count, clone)
-          },
-          bufferSubData: {
-            configurable: true,
-            value: gl.bufferSubData.bind(gl, gl.ARRAY_BUFFER, byteOffset, subdata)
-          }
-        });
-        0;
-      }
-      return 1;
-    },
+    attrLocation: i_Position,
     draw: function(force = true) {
-      var begin, byteOffset, count, end, i, instances, len1, length, m, ref, results, start, subdata;
+      var begin, byteOffset, end, i, instances, len1, length, m, ref, results;
       ref = this.chars;
       results = [];
       for (i = m = 0, len1 = ref.length; m < len1; i = ++m) {
         instances = ref[i];
-        //@bound ||= @rebind() 
-        byteOffset = instances.byteOffset;
-        length = instances.length * 3;
-        begin = byteOffset / 4;
-        end = begin + length;
-        subdata = this.positions.slice(begin, end);
-        start = instances.model.start;
-        count = instances.model.count;
-        gl.bufferSubData(gl.ARRAY_BUFFER, byteOffset, subdata);
-        gl.vertexAttribPointer(i_Position, 3, gl.FLOAT, false, 12, byteOffset);
-        results.push(gl.drawArraysInstanced(gl.TRIANGLES, start, count, instances.length));
+        if (instances.needsUpload || instances.needsRebind) {
+          if (instances.needsUpload) {
+            instances.needsUpload = 0;
+            byteOffset = instances.byteOffset;
+            length = instances.length * 3;
+            begin = byteOffset / 4;
+            end = begin + length;
+            gl.bufferSubData(gl.ARRAY_BUFFER, byteOffset, this.positions.slice(begin, end));
+          }
+          if (instances.needsRebind) {
+            instances.needsRebind = 0;
+            instances.vertexAttribPointer = gl.vertexAttribPointer.bind(gl, this.attrLocation, 3, gl.FLOAT, 0, 12, byteOffset);
+            instances.drawArraysInstanced = gl.drawArraysInstanced.bind(gl, gl.TRIANGLES, instances.model.start, instances.model.count, instances.length);
+          }
+          0;
+        }
+        instances.vertexAttribPointer();
+        instances.drawArraysInstanced();
+        results.push(1);
+      }
+      return results;
+    },
+    writeLetter: function(letter) {
+      var base, byteOffset, charCode, chars, dview, i, index, instance, instances, len, len1, len2, length, m, max, min, n, offset, positions, ref, ref1, val, vertices;
+      this.length += 3;
+      this.charCount += 1;
+      this.byteLength += 12;
+      this.buffer.resize(this.byteLength);
+      dview = this.view;
+      chars = (base = this.letters)[letter] || (base[letter] = this.chars[index = this.chars.length] = new Array());
+      charCode = letter.charCodeAt(0);
+      if (!Object.hasOwn(chars, "index")) {
+        Object.defineProperties(chars, {
+          byteLength: {
+            get: function() {
+              return this.length * 12;
+            }
+          },
+          byteOffset: {
+            value: 0,
+            writable: true
+          },
+          needsUpload: {
+            value: 1,
+            writable: true
+          },
+          needsRebind: {
+            value: 1,
+            writable: true
+          },
+          index: {
+            value: index
+          },
+          letter: {
+            value: letter
+          },
+          charCode: {
+            value: charCode
+          },
+          getPosition: {
+            value: function(offset = 0) {
+              return dview.getFloat32(this.byteOffset + offset, iLE);
+            }
+          },
+          setPosition: {
+            value: function(offset = 0, value) {
+              this.needsUpload = true;
+              return dview.setFloat32(this.byteOffset + offset, value, iLE);
+            }
+          }
+        });
+        chars.byteOffset = this.byteLength - 12;
+        vertices = CHARCODE_VERTICES[charCode];
+        min = +2e308;
+        max = -2e308;
+        len = vertices.length;
+        i = 0;
+        while (i < len) {
+          if (null !== (val = vertices[i])) {
+            if (val > max) {
+              max = val;
+            }
+            if (min > val) {
+              min = val;
+            }
+          }
+          i += 3;
+        }
+        Object.defineProperties(chars, {
+          charCode: {
+            value: charCode
+          },
+          xMax: {
+            value: max
+          },
+          xMin: {
+            value: min
+          },
+          width: {
+            value: max + min
+          },
+          left: {
+            value: min
+          },
+          model: {
+            value: verticesBufferArray.upload(vertices)
+          }
+        });
+        if (vertices.length % 3) {
+          throw [
+            {
+              MOD_TRIANGLE: letter
+            }
+          ];
+        }
+        this.letterCount += 1;
+      }
+      log(letter, chars);
+      chars[index = chars.length] = instance = chars.model.instance;
+      offset = +12 * index;
+      Object.defineProperty(instance, "x", {
+        get: chars.getPosition.bind(chars, offset),
+        set: chars.setPosition.bind(chars, offset)
+      });
+      Object.defineProperty(instance, "y", {
+        get: chars.getPosition.bind(chars, offset + 4),
+        set: chars.setPosition.bind(chars, offset + 4)
+      });
+      Object.defineProperty(instance, "z", {
+        get: chars.getPosition.bind(chars, offset + 8),
+        set: chars.setPosition.bind(chars, offset + 8)
+      });
+      positions = [];
+      ref = this.chars;
+      for (m = 0, len1 = ref.length; m < len1; m++) {
+        ({byteOffset, length} = ref[m]);
+        positions.push.apply(positions, new Float32Array(this.buffer, byteOffset, length * 3));
+      }
+      byteOffset = 0;
+      ref1 = this.chars;
+      for (n = 0, len2 = ref1.length; n < len2; n++) {
+        instances = ref1[n];
+        instances.byteOffset = byteOffset;
+        instances.needsUpload = 1;
+        instances.needsRebind = 1;
+        byteOffset = byteOffset + (instances.length * 12);
+      }
+      this.positions.set(positions);
+      instance.x = this.width + chars.left;
+      instance.y = this.height;
+      instance.z = 0;
+      this.width += chars.width + this.letterSpace;
+      positions = null;
+      return instance;
+    },
+    write: function(text) {
+      var len1, letter, m, ref, results;
+      ref = `${text}`;
+      results = [];
+      for (m = 0, len1 = ref.length; m < len1; m++) {
+        letter = ref[m];
+        results.push(this.writeLetter(letter));
       }
       return results;
     }
   };
-  textBufferView = new DataView(text.positions.buffer);
   self.text = text;
-  writeLetter = function(letter) {
-    var base, byteOffset, charCode, chars, i, index, instance, instances, len, len1, len2, m, max, min, n, positions, ref, ref1, val, vertices;
-    text.length += 3;
-    text.charCount += 1;
-    text.byteLength += 12;
-    text.buffer.resize(text.byteLength);
-    chars = (base = text.letters)[letter] || (base[letter] = text.chars[index = text.chars.length] = new Array());
-    charCode = letter.charCodeAt(0);
-    if (!Object.hasOwn(chars, "index")) {
-      Object.defineProperties(chars, {
-        byteLength: {
-          get: function() {
-            return this.length * 12;
-          }
-        },
-        byteOffset: {
-          value: 0,
-          writable: true
-        },
-        needsUpload: {
-          value: 1,
-          writable: true
-        },
-        index: {
-          value: index
-        },
-        letter: {
-          value: letter
-        },
-        charCode: {
-          value: charCode
-        }
-      });
-      chars.byteOffset = text.byteLength - 12;
-      vertices = CHARCODE_VERTICES[charCode];
-      min = +2e308;
-      max = -2e308;
-      len = vertices.length;
-      i = 0;
-      while (i < len) {
-        if (null !== (val = vertices[i])) {
-          if (val > max) {
-            max = val;
-          }
-          if (min > val) {
-            min = val;
-          }
-        }
-        i += 3;
-      }
-      Object.defineProperties(chars, {
-        charCode: {
-          value: charCode
-        },
-        xMax: {
-          value: max
-        },
-        xMin: {
-          value: min
-        },
-        width: {
-          value: max + min
-        },
-        left: {
-          value: min
-        },
-        model: {
-          value: verticesBufferArray.upload(vertices)
-        }
-      });
-      if (vertices.length % 3) {
-        throw [
-          {
-            MOD_TRIANGLE: letter
-          }
-        ];
-      }
-      text.letterCount += 1;
-    }
-    chars[index = chars.length] = instance = chars.model.instance;
-    Object.defineProperties(instance, {
-      parent: {
-        value: chars
-      },
-      offset: {
-        value: index * 12
-      },
-      x: {
-        get: function() {
-          return textBufferView.getFloat32(this.parent.byteOffset + this.offset, iLE);
-        },
-        set: function() {
-          return textBufferView.setFloat32(this.parent.byteOffset + this.offset, arguments[0], iLE);
-        }
-      },
-      y: {
-        get: function() {
-          return textBufferView.getFloat32(this.parent.byteOffset + this.offset + 4, iLE);
-        },
-        set: function() {
-          return textBufferView.setFloat32(this.parent.byteOffset + this.offset + 4, arguments[0], iLE);
-        }
-      },
-      z: {
-        get: function() {
-          return textBufferView.getFloat32(this.parent.byteOffset + this.offset + 8, iLE);
-        },
-        set: function() {
-          return textBufferView.setFloat32(this.parent.byteOffset + this.offset + 8, arguments[0], iLE);
-        }
-      }
-    });
-    positions = [];
-    ref = text.chars;
-    for (m = 0, len1 = ref.length; m < len1; m++) {
-      instances = ref[m];
-      positions.push.apply(positions, new Float32Array(text.buffer, instances.byteOffset, instances.length * 3));
-    }
-    byteOffset = 0;
-    ref1 = text.chars;
-    for (i = n = 0, len2 = ref1.length; n < len2; i = ++n) {
-      instances = ref1[i];
-      instances.byteOffset = byteOffset;
-      instances.needsUpload = 1;
-      byteOffset = byteOffset + instances.length * 12;
-    }
-    text.positions.set(positions);
-    instance.x = text.width + chars.left;
-    instance.y = text.height;
-    instance.z = 0;
-    text.width += chars.width + text.letterSpace;
-    return instance;
-  };
-  writeText = function(text) {
-    return text.split("").map(writeLetter);
-  };
-  writeText("192.168.002.003");
+  text.write("192.168.002.003");
   viewMatrix.dx -= 20;
   i = 0;
   j = 1;
