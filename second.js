@@ -796,7 +796,7 @@ init2dContext = function(width = 500, height, margin = "0") {
 })();
 
 (function() {
-  var BYTES_PER_INSTANCE, BYTES_PER_VERTEX, CHARCODE_VERTICES, M4, a_ModelMatrix, a_Position, arrClearColor, arrayInstancesInfo, backgroundColor, buf, bufferInstancesInfo, charMalloc, drawPoints, drawTriangles, fshader, gl, glClear, glClearColor, i, iLE, i_Position, init, instanceCount, j, maxInstanceCount, modelMatrix, pointCount, program, render, reup, text, u_Color, u_ViewMatrix, verticesBufferArray, verticesGLBuffer, verticesOffset, viewMatrix, vshader;
+  var BYTES_PER_INSTANCE, BYTES_PER_VERTEX, CHARCODE_VERTICES, M4, a_ModelMatrix, a_Position, arrClearColor, arrayInstancesInfo, backgroundColor, buf, bufferInstancesInfo, charMalloc, drawPoints, drawTriangles, fshader, gl, glClear, glClearColor, i, iLE, i_Position, init, instanceCount, j, maxInstanceCount, modelMatrix, pointCount, program, render, reup, u_Color, u_ViewMatrix, verticesBufferArray, verticesGLBuffer, verticesOffset, viewMatrix, vshader;
   M4 = (function() {
     var Camera;
 
@@ -1190,8 +1190,7 @@ init2dContext = function(width = 500, height, margin = "0") {
     return charBuffer;
   };
   init();
-  self.a = 1;
-  text = {
+  self.text = {
     letters: {},
     chars: [],
     charCount: 0,
@@ -1204,46 +1203,41 @@ init2dContext = function(width = 500, height, margin = "0") {
     width: 0,
     height: 0,
     length: 0,
-    buffer: buf = new ArrayBuffer(0, {
-      maxByteLength: 400 * 12
-    }),
+    buffer: buf = new ArrayBuffer(1e6 * 12),
     view: new DataView(buf),
     positions: new Float32Array(buf),
     attrLocation: i_Position,
     draw: function(force = true) {
-      var begin, byteOffset, end, i, instances, len1, length, m, ref, results;
+      var begin, byteOffset, end, i, instances, len1, length, m, ref;
       ref = this.chars;
-      results = [];
       for (i = m = 0, len1 = ref.length; m < len1; i = ++m) {
         instances = ref[i];
-        if (instances.needsUpload || instances.needsRebind) {
-          if (instances.needsUpload) {
-            instances.needsUpload = 0;
-            byteOffset = instances.byteOffset;
-            length = instances.length * 3;
-            begin = byteOffset / 4;
-            end = begin + length;
-            gl.bufferSubData(gl.ARRAY_BUFFER, byteOffset, this.positions.slice(begin, end));
-          }
-          if (instances.needsRebind) {
-            instances.needsRebind = 0;
-            instances.vertexAttribPointer = gl.vertexAttribPointer.bind(gl, this.attrLocation, 3, gl.FLOAT, 0, 12, byteOffset);
-            instances.drawArraysInstanced = gl.drawArraysInstanced.bind(gl, gl.TRIANGLES, instances.model.start, instances.model.count, instances.length);
-          }
-          0;
+        if (instances.needsRebind) {
+          instances.needsRebind = 0;
+          byteOffset = instances.byteOffset;
+          length = instances.length * 3;
+          begin = byteOffset / 4;
+          end = begin + length;
+          instances.vertexAttribPointer = gl.vertexAttribPointer.bind(gl, this.attrLocation, 3, gl.FLOAT, 0, 12, byteOffset);
+          instances.drawArraysInstanced = gl.drawArraysInstanced.bind(gl, gl.TRIANGLES, instances.model.start, instances.model.count, instances.length);
+          instances.bufferSubData = gl.bufferSubData.bind(gl, gl.ARRAY_BUFFER, byteOffset, this.positions, begin, end);
+        }
+        if (instances.needsUpload) {
+          instances.needsUpload = 0;
+          instances.bufferSubData();
         }
         instances.vertexAttribPointer();
         instances.drawArraysInstanced();
-        results.push(1);
+        0;
       }
-      return results;
+      return 0;
     },
-    writeLetter: function(letter) {
+    addLetter: function(letter) {
       var base, byteOffset, charCode, chars, dview, i, index, instance, instances, len, len1, len2, length, m, max, min, n, offset, positions, ref, ref1, val, vertices;
       this.length += 3;
       this.charCount += 1;
       this.byteLength += 12;
-      this.buffer.resize(this.byteLength);
+      //@buffer.resize @byteLength
       dview = this.view;
       chars = (base = this.letters)[letter] || (base[letter] = this.chars[index = this.chars.length] = new Array());
       charCode = letter.charCodeAt(0);
@@ -1333,7 +1327,6 @@ init2dContext = function(width = 500, height, margin = "0") {
         }
         this.letterCount += 1;
       }
-      log(letter, chars);
       chars[index = chars.length] = instance = chars.model.instance;
       offset = +12 * index;
       Object.defineProperty(instance, "x", {
@@ -1371,18 +1364,29 @@ init2dContext = function(width = 500, height, margin = "0") {
       positions = null;
       return instance;
     },
-    write: function(text) {
-      var len1, letter, m, ref, results;
-      ref = `${text}`;
-      results = [];
-      for (m = 0, len1 = ref.length; m < len1; m++) {
-        letter = ref[m];
-        results.push(this.writeLetter(letter));
+    write: function(text, delays = 40) {
+      var l, len1, m, ref;
+      if (delays > 0) {
+        this.delay = clearTimeout(this.delay) || setTimeout(() => {
+          var len1, letter, m, ref, results;
+          ref = `${text}`;
+          results = [];
+          for (m = 0, len1 = ref.length; m < len1; m++) {
+            letter = ref[m];
+            results.push(this.addLetter(letter));
+          }
+          return results;
+        }, delays);
+      } else {
+        ref = `${text}`;
+        for (m = 0, len1 = ref.length; m < len1; m++) {
+          l = ref[m];
+          this.writeLetter(l);
+        }
       }
-      return results;
+      return 0;
     }
   };
-  self.text = text;
   text.write("192.168.002.003");
   viewMatrix.dx -= 20;
   i = 0;

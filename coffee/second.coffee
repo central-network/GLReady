@@ -1203,9 +1203,7 @@ do ->
 
     init()
 
-
-    self.a = 1
-    text = {
+    self.text = {
         letters     : {}
         chars       : []
 
@@ -1222,33 +1220,23 @@ do ->
         height      : 0
         length      : 0
         
-        buffer      : buf = new ArrayBuffer(
-            0, { maxByteLength : 400 * 12 }
-        )
+        buffer      : buf = new ArrayBuffer 1e6 * 12
         view        : new DataView buf
         positions   : new Float32Array buf 
 
-        attrLocation : i_Position
+        attrLocation: i_Position
 
-        draw : ( force = on ) -> for instances, i in @chars
-        
-            if  instances.needsUpload or instances.needsRebind
+        draw        : ( force = on ) ->
 
-                if  instances.needsUpload
-                    instances.needsUpload = 0
+            for instances, i in this.chars
+            
+                if  instances.needsRebind
+                    instances.needsRebind = 0
 
                     byteOffset = instances.byteOffset
                     length     = instances.length * 3
                     begin      = byteOffset / 4
                     end        = begin + length
-
-                    gl.bufferSubData(
-                        gl.ARRAY_BUFFER, byteOffset, 
-                        @positions.slice begin, end
-                    )
-
-                if  instances.needsRebind
-                    instances.needsRebind = 0
 
                     instances.vertexAttribPointer =
                         gl.vertexAttribPointer.bind(
@@ -1262,22 +1250,32 @@ do ->
                             instances.model.start,
                             instances.model.count, 
                             instances.length
-                        )
+                        )   
+
+                    instances.bufferSubData =
+                        gl.bufferSubData.bind(
+                            gl, gl.ARRAY_BUFFER,
+                            byteOffset, @positions, begin, end
+                        )                    
+
+                if  instances.needsUpload
+                    instances.needsUpload = 0
+                    instances.bufferSubData()
+
+                instances.vertexAttribPointer()
+                instances.drawArraysInstanced()
 
                 0
 
-            instances.vertexAttribPointer()
-            instances.drawArraysInstanced()
+            0
 
-            1
-
-        writeLetter : ( letter ) ->
+        addLetter   : ( letter ) ->
 
             @length      += 3
             @charCount   += 1
             @byteLength  += 12
 
-            @buffer.resize @byteLength
+            #@buffer.resize @byteLength
 
             dview = @view
             chars = @letters[ letter ] ||=
@@ -1340,8 +1338,6 @@ do ->
                     throw [ MOD_TRIANGLE: letter ]
 
                 @letterCount += 1
-
-            log letter, chars
                 
             chars[ index = chars.length ] =
                 instance = chars.model.instance
@@ -1387,13 +1383,20 @@ do ->
             positions = null
             instance
             
-        write : ( text ) ->
-            @writeLetter letter for letter in "#{text}" 
+        write       : ( text, delays = 40 ) ->
+            
+            if  delays > 0
+                @delay = clearTimeout( @delay ) or setTimeout =>
+                    @addLetter letter for letter in "#{text}" 
+                ,delays
+
+            else for l in "#{text}" then @writeLetter l
+                
+            0
 
     }
 
 
-    self.text = text
 
     text.write "192.168.002.003"
 
