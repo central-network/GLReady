@@ -1,8 +1,11 @@
-#`import font from "./ibmplex.json" with { type: "json" }`
-#sessionStorage.setItem "font", JSON.stringify font
+`import font from "./ibmplex.json" with { type: "json" }`
+sessionStorage.setItem "font", JSON.stringify font
 
 
 {log,warn,error} = console
+
+delay = -> new Promise (done) =>
+    setTimeout done, arguments[0] or 1000
 
 
 
@@ -11,6 +14,7 @@ Object.defineProperties Math,
     deg             : value : ( rad ) -> rad * 180 / Math.PI
     powsum          : value : ( arr, pow = 2 ) ->
         [ ...arr ].flat().reduce (a, b) -> a + Math.pow b, pow
+
 
 init2dContext = ( width = 500, height, margin = "0" ) ->
 
@@ -39,7 +43,7 @@ init2dContext = ( width = 500, height, margin = "0" ) ->
 
     ctx
 
-do ->
+0 and do ->
     sekilKalip = init2dContext(500, 500, "0 0 0 -260px")
     sekilGecen = init2dContext(500, 500, "0 0 0 260px")
     triangle = init2dContext(500, 500, "0 0 0 -260px")
@@ -541,8 +545,6 @@ do ->
 
 
 0 and do ->
-    delay = -> new Promise (done) =>
-        setTimeout done, arguments[0] or 1000
 
 
 
@@ -794,7 +796,7 @@ do ->
 
 
 
-0 and do ->        
+do ->        
     class M4 extends Float32Array
 
         #? https://webgl2fundamentals.org/webgl/lessons/webgl-3d-perspective.html
@@ -1085,7 +1087,7 @@ do ->
 
             Object.defineProperty vertices, "instance", get : ->
 
-                ++@clone
+                this.clone += 1
 
                 instanceByteOffset  = BYTES_PER_INSTANCE * instanceCount++
                 instanceLength      = BYTES_PER_INSTANCE / 4
@@ -1204,75 +1206,121 @@ do ->
 
     text = {
         letters : {}
-        lineCount : 0
-        letterCount : 0
-        letterCount : 0
-        length : 0
         
+        chars       : []
         charCount   : 0
+        letterCount : 0
+        byteLength  : 0
+        
+        lineCount   : 0
         lineWidth   : 100
         lineHeight  : 10
-        letterSpace : 2.0
-        offsetLeft  : 0
+        letterSpace : 1
+
+        width       : 0
+        height      : 0
+        length      : 0
+
+        offsetX     : 0
+        offsetY     : 0
+        offsetZ     : 0
         
-        positions : new Float32Array new ArrayBuffer 0, maxByteLength : 400 * 12
+        buffer      : buf = new ArrayBuffer 0, maxByteLength : 400 * 12
+        positions   : new Float32Array buf 
+        locked      : 0
 
-        rebind : -> for char, info of @letters
+        rebind      : ( index = 0 ) ->
 
-            Object.defineProperty info, "vertexAttribPointer",
-                configurable: on
-                value : gl.vertexAttribPointer.bind(
-                    gl, i_Position, 3, gl.FLOAT, false, 12, info.offset
-                )
+            for instances, i in @chars when i >= index 
 
-            Object.defineProperty info, "drawArraysInstanced",
-                configurable: on
-                value : gl.drawArraysInstanced.bind(
-                    gl, gl.TRIANGLES, info.model.start, info.model.count,  info.model.clone
-                )     
+                byteOffset = instances.byteOffset
+                length     = instances.length * 3
+                begin      = byteOffset / 4
+                end        = begin + length
+                subdata    = @positions.slice begin, end 
 
-            Object.defineProperty info, "bufferSubData",
-                configurable: on
-                value : gl.bufferSubData.bind(
-                    gl, gl.ARRAY_BUFFER, info.offset, text.positions.slice(), info.begin, info.length * 3
-                )     
+                start      = instances.model.start
+                count      = instances.model.count
+                clone      = instances.model.clone
 
-            info
+                Object.defineProperties instances,
 
-        draw : ( force = on ) ->
-            for k, l of @letters when force or l.needsUpload
-                l.bufferSubData()
-                l.vertexAttribPointer()
-                l.drawArraysInstanced()
-                l.needsUpload = 0 
+                    vertexAttribPointer :
+                        configurable    : on
+                        value           : gl.vertexAttribPointer.bind(
+                            gl, i_Position, 3, gl.FLOAT, false, 12, byteOffset
+                        )
+                        
+                    drawArraysInstanced :
+                        configurable    : on
+                        value           : gl.drawArraysInstanced.bind(
+                            gl, gl.TRIANGLES, start, count, clone
+                        )     
+                        
+                    bufferSubData       :
+                        configurable    : on
+                        value           : gl.bufferSubData.bind(
+                            gl, gl.ARRAY_BUFFER, byteOffset, subdata
+                        )
+                0
+            1
+
+        draw : ( force = on ) -> for instances, i in @chars
+            #@bound ||= @rebind() 
+
+            byteOffset = instances.byteOffset
+            length     = instances.length * 3
+            begin      = byteOffset / 4
+            end        = begin + length
+            subdata    = @positions.slice begin, end 
+
+            start      = instances.model.start
+            count      = instances.model.count
+
+            gl.bufferSubData gl.ARRAY_BUFFER, byteOffset, subdata
+            gl.vertexAttribPointer i_Position, 3, gl.FLOAT, false, 12, byteOffset
+            gl.drawArraysInstanced gl.TRIANGLES, start, count, instances.length
+
+
     }
 
     textBufferView = new DataView text.positions.buffer
 
+    self.text = text
     writeLetter = ( letter ) ->
 
-        text.letterCount += 1
+        text.length      += 3
+        text.charCount   += 1
+        text.byteLength  += 12
 
-        if !l = text.letters[ letter ]
-            l = text.letters[ letter ] = []
+        text.buffer.resize(
+            text.byteLength
+        )        
 
-            charCode = letter.charCodeAt 0
+        chars = text.letters[ letter ] ||=
+            text.chars[ index = text.chars.length ] =
+                new Array()
 
-            Object.defineProperty l, "begin",
-                value : text.length
-                writable: on
+        charCode = letter.charCodeAt 0
 
-            Object.defineProperty l, "offset",
-                value : text.length * 4
-                writable: on
+        if !Object.hasOwn chars, "index"
+            Object.defineProperties chars,
 
-            Object.defineProperty l, "model",
-                value : verticesBufferArray.upload(
-                    vertices = CHARCODE_VERTICES[ charCode ]
-                )
+                byteLength  :
+                    get     : -> @length * 12
 
-            if  vertices.length % 3
-                throw [ MOD_TRIANGLE: letter ]
+                byteOffset  : { value : 0 , writable: on }
+                needsUpload : { value : 1 , writable: on }
+
+                index       : value : index
+                letter      : value : letter
+                charCode    : value : charCode
+
+            chars.byteOffset =
+                text.byteLength - 12
+
+            vertices =
+                CHARCODE_VERTICES[ charCode ]
 
             min = +Infinity
             max = -Infinity
@@ -1287,68 +1335,73 @@ do ->
                     if  min > val
                         min = val
                 i += 3
-            
-            Object.defineProperties l,
-                xMax  : value : max
-                xMin  : value : min
-                width : value : max - min
-                left  : value : min + ( max - min ) / 2
+                
+            Object.defineProperties chars,
+                charCode    : value : charCode
+                xMax        : value : max
+                xMin        : value : min
+                width       : value : (max + min)
+                left        : value : min
+                model       : value : verticesBufferArray.upload vertices
 
-            warn letter, l.model
+            if  vertices.length % 3
+                throw [ MOD_TRIANGLE: letter ]
 
-        text.positions.buffer.resize(
-            ( text.length += 3 ) * 4
-        )
+            text.letterCount += 1
+         
+        chars[ index = chars.length ] =
+            instance = chars.model.instance
 
-        l.unshift instance =
-            l.model.instance
+        Object.defineProperties instance,
+            parent     : value : chars
+            offset     : value : index * 12
 
-        for char, info of text.letters when char is letter
-            text.positions.copyWithin info.begin + 3, info.begin
-            text.positions.set [0, 0, 0], info.begin
-            break
+            x          :
+                get    : -> textBufferView.getFloat32 @parent.byteOffset + @offset    , iLE
+                set    : -> textBufferView.setFloat32 @parent.byteOffset + @offset    , arguments[0], iLE
 
-        prop = ->
-            (( instanceOffset ) ->
-                configurable : on
-                get : textBufferView.getFloat32.bind textBufferView, instanceOffset, iLE
-                set : ( value ) -> textBufferView.setFloat32 instanceOffset, value, iLE
-            )( arguments... )    
+            y          :
+                get    : -> textBufferView.getFloat32 @parent.byteOffset + @offset + 4, iLE
+                set    : -> textBufferView.setFloat32 @parent.byteOffset + @offset + 4, arguments[0], iLE
 
-        begin = 0
-        for char, info of text.letters
-            info.begin  = begin
-            info.offset = info.begin * 4
+            z          :
+                get    : -> textBufferView.getFloat32 @parent.byteOffset + @offset + 8, iLE
+                set    : -> textBufferView.setFloat32 @parent.byteOffset + @offset + 8, arguments[0], iLE
 
-            for ins, instanceIndex in info
 
-                attributeOffset =
-                    info.offset + instanceIndex * 12
+        positions = []
+        for instances in text.chars
+            positions.push.apply positions, new Float32Array(
+                text.buffer, instances.byteOffset, instances.length * 3
+            )
 
-                Object.defineProperties ins,
-                    x : prop attributeOffset
-                    y : prop attributeOffset + 4
-                    z : prop attributeOffset + 8
+        byteOffset  = 0
+        for instances, i in text.chars
 
-            begin += info.length * 3
+            instances.byteOffset    = byteOffset
+            instances.needsUpload   = 1
 
-        #left = text.letterSpace * text.charCount++
-        #top  = Math.trunc left / text.lineWidth
+            byteOffset = byteOffset +
+                instances.length * 12
 
-        instance.x = text.offsetLeft
-        #instance.y = top * text.lineHeight 
-        
-        text.offsetLeft += l.left + l.width/2
-        text.offsetLeft += text.letterSpace
 
-        l.needsUpload = 1
+        text.positions.set positions
+
+        instance.x  = text.width + chars.left
+        instance.y  = text.height
+        instance.z  = 0
+
+        text.width +=
+            chars.width + text.letterSpace 
+
         instance
 
-    writeLetter "e"
+        
+    writeText = ( text ) ->
+        text.split( "" ).map( writeLetter )
 
 
-    text.rebind()
-    log text.positions.slice 0
+    writeText "192.168.002.003"
 
     viewMatrix.dx -= 20
 
