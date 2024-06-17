@@ -3,8 +3,12 @@
 #fetch("test.dump").then( (r) -> r.blob() ).then( (b) -> b.arrayBuffer() ).then (udp) -> 
 #    sessionStorage.setItem "dump", new Uint8Array( udp ).join(" ")
 
-
 {log,warn,error} = console
+
+window.addEventListener "error", log
+window.addEventListener "messageerror", log
+window.addEventListener "unhandledrejection", log
+
 
 font = JSON.parse sessionStorage.font
 dump = Uint8Array.from sessionStorage.dump.split " "
@@ -508,8 +512,68 @@ do ->
     
             0
     
+    class TCPSocket
+
+        @PROTOCOL   : "ws#{location.protocol.at(-2)}:" 
+
+        constructor : ( host, port, protocol = TCPSocket.PROTOCOL ) ->
+            
+            script = @script.toString().replace(
+                "$wsurl", "#{protocol}//#{host}:#{port}"
+            )
+            
+
+            object = @object "(function #{script})()"
+
+            try
+                worker = new Worker object
+
+                worker.addEventListener "error", log
+                worker.addEventListener "onmessageerror", log
+                worker.addEventListener "message", ({ data }) =>
+                    @onmessage data if data.byteLength
+
+            catch e then log e
+
+        onmessage   : -> this
+
+        object      : ( script ) ->
+            blob = new Blob [ script ], { type: "application/javascript" }
+            ourl = URL.createObjectURL blob, { type: "application/javascript" }
+
+            ourl
+
+            
+        script      : ->
+            #console.log "init"
+
+            self.addEventListener "error", -> true
+            self.addEventListener "unhandledrejection", -> true
+
+            connect = ->
+                #console.log "bind"
+                
+                try ws = new WebSocket "$wsurl"
+                catch e then setTimeout connect, 3000                
+                return unless typeof ws isnt "undefined"
+
+                Object.assign ws, {
+                    onopen      : -> #console.warn "open"
+                    onerror     : -> #console.log "fail"
+                    onclose     : -> setTimeout connect, 3000
+                    onmessage   : ({ data }) ->
+                        data.arrayBuffer().then self.postMessage
+                }
+
+                ws
+
+            try connect()
+
+
     ux = null
+    ws = null
     gl = document.getElementById("gl").getContext "webgl2"
+
     iLE = new Uint8Array( Uint16Array.of(1).buffer )[0] is 1
     renderQueue = []
 
@@ -756,7 +820,11 @@ do ->
                     setPosition : value : ( offset = 0, value ) ->
                         @needsUpload = true 
                         dview.setFloat32 @byteOffset + offset, value, iLE
-                        
+
+                    setColorAll : value : ( rgba = [] ) ->
+                        vc = "rgba".split ""
+                        for v, vi in rgba when c = vc[vi]
+                            for ins in @ then ins[c] = v
                         
                 chars.byteOffset = @byteLength - 28
                 vertices = @vertices[ charCode ]
@@ -866,7 +934,29 @@ do ->
                 
             0
 
-    }        
+    }  
+    
+    
+    text.width += 125
+    zero = text.width
+
+    writePacket = ( packet ) ->
+
+        data = new Uint8Array packet
+        length = data.byteLength
+        offset = 0
+
+        while offset < length
+            text.write (data[ offset++ ].toString(16)).padStart(2, "0") + " ", no
+            text.write (data[ offset++ ].toString(16)).padStart(2, "0") + " ", no
+            text.write (data[ offset++ ].toString(16)).padStart(2, "0") + " ", no
+            text.write (data[ offset++ ].toString(16)).padStart(2, "0") + " ", no
+            text.char " "
+
+            unless offset % 16
+                text.height -= 20
+                text.width = zero    
+
 
     init = ->
 
@@ -915,6 +1005,10 @@ do ->
 
         ux = new UX gl.canvas, viewMatrix
 
+        await delay 3000
+        ws = new TCPSocket( "192.168.2.2", 8000, "ws:" )
+        ws . onmessage = writePacket
+
     init()
 
 
@@ -936,36 +1030,15 @@ do ->
         easeOutQuint    : ( x ) ->
             return 1 - Math.pow(1 - x, 5);
                 
-    do  writeUDPDump = ->
-
-        text.width += 125
-        zero = text.width
-
-        length = dump.length
-        offset = 0
-        length = 16 * 32
-
-        while offset < length
-            text.write (dump[ offset++ ].toString(16)).padStart(2, "0") + " ", no
-            text.write (dump[ offset++ ].toString(16)).padStart(2, "0") + " ", no
-            text.write (dump[ offset++ ].toString(16)).padStart(2, "0") + " ", no
-            text.write (dump[ offset++ ].toString(16)).padStart(2, "0") + " ", no
-            text.char " "
-
-            unless offset % 16
-                text.height -= 20
-                text.width = zero
-
-    scrollDump = ( height, step = 120, fn = "easeOutQuint" ) ->
+    self.scrollDump = ( height, step = 120, fn = "easeOutQuint" ) ->
         
         
-        for ls in text.chars then for l in ls
-
-            l.steps = new Float32Array step
+        steps = ( l ) ->
+            arr = new Float32Array step
             i = -1
-            
-            while ++i < step then l.steps[i] =
+            while ++i < step then arr[i] =
                 easing[ fn ]( i / step ) * height + l.y
+            arr
                     
         i = -1
         queueIndex = -1 + renderQueue.push ->
@@ -973,6 +1046,8 @@ do ->
             if  ++i < step
 
                 for l in text.chars then for instance in l
+                    if !instance.steps
+                        instance.steps = steps instance
                     instance.y = instance.steps[ i ]
 
                 return 0
@@ -984,9 +1059,6 @@ do ->
 
     render = ( t ) ->
         text.draw()
-
-        unless i % 240
-            scrollDump( 160 * j )
 
         job t for job in renderQueue
         requestAnimationFrame render

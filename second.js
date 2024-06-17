@@ -6,6 +6,12 @@ var delay, dump, error, font, log, warn;
 
 ({log, warn, error} = console);
 
+window.addEventListener("error", log);
+
+window.addEventListener("messageerror", log);
+
+window.addEventListener("unhandledrejection", log);
+
 font = JSON.parse(sessionStorage.font);
 
 dump = Uint8Array.from(sessionStorage.dump.split(" "));
@@ -37,7 +43,7 @@ Object.defineProperties(Math, {
 });
 
 (function() {
-  var M4, UX, a_Color, a_Position, a_Vertices, arrClearColor, backgroundColor, bindBufferInstances, bindBufferVertices, buf, easing, fshader, gl, glClear, glClearColor, i, iLE, init, instanceCount, instancesBufferArray, j, pointCount, program, render, renderQueue, scrollDump, u_ViewMatrix, ux, verticesBufferArray, verticesOffset, viewMatrix, vshader, writeUDPDump;
+  var M4, TCPSocket, UX, a_Color, a_Position, a_Vertices, arrClearColor, backgroundColor, bindBufferInstances, bindBufferVertices, buf, easing, fshader, gl, glClear, glClearColor, i, iLE, init, instanceCount, instancesBufferArray, j, pointCount, program, render, renderQueue, u_ViewMatrix, ux, verticesBufferArray, verticesOffset, viewMatrix, vshader, writePacket, ws, zero;
   M4 = (function() {
     var Camera;
 
@@ -668,7 +674,89 @@ Object.defineProperties(Math, {
     return UX;
 
   }).call(this);
+  TCPSocket = (function() {
+    class TCPSocket {
+      constructor(host, port, protocol = TCPSocket.PROTOCOL) {
+        var e, object, script, worker;
+        script = this.script.toString().replace("$wsurl", `${protocol}//${host}:${port}`);
+        object = this.object(`(function ${script})()`);
+        try {
+          worker = new Worker(object);
+          worker.addEventListener("error", log);
+          worker.addEventListener("onmessageerror", log);
+          worker.addEventListener("message", ({data}) => {
+            if (data.byteLength) {
+              return this.onmessage(data);
+            }
+          });
+        } catch (error1) {
+          e = error1;
+          log(e);
+        }
+      }
+
+      onmessage() {
+        return this;
+      }
+
+      object(script) {
+        var blob, ourl;
+        blob = new Blob([script], {
+          type: "application/javascript"
+        });
+        ourl = URL.createObjectURL(blob, {
+          type: "application/javascript"
+        });
+        return ourl;
+      }
+
+      script() {
+        var connect;
+        //console.log "init"
+        self.addEventListener("error", function() {
+          return true;
+        });
+        self.addEventListener("unhandledrejection", function() {
+          return true;
+        });
+        connect = function() {
+          var e, ws;
+          try {
+            //console.log "bind"
+            ws = new WebSocket("$wsurl");
+          } catch (error1) {
+            e = error1;
+            setTimeout(connect, 3000);
+          }
+          if (typeof ws === "undefined") {
+            return;
+          }
+          Object.assign(ws, {
+            onopen: function() {}, //console.warn "open"
+            onerror: function() {}, //console.log "fail"
+            onclose: function() {
+              return setTimeout(connect, 3000);
+            },
+            onmessage: function({data}) {
+              return data.arrayBuffer().then(self.postMessage);
+            }
+          });
+          return ws;
+        };
+        try {
+          return connect();
+        } catch (error1) {}
+      }
+
+    };
+
+    TCPSocket.PROTOCOL = `ws${location.protocol.at(-2)}:`;
+
+    return TCPSocket;
+
+  }).call(this);
   ux = null;
+  ws = null;
   gl = document.getElementById("gl").getContext("webgl2");
   iLE = new Uint8Array(Uint16Array.of(1).buffer)[0] === 1;
   renderQueue = [];
@@ -936,6 +1024,29 @@ Object.defineProperties(Math, {
                 this.needsUpload = true;
                 return dview.setFloat32(this.byteOffset + offset, value, iLE);
               }
+            },
+            setColorAll: {
+              value: function(rgba = []) {
+                var c, ins, k, len, results, v, vc, vi;
+                vc = "rgba".split("");
+                results = [];
+                for (vi = k = 0, len = rgba.length; k < len; vi = ++k) {
+                  v = rgba[vi];
+                  if (c = vc[vi]) {
+                    results.push((function() {
+                      var len1, m, ref, results1;
+                      ref = this;
+                      results1 = [];
+                      for (m = 0, len1 = ref.length; m < len1; m++) {
+                        ins = ref[m];
+                        results1.push(ins[c] = v);
+                      }
+                      return results1;
+                    }).call(this));
+                  }
+                }
+                return results;
+              }
             }
           });
           chars.byteOffset = this.byteLength - 28;
@@ -1069,7 +1180,30 @@ Object.defineProperties(Math, {
       }
     }
   });
-  init = function() {
+  text.width += 125;
+  zero = text.width;
+  writePacket = function(packet) {
+    var data, length, offset, results;
+    data = new Uint8Array(packet);
+    length = data.byteLength;
+    offset = 0;
+    results = [];
+    while (offset < length) {
+      text.write((data[offset++].toString(16)).padStart(2, "0") + " ", false);
+      text.write((data[offset++].toString(16)).padStart(2, "0") + " ", false);
+      text.write((data[offset++].toString(16)).padStart(2, "0") + " ", false);
+      text.write((data[offset++].toString(16)).padStart(2, "0") + " ", false);
+      text.char(" ");
+      if (!(offset % 16)) {
+        text.height -= 20;
+        results.push(text.width = zero);
+      } else {
+        results.push(void 0);
+      }
+    }
+    return results;
+  };
+  init = async function() {
     (function()/* viewport */ {
       Object.assign(gl.canvas, {
         width: innerWidth * devicePixelRatio,
@@ -1096,7 +1230,10 @@ Object.defineProperties(Math, {
         return viewMatrix.reset();
       }
     });
-    return ux = new UX(gl.canvas, viewMatrix);
+    ux = new UX(gl.canvas, viewMatrix);
+    await delay(3000);
+    ws = new TCPSocket("192.168.2.2", 8000, "ws:");
+    return ws.onmessage = writePacket;
   };
   init();
   // @url https://easings.net/#easeOutBack    
@@ -1120,52 +1257,29 @@ Object.defineProperties(Math, {
       return 1 - Math.pow(1 - x, 5);
     }
   };
-  (writeUDPDump = function() {
-    var length, offset, results, zero;
-    text.width += 125;
-    zero = text.width;
-    length = dump.length;
-    offset = 0;
-    length = 16 * 32;
-    results = [];
-    while (offset < length) {
-      text.write((dump[offset++].toString(16)).padStart(2, "0") + " ", false);
-      text.write((dump[offset++].toString(16)).padStart(2, "0") + " ", false);
-      text.write((dump[offset++].toString(16)).padStart(2, "0") + " ", false);
-      text.write((dump[offset++].toString(16)).padStart(2, "0") + " ", false);
-      text.char(" ");
-      if (!(offset % 16)) {
-        text.height -= 20;
-        results.push(text.width = zero);
-      } else {
-        results.push(void 0);
+  self.scrollDump = function(height, step = 120, fn = "easeOutQuint") {
+    var i, queueIndex, steps;
+    steps = function(l) {
+      var arr, i;
+      arr = new Float32Array(step);
+      i = -1;
+      while (++i < step) {
+        arr[i] = easing[fn](i / step) * height + l.y;
       }
-    }
-    return results;
-  })();
-  scrollDump = function(height, step = 120, fn = "easeOutQuint") {
-    var i, k, l, len, len1, ls, m, queueIndex, ref;
-    ref = text.chars;
-    for (k = 0, len = ref.length; k < len; k++) {
-      ls = ref[k];
-      for (m = 0, len1 = ls.length; m < len1; m++) {
-        l = ls[m];
-        l.steps = new Float32Array(step);
-        i = -1;
-        while (++i < step) {
-          l.steps[i] = easing[fn](i / step) * height + l.y;
-        }
-      }
-    }
+      return arr;
+    };
     i = -1;
     return queueIndex = -1 + renderQueue.push(function() {
-      var instance, len2, len3, n, o, ref1;
+      var instance, k, l, len, len1, m, ref;
       if (++i < step) {
-        ref1 = text.chars;
-        for (n = 0, len2 = ref1.length; n < len2; n++) {
-          l = ref1[n];
-          for (o = 0, len3 = l.length; o < len3; o++) {
-            instance = l[o];
+        ref = text.chars;
+        for (k = 0, len = ref.length; k < len; k++) {
+          l = ref[k];
+          for (m = 0, len1 = l.length; m < len1; m++) {
+            instance = l[m];
+            if (!instance.steps) {
+              instance.steps = steps(instance);
+            }
             instance.y = instance.steps[i];
           }
         }
@@ -1179,9 +1293,6 @@ Object.defineProperties(Math, {
   render = function(t) {
     var job, k, len;
     text.draw();
-    if (!(i % 240)) {
-      scrollDump(160 * j);
-    }
     for (k = 0, len = renderQueue.length; k < len; k++) {
       job = renderQueue[k];
       job(t);
