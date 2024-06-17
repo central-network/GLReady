@@ -36,27 +36,32 @@
 
         <!-- vertex shader -->
         <script id="vshader" type="x-shader/x-vertex">
-            attribute vec3 a_Position;
-            attribute vec3 i_Position;
-            attribute mat4 a_ModelMatrix;
-            uniform mat4 u_ViewMatrix;
+            attribute vec3      a_Vertices;
+            attribute vec3      a_Position;
+            
+            attribute vec4      a_Color;
+            varying lowp vec4   v_Color;
+
+            uniform mat4        u_ViewMatrix;
              
             void main() {
-              // Multiply the position by the matrix.
-              //gl_Position = u_ViewMatrix * vec4(a_Position, 1.);
-                gl_Position = u_ViewMatrix * vec4(a_Position + i_Position, 1.0);
-              gl_PointSize = 10.;
+                gl_Position     =
+                    u_ViewMatrix    *
+                    vec4( 
+                        a_Vertices  + 
+                        a_Position  , 1.0 );
+
+                gl_PointSize    = 10.;
+                v_Color         = a_Color;
             }
         </script>
 
         <!-- fragment shader -->
         <script id="fshader" type="x-shader/x-fragment">
-            precision mediump float;
-            
-            uniform vec3 u_Color;
-            
+            precision lowp float;
+            varying vec4 v_Color;
             void main() {
-                gl_FragColor = vec4(u_Color, 1.) + vec4(1, 0.2, 1, 0);
+                gl_FragColor = v_Color + vec4(0., 0., 0., 0.1);
             }
         </script>
         <script type="module" src="second.js">

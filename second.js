@@ -37,7 +37,7 @@ Object.defineProperties(Math, {
 });
 
 (function() {
-  var BYTES_PER_INSTANCE, BYTES_PER_VERTEX, M4, UX, a_ModelMatrix, a_Position, arrClearColor, backgroundColor, bindBufferInstances, bindBufferVertices, buf, easing, fshader, gl, glClear, glClearColor, i, iLE, i_Position, init, instanceCount, instancesBufferArray, j, maxInstanceCount, pointCount, program, render, renderQueue, scrollDump, u_Color, u_ViewMatrix, ux, verticesBufferArray, verticesOffset, viewMatrix, vshader, writeUDPDump;
+  var M4, UX, a_Color, a_Position, a_Vertices, arrClearColor, backgroundColor, bindBufferInstances, bindBufferVertices, buf, easing, fshader, gl, glClear, glClearColor, i, iLE, init, instanceCount, instancesBufferArray, j, pointCount, program, render, renderQueue, scrollDump, u_ViewMatrix, ux, verticesBufferArray, verticesOffset, viewMatrix, vshader, writeUDPDump;
   M4 = (function() {
     var Camera;
 
@@ -691,22 +691,18 @@ Object.defineProperties(Math, {
   pointCount = 0;
   instanceCount = 0;
   verticesOffset = 0;
-  BYTES_PER_VERTEX = 12;
-  BYTES_PER_INSTANCE = 12;
-  maxInstanceCount = 100;
   verticesBufferArray = new Float32Array(new ArrayBuffer(1e8));
   instancesBufferArray = new Float32Array(new ArrayBuffer(1e7));
-  bindBufferVertices = gl.bindBuffer.bind(gl, gl.ARRAY_BUFFER, gl.createBuffer());
-  bindBufferVertices();
-  gl.bufferData(gl.ARRAY_BUFFER, verticesBufferArray.byteLength, gl.STATIC_DRAW);
   bindBufferInstances = gl.bindBuffer.bind(gl, gl.ARRAY_BUFFER, gl.createBuffer());
   bindBufferInstances();
   gl.bufferData(gl.ARRAY_BUFFER, instancesBufferArray.byteLength, gl.DYNAMIC_READ);
-  u_ViewMatrix = gl.getUniformLocation(program, "u_ViewMatrix");
-  u_Color = gl.getUniformLocation(program, 'u_Color');
-  i_Position = gl.getAttribLocation(program, 'i_Position');
+  bindBufferVertices = gl.bindBuffer.bind(gl, gl.ARRAY_BUFFER, gl.createBuffer());
+  bindBufferVertices();
+  gl.bufferData(gl.ARRAY_BUFFER, verticesBufferArray.byteLength, gl.STATIC_DRAW);
   a_Position = gl.getAttribLocation(program, 'a_Position');
-  a_ModelMatrix = gl.getAttribLocation(program, "a_ModelMatrix");
+  a_Vertices = gl.getAttribLocation(program, 'a_Vertices');
+  a_Color = gl.getAttribLocation(program, "a_Color");
+  u_ViewMatrix = gl.getUniformLocation(program, "u_ViewMatrix");
   viewMatrix = new M4.Camera(90, innerWidth / innerHeight, 0.1, 1e5);
   glClearColor = gl.clearColor.apply.bind(gl.clearColor, gl, arrClearColor);
   glClear = gl.clear.bind(gl, gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
@@ -725,43 +721,27 @@ Object.defineProperties(Math, {
       gl.bufferSubData(gl.ARRAY_BUFFER, byteOffset, verticesBufferArray, begin, length);
       Object.defineProperties(subarray, {
         start: {
-          value: byteOffset / BYTES_PER_VERTEX
+          value: byteOffset / 12
         },
         count: {
           value: pointCount
-        },
-        clone: {
-          value: 0,
-          writable: true
-        },
-        instanceOffset: {
-          value: 0,
-          writable: true
         }
       });
       (function(vertices) {
-        return Object.defineProperty(vertices, "instance", {
-          get: function() {
-            var instanceBegin, instanceByteOffset, instanceEnd, instanceLength, instanceSubarray;
-            this.clone += 1;
-            instanceByteOffset = BYTES_PER_INSTANCE * instanceCount++;
-            instanceLength = BYTES_PER_INSTANCE / 4;
-            instanceBegin = instanceByteOffset / 4;
-            instanceEnd = instanceBegin + instanceLength;
-            instanceSubarray = instancesBufferArray.subarray(instanceBegin, instanceEnd);
-            return (function(instance) {
-              return {
-                translateX: function() {
-                  return instance[0] += arguments[0];
+        var cloneCount;
+        cloneCount = 1;
+        return Object.defineProperties(vertices, {
+          instance: {
+            value: function(instance) {
+              return Object.defineProperties(instance, {
+                globalInstanceIndex: {
+                  value: instanceCount++
                 },
-                translateY: function() {
-                  return instance[1] += arguments[0];
-                },
-                translateZ: function() {
-                  return instance[2] += arguments[0];
+                modelInstanceIndex: {
+                  value: cloneCount++
                 }
-              };
-            })(instanceSubarray);
+              });
+            }
           }
         });
       })(subarray);
@@ -815,7 +795,8 @@ Object.defineProperties(Math, {
     },
     store: {
       value: function() {
-        return sessionStorage.viewMatrix = this.toJSON();
+        sessionStorage.viewMatrix = this.toJSON();
+        return 0;
       }
     },
     restore: {
@@ -827,12 +808,14 @@ Object.defineProperties(Math, {
       value: function() {
         return sessionStorage.removeItem("viewMatrix");
       }
-    }
-  });
-  Object.defineProperty(viewMatrix, "upload", {
-    value: function() {
-      this.store(gl.uniformMatrix4fv(this.location, false, this.slice().translate(this.dx, this.dy, this.dz).rotate(this.rx, this.ry, this.rz).scale(this.sx, this.sy, this.sz)));
-      return 0;
+    },
+    upload: {
+      value: function() {
+        var matrix;
+        matrix = this.slice().translate(this.dx, this.dy, this.dz).rotate(this.rx, this.ry, this.rz).scale(this.sx, this.sy, this.sz);
+        gl.uniformMatrix4fv(this.location, false, matrix);
+        return this.store();
+      }
     }
   });
   Object.assign(self, {
@@ -854,10 +837,11 @@ Object.defineProperties(Math, {
       height: +300,
       depth: -300,
       length: 0,
-      buffer: buf = new ArrayBuffer(1e7 * 12),
+      buffer: buf = new ArrayBuffer(1e6 * (12 + 16)),
       view: new DataView(buf),
-      positions: new Float32Array(buf),
-      attrLocation: i_Position,
+      attributes: new Float32Array(buf),
+      a_Position: a_Position,
+      a_Color: a_Color,
       draw: function(force = true) {
         var begin, byteOffset, end, i, instances, k, len, length, ref;
         bindBufferInstances();
@@ -867,31 +851,33 @@ Object.defineProperties(Math, {
           if (instances.needsRebind) {
             instances.needsRebind = 0;
             byteOffset = instances.byteOffset;
-            length = instances.length * 3;
+            length = instances.length * 7;
             begin = byteOffset / 4;
             end = begin + length;
-            instances.vertexAttribPointer = gl.vertexAttribPointer.bind(gl, this.attrLocation, 3, gl.FLOAT, 0, 12, byteOffset);
+            instances.vertexPositionPointer = gl.vertexAttribPointer.bind(gl, this.a_Position, 3, gl.FLOAT, 0, 28, byteOffset);
+            instances.vertexColorPointer = gl.vertexAttribPointer.bind(gl, this.a_Color, 4, gl.FLOAT, 0, 28, byteOffset + 12);
             instances.drawArraysInstanced = gl.drawArraysInstanced.bind(gl, gl.TRIANGLES, instances.model.start, instances.model.count, instances.length);
-            instances.bufferSubData = gl.bufferSubData.bind(gl, gl.ARRAY_BUFFER, byteOffset, this.positions, begin, end);
+            instances.bufferSubData = gl.bufferSubData.bind(gl, gl.ARRAY_BUFFER, byteOffset, this.attributes, begin, end);
           }
           if (instances.needsUpload) {
             instances.needsUpload = 0;
             instances.bufferSubData();
           }
-          instances.vertexAttribPointer();
+          instances.vertexColorPointer();
+          instances.vertexPositionPointer();
           instances.drawArraysInstanced();
           0;
         }
         return 0;
       },
       char: function(letter) {
-        var base, byteOffset, charCode, chars, dview, i, index, instance, instances, ival, k, len, len1, length, m, offset, positions, ref, ref1, vertices, xMax, xMin, yMax, yMin;
+        var attributes, base, byteOffset, charCode, chars, dview, i, index, instance, instances, ival, k, len, len1, length, m, offset, ref, ref1, vertices, xMax, xMin, yMax, yMin;
         if (!`${letter}`.trim()) {
           return this.width += this.spaceWidth;
         }
-        this.length += 3;
+        this.length += 7;
         this.charCount += 1;
-        this.byteLength += 12;
+        this.byteLength += 28;
         //@buffer.resize @byteLength
         dview = this.view;
         chars = (base = this.letters)[letter] || (base[letter] = this.chars[index = this.chars.length] = new Array());
@@ -900,7 +886,7 @@ Object.defineProperties(Math, {
           Object.defineProperties(chars, {
             byteLength: {
               get: function() {
-                return this.length * 12;
+                return this.length * 28;
               }
             },
             byteOffset: {
@@ -915,6 +901,10 @@ Object.defineProperties(Math, {
               value: 1,
               writable: true
             },
+            needsColor: {
+              value: 1,
+              writable: true
+            },
             index: {
               value: index
             },
@@ -923,6 +913,18 @@ Object.defineProperties(Math, {
             },
             charCode: {
               value: charCode
+            },
+            getColor: {
+              value: function(offset = 0) {
+                return dview.getFloat32(this.byteOffset + offset + 12, iLE);
+              }
+            },
+            setColor: {
+              value: function(offset = 0, value) {
+                this.needsColor = true;
+                this.needsUpload = true;
+                return dview.setFloat32(this.byteOffset + offset + 12, value, iLE);
+              }
             },
             getPosition: {
               value: function(offset = 0) {
@@ -936,7 +938,7 @@ Object.defineProperties(Math, {
               }
             }
           });
-          chars.byteOffset = this.byteLength - 12;
+          chars.byteOffset = this.byteLength - 28;
           vertices = this.vertices[charCode];
           i = vertices.length;
           xMin = yMin = +2e308;
@@ -987,8 +989,8 @@ Object.defineProperties(Math, {
           }
           this.letterCount += 1;
         }
-        chars[index = chars.length] = instance = chars.model.instance;
-        offset = +12 * index;
+        chars[index = chars.length] = instance = chars.model.instance({});
+        offset = +28 * index;
         Object.defineProperty(instance, "x", {
           get: chars.getPosition.bind(chars, offset),
           set: chars.setPosition.bind(chars, offset)
@@ -1001,11 +1003,27 @@ Object.defineProperties(Math, {
           get: chars.getPosition.bind(chars, offset + 8),
           set: chars.setPosition.bind(chars, offset + 8)
         });
-        positions = [];
+        Object.defineProperty(instance, "r", {
+          get: chars.getColor.bind(chars, offset),
+          set: chars.setColor.bind(chars, offset)
+        });
+        Object.defineProperty(instance, "g", {
+          get: chars.getColor.bind(chars, offset + 4),
+          set: chars.setColor.bind(chars, offset + 4)
+        });
+        Object.defineProperty(instance, "b", {
+          get: chars.getColor.bind(chars, offset + 8),
+          set: chars.setColor.bind(chars, offset + 8)
+        });
+        Object.defineProperty(instance, "a", {
+          get: chars.getColor.bind(chars, offset + 12),
+          set: chars.setColor.bind(chars, offset + 12)
+        });
+        attributes = [];
         ref = this.chars;
         for (k = 0, len = ref.length; k < len; k++) {
           ({byteOffset, length} = ref[k]);
-          positions.push.apply(positions, new Float32Array(this.buffer, byteOffset, length * 3));
+          attributes.push.apply(attributes, new Float32Array(this.buffer, byteOffset, length * 7));
         }
         byteOffset = 0;
         ref1 = this.chars;
@@ -1014,14 +1032,17 @@ Object.defineProperties(Math, {
           instances.byteOffset = byteOffset;
           instances.needsUpload = 1;
           instances.needsRebind = 1;
-          byteOffset = byteOffset + (instances.length * 12);
+          instances.needsColor = 1;
+          byteOffset = byteOffset + (instances.length * 28);
         }
-        this.positions.set(positions);
+        this.attributes.set(attributes);
         instance.x = !this.monospace ? this.width + chars.left : this.width + this.letterSpace - chars.width / 2;
         instance.y = this.height;
         instance.z = this.depth;
+        instance.r = Math.random();
+        instance.a = 1;
         this.width += !this.monospace ? this.letterSpace + chars.width : this.letterSpace * 8;
-        positions = null;
+        attributes = null;
         return instance;
       },
       write: function(text, delays = 40) {
@@ -1059,11 +1080,13 @@ Object.defineProperties(Math, {
     glClearColor();
     glClear();
     bindBufferInstances();
-    gl.enableVertexAttribArray(i_Position);
-    gl.vertexAttribDivisor(i_Position, 1);
-    bindBufferVertices();
     gl.enableVertexAttribArray(a_Position);
-    gl.vertexAttribPointer(a_Position, 3, gl.FLOAT, false, 0, 0); // location // size (num values to pull from buffer per iteration) // type of data in buffer // normalize // stride (0 = compute from size and type above) // offset in buffer
+    gl.vertexAttribDivisor(a_Position, 1);
+    gl.enableVertexAttribArray(a_Color);
+    gl.vertexAttribDivisor(a_Color, 1);
+    bindBufferVertices();
+    gl.enableVertexAttribArray(a_Vertices);
+    gl.vertexAttribPointer(a_Vertices, 3, gl.FLOAT, false, 0, 0); // location // size (num values to pull from buffer per iteration) // type of data in buffer // normalize // stride (0 = compute from size and type above) // offset in buffer
     if (!sessionStorage.viewMatrix) {
       viewMatrix.store();
     }

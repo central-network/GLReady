@@ -537,27 +537,22 @@ do ->
     instanceCount = 0
     verticesOffset = 0
 
-    BYTES_PER_VERTEX = 12
-    BYTES_PER_INSTANCE = 12
-    maxInstanceCount = 100
-
     verticesBufferArray  = new Float32Array new ArrayBuffer 1e8
     instancesBufferArray = new Float32Array new ArrayBuffer 1e7
-
-    bindBufferVertices  = gl.bindBuffer.bind gl, gl.ARRAY_BUFFER, gl.createBuffer()
-    bindBufferVertices()
-    gl.bufferData gl.ARRAY_BUFFER, verticesBufferArray.byteLength, gl.STATIC_DRAW
 
     bindBufferInstances = gl.bindBuffer.bind gl, gl.ARRAY_BUFFER, gl.createBuffer()
     bindBufferInstances()
     gl.bufferData gl.ARRAY_BUFFER, instancesBufferArray.byteLength, gl.DYNAMIC_READ
 
-    u_ViewMatrix    = gl.getUniformLocation program, "u_ViewMatrix"
-    u_Color         = gl.getUniformLocation program, 'u_Color'
+    bindBufferVertices  = gl.bindBuffer.bind gl, gl.ARRAY_BUFFER, gl.createBuffer()
+    bindBufferVertices()
+    gl.bufferData gl.ARRAY_BUFFER, verticesBufferArray.byteLength, gl.STATIC_DRAW
 
-    i_Position      = gl.getAttribLocation  program, 'i_Position'
+
     a_Position      = gl.getAttribLocation  program, 'a_Position'
-    a_ModelMatrix   = gl.getAttribLocation  program, "a_ModelMatrix"
+    a_Vertices      = gl.getAttribLocation  program, 'a_Vertices'
+    a_Color         = gl.getAttribLocation  program, "a_Color"
+    u_ViewMatrix    = gl.getUniformLocation program, "u_ViewMatrix"
 
     viewMatrix      = new M4.Camera 90, innerWidth/innerHeight, 0.1, 1e5
     
@@ -588,34 +583,20 @@ do ->
         )
 
         Object.defineProperties subarray,
-            start : value : byteOffset / BYTES_PER_VERTEX
+            start : value : byteOffset / 12
             count : value : pointCount
-            clone : value : 0, writable: on
-            instanceOffset : value : 0, writable: on
 
         ( (vertices) ->
-
-            Object.defineProperty vertices, "instance", get : ->
-
-                this.clone += 1
-
-                instanceByteOffset  = BYTES_PER_INSTANCE * instanceCount++
-                instanceLength      = BYTES_PER_INSTANCE / 4
-                instanceBegin       = instanceByteOffset / 4
-                instanceEnd         = instanceBegin + instanceLength
-                instanceSubarray    = instancesBufferArray.subarray instanceBegin, instanceEnd
-
-                return ( ( instance ) ->
-                    translateX : -> instance[0] += arguments[0]
-                    translateY : -> instance[1] += arguments[0]
-                    translateZ : -> instance[2] += arguments[0]
-                )( instanceSubarray )
-
+            cloneCount = 1
+            Object.defineProperties vertices, instance : value : ( instance ) ->
+                Object.defineProperties instance,
+                    globalInstanceIndex : value : instanceCount++
+                    modelInstanceIndex : value : cloneCount++                
         )(subarray)
                         
         subarray
 
-    Object.defineProperties viewMatrix, {
+    Object.defineProperties viewMatrix,
         dx: { writable:1, value: 0 },
         dy: { writable:1, value: 0 },
         dz: { writable:1, value: -5 },
@@ -630,18 +611,19 @@ do ->
         
         location : value : gl.getUniformLocation( program, "u_ViewMatrix" )
         toJSON   : value : -> JSON.stringify { @dx,@dy,@dz, @rx,@ry,@rz, @sx,@sy,@sz }
-        store    : value : -> sessionStorage.viewMatrix = @toJSON()
+        store    : value : -> sessionStorage.viewMatrix = @toJSON() ; 0
         restore  : value : -> Object.assign( @, JSON.parse sessionStorage.viewMatrix ).upload()
         reset    : value : -> sessionStorage.removeItem "viewMatrix"
-    }
-        
-    Object.defineProperty viewMatrix, "upload", value : ->
-        @store gl.uniformMatrix4fv @location, no,
-            @slice()
+        upload   : value : ->
+            
+            matrix = @slice()
                 .translate @dx, @dy, @dz
                 .rotate @rx, @ry, @rz
                 .scale @sx, @sy, @sz
-        0
+
+            gl.uniformMatrix4fv @location, no, matrix
+            
+            @store()
 
 
     Object.assign self, text : {
@@ -667,11 +649,12 @@ do ->
         depth       : -300
         length      : 0
         
-        buffer      : buf = new ArrayBuffer 1e7 * 12
+        buffer      : buf = new ArrayBuffer 1e6 * ( 12 + 16 )
         view        : new DataView buf
-        positions   : new Float32Array buf 
+        attributes  : new Float32Array buf 
 
-        attrLocation: i_Position
+        a_Position  : a_Position
+        a_Color     : a_Color
 
         draw        : ( force = on ) ->
 
@@ -683,16 +666,20 @@ do ->
                     instances.needsRebind = 0
 
                     byteOffset = instances.byteOffset
-                    length     = instances.length * 3
+                    length     = instances.length * 7
                     begin      = byteOffset / 4
                     end        = begin + length
-
                     
-
-                    instances.vertexAttribPointer =
+                    instances.vertexPositionPointer =
                         gl.vertexAttribPointer.bind(
-                            gl, @attrLocation, 3, 
-                            gl.FLOAT, 0, 12, byteOffset
+                            gl, @a_Position, 3, 
+                            gl.FLOAT, 0, 28, byteOffset
+                        )
+
+                    instances.vertexColorPointer =
+                        gl.vertexAttribPointer.bind(
+                            gl, @a_Color, 4, 
+                            gl.FLOAT, 0, 28, byteOffset + 12
                         )
 
                     instances.drawArraysInstanced =
@@ -706,7 +693,7 @@ do ->
                     instances.bufferSubData =
                         gl.bufferSubData.bind(
                             gl, gl.ARRAY_BUFFER,
-                            byteOffset, @positions, begin, end
+                            byteOffset, @attributes, begin, end
                         )                    
 
                 if  instances.needsUpload
@@ -714,7 +701,8 @@ do ->
                     instances.bufferSubData()
 
 
-                instances.vertexAttribPointer()
+                instances.vertexColorPointer()
+                instances.vertexPositionPointer()
                 instances.drawArraysInstanced()
 
                 0
@@ -726,9 +714,9 @@ do ->
             if !"#{letter}".trim()
                 return @width += @spaceWidth
 
-            @length      += 3
+            @length      += 7
             @charCount   += 1
-            @byteLength  += 12
+            @byteLength  += 28
 
             #@buffer.resize @byteLength
 
@@ -743,16 +731,25 @@ do ->
                 Object.defineProperties chars,
 
                     byteLength  :
-                        get     : -> @length * 12
+                        get     : -> @length * 28
 
                     byteOffset  : { value : 0 , writable: on }
                     needsUpload : { value : 1 , writable: on }
                     needsRebind : { value : 1 , writable: on }
+                    needsColor  : { value : 1 , writable: on }
 
                     index       : value : index
                     letter      : value : letter
                     charCode    : value : charCode
                     
+                    getColor    : value : ( offset = 0 ) ->
+                        dview.getFloat32 @byteOffset + offset + 12, iLE
+
+                    setColor    : value : ( offset = 0, value ) ->
+                        @needsColor = true 
+                        @needsUpload = true 
+                        dview.setFloat32 @byteOffset + offset + 12, value, iLE
+                                            
                     getPosition : value : ( offset = 0 ) ->
                         dview.getFloat32 @byteOffset + offset, iLE
 
@@ -761,7 +758,7 @@ do ->
                         dview.setFloat32 @byteOffset + offset, value, iLE
                         
                         
-                chars.byteOffset = this.byteLength - 12
+                chars.byteOffset = @byteLength - 28
                 vertices = @vertices[ charCode ]
                 i = vertices.length
 
@@ -792,8 +789,8 @@ do ->
                 @letterCount += 1
                 
             chars[ index = chars.length ] =
-                instance = chars.model.instance
-            offset = +12 * index
+                instance = chars.model.instance {}
+            offset = +28 * index
 
             Object.defineProperty instance, "x",
                 get    : chars.getPosition.bind chars, offset
@@ -807,21 +804,38 @@ do ->
                 get    : chars.getPosition.bind chars, offset + 8
                 set    : chars.setPosition.bind chars, offset + 8
 
-            positions = []
-            for { byteOffset, length } in this.chars
-                positions.push.apply positions, new Float32Array(
-                    @buffer, byteOffset, length * 3
+            Object.defineProperty instance, "r",
+                get    : chars.getColor.bind chars, offset
+                set    : chars.setColor.bind chars, offset
+
+            Object.defineProperty instance, "g",
+                get    : chars.getColor.bind chars, offset + 4
+                set    : chars.setColor.bind chars, offset + 4
+
+            Object.defineProperty instance, "b",
+                get    : chars.getColor.bind chars, offset + 8
+                set    : chars.setColor.bind chars, offset + 8
+
+            Object.defineProperty instance, "a",
+                get    : chars.getColor.bind chars, offset + 12
+                set    : chars.setColor.bind chars, offset + 12
+
+            attributes = []
+            for { byteOffset, length } in @chars
+                attributes.push.apply attributes, new Float32Array(
+                    @buffer, byteOffset, length * 7
                 )
 
             byteOffset = 0
-            for instances in this.chars
+            for instances in @chars
                 instances.byteOffset    = byteOffset
                 instances.needsUpload   = 1
                 instances.needsRebind   = 1
+                instances.needsColor    = 1
                 byteOffset = byteOffset +
-                    (  instances.length * 12  )    
+                    (  instances.length * 28  )    
 
-            this.positions.set( positions )
+            @attributes.set( attributes )
 
             instance.x = if !@monospace then (
                 @width + chars.left
@@ -830,11 +844,14 @@ do ->
             instance.y = @height
             instance.z = @depth
 
+            instance.r = Math.random()
+            instance.a = 1 
+
             @width += if !@monospace then (
                 @letterSpace + chars.width 
             ) else @letterSpace * 8
 
-            positions = null
+            attributes = null
 
             instance
             
@@ -871,13 +888,17 @@ do ->
         glClear()
 
         bindBufferInstances()
-        gl.enableVertexAttribArray i_Position
-        gl.vertexAttribDivisor i_Position, 1
+
+        gl.enableVertexAttribArray a_Position
+        gl.vertexAttribDivisor a_Position, 1
+
+        gl.enableVertexAttribArray a_Color
+        gl.vertexAttribDivisor a_Color, 1
 
         bindBufferVertices()
-        gl.enableVertexAttribArray a_Position
+        gl.enableVertexAttribArray a_Vertices
         gl.vertexAttribPointer(
-            a_Position,  # location
+            a_Vertices,  # location
             3,           # size (num values to pull from buffer per iteration)
             gl.FLOAT,    # type of data in buffer
             false,       # normalize
