@@ -907,6 +907,9 @@ Object.defineProperties(Math, {
     }
   });
   Object.assign(self, {
+    line: {}
+  });
+  Object.assign(self, {
     text: {
       vertices: font,
       letters: {},
@@ -1203,7 +1206,7 @@ Object.defineProperties(Math, {
     }
     return results;
   };
-  init = async function() {
+  init = function() {
     (function()/* viewport */ {
       Object.assign(gl.canvas, {
         width: innerWidth * devicePixelRatio,
@@ -1230,11 +1233,11 @@ Object.defineProperties(Math, {
         return viewMatrix.reset();
       }
     });
-    ux = new UX(gl.canvas, viewMatrix);
-    await delay(3000);
-    ws = new TCPSocket("192.168.2.2", 8000, "ws:");
-    return ws.onmessage = writePacket;
+    return ux = new UX(gl.canvas, viewMatrix);
   };
+  //await delay 3000
+  //ws = new TCPSocket( "192.168.2.2", 8000, "ws:" )
+  //ws . onmessage = writePacket
   init();
   // @url https://easings.net/#easeOutBack    
   easing = {

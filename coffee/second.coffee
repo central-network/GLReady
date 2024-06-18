@@ -690,6 +690,10 @@ do ->
             @store()
 
 
+    Object.assign self, line : {
+        
+    }
+
     Object.assign self, text : {
         vertices    : font
         letters     : {}
@@ -1005,9 +1009,9 @@ do ->
 
         ux = new UX gl.canvas, viewMatrix
 
-        await delay 3000
-        ws = new TCPSocket( "192.168.2.2", 8000, "ws:" )
-        ws . onmessage = writePacket
+        #await delay 3000
+        #ws = new TCPSocket( "192.168.2.2", 8000, "ws:" )
+        #ws . onmessage = writePacket
 
     init()
 
