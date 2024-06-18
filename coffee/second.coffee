@@ -3,7 +3,11 @@
 #fetch("test.dump").then( (r) -> r.blob() ).then( (b) -> b.arrayBuffer() ).then (udp) -> 
 #    sessionStorage.setItem "dump", new Uint8Array( udp ).join(" ")
 
+#import "./uc-worker.js"
+
 {log,warn,error} = console
+
+
 
 window.addEventListener "error", log
 window.addEventListener "messageerror", log
@@ -691,7 +695,144 @@ do ->
 
 
     Object.assign self, line : {
+
+        shapes      : []
+
+        buffer      : buf = new ArrayBuffer 1e6 * ( 12 + 16 )
+        view        : new DataView buf
+        attributes  : new Float32Array buf 
+
+        a_Position  : a_Position
+        a_Color     : a_Color
+
+
+        draw        : ->
+
+            bindBufferInstances()
+
+            for instances, i in shapes
+            
+                if  instances.needsRebind
+                    instances.needsRebind = 0
+
+                    byteOffset = instances.byteOffset
+                    length     = instances.length * 7
+                    begin      = byteOffset / 4
+                    end        = begin + length
+                    
+                    instances.vertexPositionPointer =
+                        gl.vertexAttribPointer.bind(
+                            gl, @a_Position, 3, 
+                            gl.FLOAT, 0, 28, byteOffset
+                        )
+
+                    instances.vertexColorPointer =
+                        gl.vertexAttribPointer.bind(
+                            gl, @a_Color, 4, 
+                            gl.FLOAT, 0, 28, byteOffset + 12
+                        )
+
+                    instances.drawArraysInstanced =
+                        gl.drawArraysInstanced.bind(
+                            gl, gl.TRIANGLES, 
+                            instances.model.start,
+                            instances.model.count, 
+                            instances.length
+                        )   
+
+                    instances.bufferSubData =
+                        gl.bufferSubData.bind(
+                            gl, gl.ARRAY_BUFFER,
+                            byteOffset, @attributes, begin, end
+                        )                    
+
+                if  instances.needsUpload
+                    instances.needsUpload = 0
+                    instances.bufferSubData()
+
+
+                instances.vertexColorPointer()
+                instances.vertexPositionPointer()
+                instances.drawArraysInstanced()
+
+                0
+
+            0
+
+        add         : ( size ) ->
         
+        rect        : ( options = {} ) ->
+            { x = 0, y = 0, z = -300, width: w, height: h, mode = WebGL2RenderingContext.LINES } =
+                { ...options }
+            
+            h ||= w
+
+            p0 = Float32Array.of x, y, z
+            p1 = Float32Array.of x + w, y, z
+            p2 = Float32Array.of x + w, y + h, z
+            p3 = Float32Array.of x, y + h, z
+
+            if  mode is WebGL2RenderingContext.LINES
+                rect = Float32Array.of(
+                    ...p0, ...p1, 
+                    ...p1, ...p2,
+
+                    ...p0, ...p3, 
+                    ...p2, ...p3
+                )
+
+            else if mode is WebGL2RenderingContext.TRIANGLES
+                rect = Float32Array.of(
+                    ...p0, ...p1, ...p2,
+                    ...p0, ...p3, ...p2
+                )
+
+            glmalloc = verticesBufferArray.malloc rect
+
+            byteOffset = 0
+            length     = 28
+            begin      = byteOffset / 4
+            end        = begin + length
+            
+            rect.vertexPositionPointer =
+                gl.vertexAttribPointer.bind(
+                    gl, @a_Position, 3, 
+                    gl.FLOAT, 0, 28, byteOffset
+                )
+
+            rect.vertexColorPointer =
+                gl.vertexAttribPointer.bind(
+                    gl, @a_Color, 4, 
+                    gl.FLOAT, 0, 28, byteOffset + 12
+                )
+
+            rect.drawArraysInstanced =
+                gl.drawArraysInstanced.bind(
+                    gl, mode, 
+                    glmalloc.start,
+                    glmalloc.count, 
+                    1
+                )   
+
+            rect.bufferSubData =
+                gl.bufferSubData.bind(
+                    gl, gl.ARRAY_BUFFER,
+                    byteOffset, @attributes, begin, end
+                )
+                
+            @attributes.set [
+                0, 0, 0,
+                1, 1, 0, 1
+            ]
+
+            bindBufferInstances()
+
+            rect.bufferSubData()
+            rect.vertexColorPointer()
+            rect.vertexPositionPointer()
+            rect.drawArraysInstanced()
+
+            log @attributes
     }
 
     Object.assign self, text : {
@@ -724,7 +865,7 @@ do ->
         a_Position  : a_Position
         a_Color     : a_Color
 
-        draw        : ( force = on ) ->
+        draw        : ->
 
             bindBufferInstances()
 
@@ -1012,6 +1153,11 @@ do ->
         #await delay 3000
         #ws = new TCPSocket( "192.168.2.2", 8000, "ws:" )
         #ws . onmessage = writePacket
+
+        line.rect {
+            x: -140, y: 20, 
+            width: 200, height: 250
+        }
 
     init()
 
