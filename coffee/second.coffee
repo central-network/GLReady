@@ -23,8 +23,33 @@ delay = -> new Promise (done) =>
 Object.defineProperties Math,
     rad             : value : ( deg ) -> deg * Math.PI / 180
     deg             : value : ( rad ) -> rad * 180 / Math.PI
+    randBit         : value : -> Number Math.random() > 0.5
     powsum          : value : ( arr, pow = 2 ) ->
         [ ...arr ].flat().reduce (a, b) -> a + Math.pow b, pow
+
+iLE = new Uint8Array( Uint16Array.of(1).buffer )[0] is 1
+
+Object.defineProperties DataView::,
+    bind            : value : ( object, property, byteOffset, TypedArray, callback ) ->
+
+        caller = TypedArray.name.split("Array").at(0)
+        getter = this[ "get#{caller}" ].bind this, object.byteOffset + byteOffset, iLE
+        setter = this[ "set#{caller}" ].bind this, object.byteOffset + byteOffset
+        
+        unless typeof callback is "function"
+            Object.defineProperty object, property, {
+                get : getter, set : ( val ) ->
+                    setter val, iLE 
+            }
+
+        else
+            Object.defineProperty object, property, {
+                get : getter, set : ( val ) ->
+                    setter val, iLE
+                    callback.call this, val
+            }
+
+        return this
 
 do ->    
 
@@ -578,7 +603,6 @@ do ->
     ws = null
     gl = document.getElementById("gl").getContext "webgl2"
 
-    iLE = new Uint8Array( Uint16Array.of(1).buffer )[0] is 1
     renderQueue = []
 
     program = gl.createProgram()
@@ -699,11 +723,13 @@ do ->
         shapes      : []
 
         buffer      : buf = new ArrayBuffer 1e6 * ( 12 + 16 )
-        view        : new DataView buf
-        attributes  : new Float32Array buf 
+        view        : new DataView buf, 0, 4096 * 4096
+        attributes  : new Float32Array buf, 0, 4096 * 1024 
 
         a_Position  : a_Position
         a_Color     : a_Color
+
+        zOffset     : -300
 
 
         draw        : ->
@@ -759,21 +785,409 @@ do ->
 
             0
 
-        add         : ( size ) ->
+        poly        : ( boxes = [], options = {} ) ->
+            mode = options.mode || WebGL2RenderingContext.LINES 
+            blen = boxes.length
+            
+            points  = []
+            xPoints = []
+            yPoints = []
+            xBounds = []
+            yBounds = []
+
+            { r, g, b, a } = boxes.at i = 0
+
+
+            while i < blen
+
+
+                box = boxes[ i++ ]
+                vertices = []
+
+                if  box.mode is WebGL2RenderingContext.TRIANGLES
+                    triangles = box.slice 0
+                    lines = []
+                    tlen = box.length
+                    t = 0
+
+                    # ...p0, ...p1, ...p2,
+                    # ...p0, ...p3, ...p2
+
+                    while t < tlen
+                        p0x = triangles[t++]
+                        p0y = triangles[t++]
+                        p0z = triangles[t++]
+
+                        p1x = triangles[t++]
+                        p1y = triangles[t++]
+                        p1z = triangles[t++]
+                    
+                        p2x = triangles[t++]
+                        p2y = triangles[t++]
+                        p2z = triangles[t++]
+
+                        t+= 3
+
+                        p3x = triangles[t++]
+                        p3y = triangles[t++]
+                        p3z = triangles[t++]
+
+                        t+= 3
+
+                        # ...p0, ...p1, 
+                        # ...p1, ...p2,
+    
+                        # ...p0, ...p3, 
+                        # ...p2, ...p3
+
+                        lines.push(
+                            p0x, p0y, p0z,  p1x, p1y, p1z,
+                            p1x, p1y, p1z,  p2x, p2y, p2z,
+
+                            p0x, p0y, p0z,  p3x, p3y, p3z,
+                            p2x, p2y, p2z,  p3x, p3y, p3z,
+                        )
+
+                    vertices = lines.slice 0
+                    lines = triangles = null
+
+                else
+                    vertices = box.slice 0
+
+                vlen = vertices.length
+                j = 0
+
+                dx = box.attributes.x
+                dy = box.attributes.y
+                dz = box.attributes.z
+
+                while j < vlen
+
+                    x = Math.fround dx + vertices[ j++ ]
+                    y = Math.fround dy + vertices[ j++ ]
+                    z = Math.fround dz + vertices[ j++ ]
+
+                    xPoints.push x if !xPoints.includes x
+                    yPoints.push y if !yPoints.includes y 
+
+                    points.push [ x, y, z ]
+
+            xBounds[x] = [] for x in xPoints
+            yBounds[y] = [] for y in yPoints
+
+            for [ x, y ] in points
+                xBounds[x].push y if !xBounds[x].includes y
+                yBounds[y].push x if !yBounds[y].includes x
+
+            for p in [ xBounds, yBounds ] then for k, v of p
+                Object.defineProperty p, k, 
+                    configurable: on, value : {
+                        max : Math.max.apply Math, v
+                        min : Math.min.apply Math, v
+                    }
+
+            [ xPoints, yPoints, points ] = []
+
+            for x of xBounds when ! found = no  
+                for y, { max, min } of yBounds
+                    break if found = 0 is (min - x)
+                    break if found = 0 is (max - x)
+                delete xBounds[x] unless found 
+
+            for y of yBounds when ! found = no  
+                for x, { max, min } of xBounds
+                    break if found = 0 is (min - y)
+                    break if found = 0 is (max - y)
+                delete yBounds[y] unless found 
+
+            vertices = []
+
+            for x , { max, min } of xBounds
+                x = parseFloat x
+                vertices.push( x, max, 0 )
+                vertices.push( x, min, 0 )
+
+            for y , { max, min } of yBounds
+                y = parseFloat y
+                vertices.push( min, y, 0 )
+                vertices.push( max, y, 0 )
+
+            length = vertices.length
+            splice = []
+            
+            i = 0
+            while i < length
+                Ax0 = vertices[ i++ ]
+                Ay0 = vertices[ i++ ]
+                Az0 = vertices[ i++ ]
+
+                Ax1 = vertices[ i++ ]
+                Ay1 = vertices[ i++ ]
+                Az1 = vertices[ i++ ]
+
+                unless Ay0 - Ay1 # y'ler esit ise
+
+                    AxMin = Math.min Ax0, Ax1 
+                    AxMax = Math.max Ax0, Ax1 
+                
+                    j = 0
+                    while j < length
+
+                        Bx0 = vertices[ j++ ]
+                        By0 = vertices[ j++ ]
+                        Bz0 = vertices[ j++ ]
+
+                        Bx1 = vertices[ j++ ]
+                        By1 = vertices[ j++ ]
+                        Bz1 = vertices[ j++ ]
+
+                        continue if i is j
+        
+                        continue if Ay0 - By0 # y'ler esit olmali
+                        continue if Bx0 - Bx1 # B dik bir cizgi olmali
+                        
+                        continue if Bx0 < AxMin # kontrol cizgimizin baslangicindan once olmamali
+                        continue if Bx0 > AxMax # kontrol cizgimizin bitisinden sonra olmamali
+
+                        # cizginin arada oldugu belli oldu
+                        # simdi kesim noktasini bulalim
+
+                        ByMin = Math.min By0, By1 
+                        ByMax = Math.max By0, By1 
+
+                        k = 0
+                        while k < length
+                            Cx0 = vertices[ k++ ]
+                            Cy0 = vertices[ k++ ]
+                            Cz0 = vertices[ k++ ]
+
+                            Cx1 = vertices[ k++ ]
+                            Cy1 = vertices[ k++ ]
+                            Cz1 = vertices[ k++ ]
+
+                            continue if j is k
+                            continue if i is k
+
+                            continue if Cy0 - Cy1 # duz bir yatay cizgi ariyoruz
+                            continue if Cy0 <= ByMin # bizim altimizda olmamali 
+                            continue if Cy0 >= ByMax # bizim ustumuzde olmamali 
+                            
+                            CxMin = Math.min Cx0, Cx1
+                            CxMax = Math.max Cx0, Cx1
+
+                            continue if CxMax < Bx0 # bizden asagida bitmemis olmali
+                            continue if CxMin > Bx0 # bizden yukarida baslamamis olmali
+
+                            # bulduk simdi B'nin y degerini C ile degistirebiliriz
+                            if  CxMax > Bx0
+                                vertices[ j - 5 ] = Cy0
+
+                            else if  CxMin < Bx0
+                                vertices[ j - 2 ] = Cy0
+
+                unless Ax0 - Ax1 # x'ler esit ise
+
+                    AyMin = Math.min Ay0, Ay1 
+                    AyMax = Math.max Ay0, Ay1 
+                
+                    j = 0
+                    while j < length
+
+                        Bx0 = vertices[ j++ ]
+                        By0 = vertices[ j++ ]
+                        Bz0 = vertices[ j++ ]
+
+                        Bx1 = vertices[ j++ ]
+                        By1 = vertices[ j++ ]
+                        Bz1 = vertices[ j++ ]
+
+                        continue if i is j
+        
+                        continue if Ax0 - Bx0 # x'ler esit olmali
+                        continue if By0 - By1 # B düz bir cizgi olmali
+                        
+                        continue if By0 < AyMin # kontrol cizgimizin baslangicindan yukarda olmali
+                        continue if By0 > AyMax # kontrol cizgimizin bitisinden asagida olmali
+
+                        # cizginin arada oldugu belli oldu
+                        # simdi kesim noktasini bulalim
+
+                        BxMin = Math.min Bx0, Bx1 
+                        BxMax = Math.max Bx0, Bx1 
+
+                        k = 0
+                        while k < length
+                            Cx0 = vertices[ k++ ]
+                            Cy0 = vertices[ k++ ]
+                            Cz0 = vertices[ k++ ]
+
+                            Cx1 = vertices[ k++ ]
+                            Cy1 = vertices[ k++ ]
+                            Cz1 = vertices[ k++ ]
+
+                            continue if j is k
+                            continue if i is k
+
+                            continue if Cx0 - Cx1 # duz bir dik cizgi ariyoruz
+                            continue if Cx0 <= BxMin # bizim oncemizde olmamali 
+                            continue if Cx0 >= BxMax # bizim sonramizda olmamali 
+                            
+                            CyMin = Math.min Cy0, Cy1
+                            CyMax = Math.max Cy0, Cy1
+
+                            continue if CyMax < By0 # bizden once bitmemis olmali
+                            continue if CyMin > By0 # bizden sonra baslamamis olmali
+
+                            if (CyMax is AyMax) and (CyMin is AyMin)
+                                continue if (By0 is CyMin) or (By0 is CyMax)
+                                vertices[ j - 6 ] = Cx0
+
+                            if (CyMin is AyMin) and (AyMax is By0)
+                                continue if (By0 is AyMin) or (By0 is CyMin)
+                                vertices[ j - 3 ] = Cx0
+                            
+
+            xMax = yMax = -Infinity
+            xMin = yMin = +Infinity
+
+            i = 0; x = 0
+            y = 0; z = 0
+
+            while i < length
+                dx = vertices[ i++ ]
+                dy = vertices[ i++ ]
+                dz = vertices[ i++ ]
+
+                xMax = dx if dx > xMax
+                xMin = dx if dx < xMin
+
+                yMax = dy if dy > yMax
+                yMin = dy if dy < yMin
+
+            x = xMin + .5 * Math.abs xMax - xMin
+            y = yMin + .5 * Math.abs yMax - yMin
+            z = this . zOffset
+            i = 0
+
+            while i < length
+                vertices[ i++ ] -= x 
+                vertices[ i++ ] -= y 
+                vertices[ i++ ]  = 0 
+
+            # aradaki cizgileri kaldirdik
+
+            if  mode is WebGL2RenderingContext.TRIANGLES
+                triangles = []
+                lines = vertices.slice 0
+                llen = lines.length
+                t = 0
+
+                while t < llen
+                    triangles.push p = {
+                        x: lines[t++], 
+                        y: lines[t++],
+                        z: lines[t++],
+                    }
+
+                
+                # ...p0, ...p1, ...p2,
+                # ...p0, ...p3, ...p2
+                t = 0
+                llen = triangles.length
+                while t < llen
+                    p0 = triangles[t++]
+                    p1 = triangles[t++]
+                    p2 = triangles[t++]
+                    p3 = triangles[t++]
+
+                    triangles.push(
+                        p0.x, p0.y, p0.z,
+                        p1.x, p1.y, p1.z,
+                        p2.x, p2.y, p2.z,
+
+                        p0.x, p0.y, p0.z,
+                        p3.x, p3.y, p3.z,
+                        p2.x, p2.y, p2.z,
+                    )
+
+                vertices = triangles.slice llen
+                lines = triangles = null
+
+            poly = verticesBufferArray.malloc vertices
+
+            length     = 7
+            byteLength = length * 4
+            byteOffset = @shapes.length * byteLength
+            begin      = byteOffset / 4
+            end        = begin + length
+
+            bindBufferInstances()
+
+            Object.defineProperty poly, "attributes", 
+                value : @attributes.subarray begin, end
+                                    
+            Object.defineProperty poly, "vertexPositionPointer", 
+                value : gl.vertexAttribPointer.bind(
+                    gl, @a_Position, 3, 
+                    gl.FLOAT, 0, byteLength, byteOffset
+                )
+
+            Object.defineProperty poly, "vertexColorPointer", 
+                value : gl.vertexAttribPointer.bind(
+                    gl, @a_Color, 4, 
+                    gl.FLOAT, 0, byteLength, byteOffset + 12
+                )
+
+            Object.defineProperty poly, "drawArraysInstanced", 
+               value : gl.drawArraysInstanced.bind(
+                    gl, mode, poly.start, poly.count, 1
+                )   
+
+            Object.defineProperty poly, "bufferSubData", 
+                value : gl.bufferSubData.bind(
+                    gl, gl.ARRAY_BUFFER,
+                    byteOffset, @attributes, begin, end
+                )
+
+            poly.attributes.set [
+                x, y, z,
+                r, g, b, a
+            ]
+    
+            poly.bufferSubData()
+            poly.vertexColorPointer()
+            poly.vertexPositionPointer()
+
+            renderQueue.push poly.vertexColorPointer
+            renderQueue.push poly.vertexPositionPointer
+            renderQueue.push poly.drawArraysInstanced
+
+            @view.bind poly.attributes, "x",  0, Float32Array, poly.bufferSubData
+            @view.bind poly.attributes, "y",  4, Float32Array, poly.bufferSubData
+            @view.bind poly.attributes, "z",  8, Float32Array, poly.bufferSubData
+            @view.bind poly.attributes, "r", 12, Float32Array, poly.bufferSubData
+            @view.bind poly.attributes, "g", 16, Float32Array, poly.bufferSubData
+            @view.bind poly.attributes, "b", 20, Float32Array, poly.bufferSubData
+            @view.bind poly.attributes, "a", 24, Float32Array, poly.bufferSubData
+
+            @shapes[ @shapes.length ] = poly
         
         rect        : ( options = {} ) ->
-            { x = 0, y = 0, z = -300, width: w, height: h, mode = WebGL2RenderingContext.LINES } =
+            { mode = WebGL2RenderingContext.LINES,
+            x = 0, y = 0, z = @zOffset, 
+            r = 0, g = 0, b = 0, a = 1, 
+            width: w, height: h } =
                 { ...options }
-            
+
             h ||= w
 
-            p0 = Float32Array.of x, y, z
-            p1 = Float32Array.of x + w, y, z
-            p2 = Float32Array.of x + w, y + h, z
-            p3 = Float32Array.of x, y + h, z
+            p0 = Float32Array.of 0, 0, 0
+            p1 = Float32Array.of w, 0, 0
+            p2 = Float32Array.of w, h, 0
+            p3 = Float32Array.of 0, h, 0
 
             if  mode is WebGL2RenderingContext.LINES
-                rect = Float32Array.of(
+                vertices = Float32Array.of(
                     ...p0, ...p1, 
                     ...p1, ...p2,
 
@@ -782,57 +1196,112 @@ do ->
                 )
 
             else if mode is WebGL2RenderingContext.TRIANGLES
-                rect = Float32Array.of(
+                vertices = Float32Array.of(
                     ...p0, ...p1, ...p2,
                     ...p0, ...p3, ...p2
                 )
 
-            glmalloc = verticesBufferArray.malloc rect
+            rect = verticesBufferArray.malloc vertices
 
-            byteOffset = 0
-            length     = 28
+            length     = 7
+            byteLength = length * 4
+            byteOffset = @shapes.length * byteLength
             begin      = byteOffset / 4
             end        = begin + length
-            
-            rect.vertexPositionPointer =
-                gl.vertexAttribPointer.bind(
-                    gl, @a_Position, 3, 
-                    gl.FLOAT, 0, 28, byteOffset
-                )
-
-            rect.vertexColorPointer =
-                gl.vertexAttribPointer.bind(
-                    gl, @a_Color, 4, 
-                    gl.FLOAT, 0, 28, byteOffset + 12
-                )
-
-            rect.drawArraysInstanced =
-                gl.drawArraysInstanced.bind(
-                    gl, mode, 
-                    glmalloc.start,
-                    glmalloc.count, 
-                    1
-                )   
-
-            rect.bufferSubData =
-                gl.bufferSubData.bind(
-                    gl, gl.ARRAY_BUFFER,
-                    byteOffset, @attributes, begin, end
-                )
-                
-            @attributes.set [
-                0, 0, 0,
-                1, 1, 0, 1
-            ]
 
             bindBufferInstances()
 
+            Object.defineProperty rect, "mode", value : mode
+
+            Object.defineProperty rect, "attributes", 
+                value : @attributes.subarray begin, end
+            
+            Object.defineProperty rect, "vertexPositionPointer", 
+                value : gl.vertexAttribPointer.bind(
+                    gl, @a_Position, 3, 
+                    gl.FLOAT, 0, byteLength, byteOffset
+                )
+
+            Object.defineProperty rect, "vertexColorPointer", 
+                value : gl.vertexAttribPointer.bind(
+                    gl, @a_Color, 4, 
+                    gl.FLOAT, 0, byteLength, byteOffset + 12
+                )
+
+            Object.defineProperty rect, "drawArraysInstanced", 
+               value : gl.drawArraysInstanced.bind(
+                    gl, mode,  rect.start, rect.count, 1
+                )   
+
+            Object.defineProperty rect, "bufferSubData", 
+                value : gl.bufferSubData.bind(
+                    gl, gl.ARRAY_BUFFER,
+                    byteOffset, @attributes, begin, end
+                )
+
+            rect.attributes . set [
+                x, y, z,
+                r, g, b, a
+            ]
+
+    
             rect.bufferSubData()
             rect.vertexColorPointer()
             rect.vertexPositionPointer()
-            rect.drawArraysInstanced()
 
-            log @attributes
+            renderQueue.push rect.vertexColorPointer
+            renderQueue.push rect.vertexPositionPointer
+            renderQueue.push rect.drawArraysInstanced
+
+            @view.bind rect.attributes, "x",  0, Float32Array, rect.bufferSubData
+            @view.bind rect.attributes, "y",  4, Float32Array, rect.bufferSubData
+            @view.bind rect.attributes, "z",  8, Float32Array, rect.bufferSubData
+            @view.bind rect.attributes, "r", 12, Float32Array, rect.bufferSubData
+            @view.bind rect.attributes, "g", 16, Float32Array, rect.bufferSubData
+            @view.bind rect.attributes, "b", 20, Float32Array, rect.bufferSubData
+            @view.bind rect.attributes, "a", 24, Float32Array, rect.bufferSubData
+
+            Object.defineProperty rect, "boundingRect", value : ->
+                length = @length
+                i = 0
+
+                xMax = yMax = zMax = -Infinity
+                xMin = yMin = zMin = +Infinity
+
+                while i < length
+                    x = this[ i++ ]
+                    y = this[ i++ ]
+                    z = this[ i++ ]
+
+                    xMax = x if xMax < x
+                    xMin = x if xMin > x
+
+                    yMax = y if yMax < y
+                    yMin = y if yMin > y
+
+                    zMax = z if zMax < z
+                    zMin = z if zMin > z
+
+                width   = xMax - xMin
+                height  = yMax - yMin
+                depth   = zMax - zMin
+
+                xMax += @attributes.x 
+                xMin += @attributes.x 
+                
+                yMax += @attributes.y 
+                yMin += @attributes.y
+                
+                zMax += @attributes.z
+                zMin += @attributes.z
+                
+                return {
+                    xMax, xMin, width, 
+                    yMax, yMin, height, 
+                    zMax, zMin, depth
+                }
+
+            @shapes[ @shapes.length ] = rect
     }
 
     Object.assign self, text : {
@@ -843,6 +1312,7 @@ do ->
         charCount   : 0
         letterCount : 0
         byteLength  : 0
+        byteOffset  : 0
         
         lineCount   : 0
         lineWidth   : 100
@@ -855,12 +1325,12 @@ do ->
 
         width       : -300
         height      : +300
-        depth       : -300
+        depth       : -200
         length      : 0
         
-        buffer      : buf = new ArrayBuffer 1e6 * ( 12 + 16 )
-        view        : new DataView buf
-        attributes  : new Float32Array buf 
+        buffer      : buf = new ArrayBuffer 4096 * 4096
+        view        : new DataView buf 
+        attributes  : new Float32Array buf
 
         a_Position  : a_Position
         a_Color     : a_Color
@@ -1003,7 +1473,7 @@ do ->
                 
             chars[ index = chars.length ] =
                 instance = chars.model.instance {}
-            offset = +28 * index
+            offset = 28 * index
 
             Object.defineProperty instance, "x",
                 get    : chars.getPosition.bind chars, offset
@@ -1034,10 +1504,13 @@ do ->
                 set    : chars.setColor.bind chars, offset + 12
 
             attributes = []
+
             for { byteOffset, length } in @chars
                 attributes.push.apply attributes, new Float32Array(
                     @buffer, byteOffset, length * 7
                 )
+
+            @attributes.set( attributes )
 
             byteOffset = 0
             for instances in @chars
@@ -1048,8 +1521,6 @@ do ->
                 byteOffset = byteOffset +
                     (  instances.length * 28  )    
 
-            @attributes.set( attributes )
-
             instance.x = if !@monospace then (
                 @width + chars.left
             ) else @width + @letterSpace - chars.width/2
@@ -1057,7 +1528,9 @@ do ->
             instance.y = @height
             instance.z = @depth
 
-            instance.r = Math.random()
+            instance.r = 1
+            instance.g = 1
+            instance.b = 1
             instance.a = 1 
 
             @width += if !@monospace then (
@@ -1065,42 +1538,128 @@ do ->
             ) else @letterSpace * 8
 
             attributes = null
-
             instance
             
         write       : ( text, delays = 40 ) ->
+            chars = []
+
+            for char,i in "#{text}" 
+                chars[i] = @char char
+
+            for prop in "xyz".split("") then ((key) ->
+                Object.defineProperty this, key, {
+                    get : -> 
+                        log this
+                        $ = 0
+                        $ = o[key] + $ for o, i in this
+                        $ / i
+
+                    set : ( v ) ->
+                        $ = @[key]
+                        o[key] += v - $ for o in this
+                        @
+                } 
+            ).call(chars, prop)
+
+            return chars
             
             if  delays > 0
                 @delay = clearTimeout( @delay ) or setTimeout =>
-                    @char letter for letter in "#{text}" 
+                    chars.push @char letter for letter in "#{text}" 
                 ,delays
 
-            else for l in "#{text}" then @char l
+            else for l in "#{text}" then chars.push @char l
                 
-            0
+            chars
 
     }  
+
+
+    gridX = -175
+    gridY = 300
+    
+    BYTES_PER_LINE  = 4
+
+    bitBoxSize = ( innerWidth / 2 ) / ( BYTES_PER_LINE * 8 )
+    bitsOffset = 0
+    bitOffsetX = 0
+    bitOffsetY = 0
+    
+    width    = bitBoxSize
+    height   = bitBoxSize * 1.38
+    bitBoxes = []
+
+    byteDataGrid = ( bitLength = 0, options = {} ) ->
+        boxes = []
+
+        r = Math.randBit()
+        g = Math.randBit()
+        b = Math.random()
+
+        if !r and !g and !b
+            g = 1
+
+        while bitLength--
+
+            bitsOffset++
+
+            x = bitOffsetX + gridX
+            y = bitOffsetY + gridY
+
+            boxes.push box = line.rect Object.assign options, {
+                x, y, r, g, b
+                width, height }
+            
+            if  bitsOffset % 2 is 0
+                bitOffsetY += height
+                bitOffsetX += width
+            else
+                bitOffsetY -= height
+
+            if  bitsOffset % 32 is 0
+                bitOffsetX -= width * 16
+                bitOffsetY -= height * 2            
+
+            continue
+
+        for prop in "xyz".split("") then ((key) ->
+            Object.defineProperty this, key, {
+                get : -> 
+                    $ = 0
+                    $ = o.attributes[key] + $ for o, i in this
+                    $ / i
+
+                set : ( v ) ->
+                    $ = @[key]
+                    for o in this
+                        o.attributes[key] += v - $
+                    @
+            } 
+        ).call(boxes, prop)            
+
+        bitBoxes[ bitBoxes.length ] = boxes    
     
     
     text.width += 125
     zero = text.width
 
-    writePacket = ( packet ) ->
+    writeDHCPPacket = ( arrayBuffer ) ->
 
-        data = new Uint8Array packet
-        length = data.byteLength
+        packet = new Uint8Array arrayBuffer
+        length = packet.byteLength
         offset = 0
 
-        while offset < length
-            text.write (data[ offset++ ].toString(16)).padStart(2, "0") + " ", no
-            text.write (data[ offset++ ].toString(16)).padStart(2, "0") + " ", no
-            text.write (data[ offset++ ].toString(16)).padStart(2, "0") + " ", no
-            text.write (data[ offset++ ].toString(16)).padStart(2, "0") + " ", no
-            text.char " "
+        ->  dhcpBox =
+            msgType : byteDataGrid 1 * 8, { mode: WebGL2RenderingContext.TRIANGLES }
+            hwType  : byteDataGrid 1 * 8, { mode: WebGL2RenderingContext.TRIANGLES }
+            hlen    : byteDataGrid 1 * 8, { mode: WebGL2RenderingContext.TRIANGLES }
+            hops    : byteDataGrid 1 * 8, { mode: WebGL2RenderingContext.TRIANGLES }
+            xid     : byteDataGrid 4 * 8, { mode: WebGL2RenderingContext.TRIANGLES }
 
-            unless offset % 16
-                text.height -= 20
-                text.width = zero    
+        byteHex =
+            msgType : text.write (packet[ offset++ ].toString(16)).padStart(2, "0")
+
+        log byteHex.msgType.x += 50
 
 
     init = ->
@@ -1152,12 +1711,11 @@ do ->
 
         #await delay 3000
         #ws = new TCPSocket( "192.168.2.2", 8000, "ws:" )
-        #ws . onmessage = writePacket
+        #ws . onmessage = writeDHCPPacket
 
-        line.rect {
-            x: -140, y: 20, 
-            width: 200, height: 250
-        }
+
+        
+        writeDHCPPacket dump.slice(0, 64)
 
     init()
 

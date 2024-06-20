@@ -4,7 +4,7 @@
 //    sessionStorage.setItem "dump", new Uint8Array( udp ).join(" ")
 
 //import "./uc-worker.js"
-var delay, dump, error, font, log, warn;
+var delay, dump, error, font, iLE, log, warn;
 
 ({log, warn, error} = console);
 
@@ -35,6 +35,11 @@ Object.defineProperties(Math, {
       return rad * 180 / Math.PI;
     }
   },
+  randBit: {
+    value: function() {
+      return Number(Math.random() > 0.5);
+    }
+  },
   powsum: {
     value: function(arr, pow = 2) {
       return [...arr].flat().reduce(function(a, b) {
@@ -44,8 +49,38 @@ Object.defineProperties(Math, {
   }
 });
 
+iLE = new Uint8Array(Uint16Array.of(1).buffer)[0] === 1;
+
+Object.defineProperties(DataView.prototype, {
+  bind: {
+    value: function(object, property, byteOffset, TypedArray, callback) {
+      var caller, getter, setter;
+      caller = TypedArray.name.split("Array").at(0);
+      getter = this[`get${caller}`].bind(this, object.byteOffset + byteOffset, iLE);
+      setter = this[`set${caller}`].bind(this, object.byteOffset + byteOffset);
+      if (typeof callback !== "function") {
+        Object.defineProperty(object, property, {
+          get: getter,
+          set: function(val) {
+            return setter(val, iLE);
+          }
+        });
+      } else {
+        Object.defineProperty(object, property, {
+          get: getter,
+          set: function(val) {
+            setter(val, iLE);
+            return callback.call(this, val);
+          }
+        });
+      }
+      return this;
+    }
+  }
+});
+
 (function() {
-  var M4, TCPSocket, UX, a_Color, a_Position, a_Vertices, arrClearColor, backgroundColor, bindBufferInstances, bindBufferVertices, buf, easing, fshader, gl, glClear, glClearColor, i, iLE, init, instanceCount, instancesBufferArray, j, pointCount, program, render, renderQueue, u_ViewMatrix, ux, verticesBufferArray, verticesOffset, viewMatrix, vshader, writePacket, ws, zero;
+  var BYTES_PER_LINE, M4, TCPSocket, UX, a_Color, a_Position, a_Vertices, arrClearColor, backgroundColor, bindBufferInstances, bindBufferVertices, bitBoxSize, bitBoxes, bitOffsetX, bitOffsetY, bitsOffset, buf, byteDataGrid, easing, fshader, gl, glClear, glClearColor, gridX, gridY, height, i, init, instanceCount, instancesBufferArray, j, pointCount, program, render, renderQueue, u_ViewMatrix, ux, verticesBufferArray, verticesOffset, viewMatrix, vshader, width, writeDHCPPacket, ws, zero;
   M4 = (function() {
     var Camera;
 
@@ -760,7 +795,6 @@ Object.defineProperties(Math, {
   ux = null;
   ws = null;
   gl = document.getElementById("gl").getContext("webgl2");
-  iLE = new Uint8Array(Uint16Array.of(1).buffer)[0] === 1;
   renderQueue = [];
   program = gl.createProgram();
   vshader = gl.createShader(gl.VERTEX_SHADER);
@@ -912,14 +946,15 @@ Object.defineProperties(Math, {
     line: {
       shapes: [],
       buffer: buf = new ArrayBuffer(1e6 * (12 + 16)),
-      view: new DataView(buf),
-      attributes: new Float32Array(buf),
+      view: new DataView(buf, 0, 4096 * 4096),
+      attributes: new Float32Array(buf, 0, 4096 * 1024),
       a_Position: a_Position,
       a_Color: a_Color,
+      zOffset: -300,
       draw: function() {
-        var begin, byteOffset, end, i, instances, k, len, length;
+        var begin, byteOffset, end, i, instances, len, length, m;
         bindBufferInstances();
-        for (i = k = 0, len = shapes.length; k < len; i = ++k) {
+        for (i = m = 0, len = shapes.length; m < len; i = ++m) {
           instances = shapes[i];
           if (instances.needsRebind) {
             instances.needsRebind = 0;
@@ -943,43 +978,515 @@ Object.defineProperties(Math, {
         }
         return 0;
       },
-      add: function(size) {},
-      rect: function(options = {}) {
-        var begin, byteOffset, end, glmalloc, h, length, mode, p0, p1, p2, p3, rect, w, x, y, z;
-        ({
-          x = 0,
-          y = 0,
-          z = -300,
-          width: w,
-          height: h,
-          mode = WebGL2RenderingContext.LINES
-        } = {...options});
-        h || (h = w);
-        p0 = Float32Array.of(x, y, z);
-        p1 = Float32Array.of(x + w, y, z);
-        p2 = Float32Array.of(x + w, y + h, z);
-        p3 = Float32Array.of(x, y + h, z);
-        if (mode === WebGL2RenderingContext.LINES) {
-          rect = Float32Array.of(...p0, ...p1, ...p1, ...p2, ...p0, ...p3, ...p2, ...p3);
-        } else if (mode === WebGL2RenderingContext.TRIANGLES) {
-          rect = Float32Array.of(...p0, ...p1, ...p2, ...p0, ...p3, ...p2);
+      poly: function(boxes = [], options = {}) {
+        var Ax0, Ax1, AxMax, AxMin, Ay0, Ay1, AyMax, AyMin, Az0, Az1, Bx0, Bx1, BxMax, BxMin, By0, By1, ByMax, ByMin, Bz0, Bz1, Cx0, Cx1, CxMax, CxMin, Cy0, Cy1, CyMax, CyMin, Cz0, Cz1, a, b, begin, blen, box, byteLength, byteOffset, dx, dy, dz, end, found, g, i, j, k, len, len1, len2, len3, length, lines, llen, m, max, min, mode, n, p, p0, p0x, p0y, p0z, p1, p1x, p1y, p1z, p2, p2x, p2y, p2z, p3, p3x, p3y, p3z, points, poly, q, r, ref, splice, t, tlen, triangles, u, v, vertices, vlen, x, xBounds, xMax, xMin, xPoints, y, yBounds, yMax, yMin, yPoints, z;
+        mode = options.mode || WebGL2RenderingContext.LINES;
+        blen = boxes.length;
+        points = [];
+        xPoints = [];
+        yPoints = [];
+        xBounds = [];
+        yBounds = [];
+        ({r, g, b, a} = boxes.at(i = 0));
+        while (i < blen) {
+          box = boxes[i++];
+          vertices = [];
+          if (box.mode === WebGL2RenderingContext.TRIANGLES) {
+            triangles = box.slice(0);
+            lines = [];
+            tlen = box.length;
+            t = 0;
+            // ...p0, ...p1, ...p2,
+            // ...p0, ...p3, ...p2
+            while (t < tlen) {
+              p0x = triangles[t++];
+              p0y = triangles[t++];
+              p0z = triangles[t++];
+              p1x = triangles[t++];
+              p1y = triangles[t++];
+              p1z = triangles[t++];
+              p2x = triangles[t++];
+              p2y = triangles[t++];
+              p2z = triangles[t++];
+              t += 3;
+              p3x = triangles[t++];
+              p3y = triangles[t++];
+              p3z = triangles[t++];
+              t += 3;
+              // ...p0, ...p1, 
+              // ...p1, ...p2,
+
+              // ...p0, ...p3, 
+              // ...p2, ...p3
+              lines.push(p0x, p0y, p0z, p1x, p1y, p1z, p1x, p1y, p1z, p2x, p2y, p2z, p0x, p0y, p0z, p3x, p3y, p3z, p2x, p2y, p2z, p3x, p3y, p3z);
+            }
+            vertices = lines.slice(0);
+            lines = triangles = null;
+          } else {
+            vertices = box.slice(0);
+          }
+          vlen = vertices.length;
+          j = 0;
+          dx = box.attributes.x;
+          dy = box.attributes.y;
+          dz = box.attributes.z;
+          while (j < vlen) {
+            x = Math.fround(dx + vertices[j++]);
+            y = Math.fround(dy + vertices[j++]);
+            z = Math.fround(dz + vertices[j++]);
+            if (!xPoints.includes(x)) {
+              xPoints.push(x);
+            }
+            if (!yPoints.includes(y)) {
+              yPoints.push(y);
+            }
+            points.push([x, y, z]);
+          }
         }
-        glmalloc = verticesBufferArray.malloc(rect);
-        byteOffset = 0;
-        length = 28;
+        for (m = 0, len = xPoints.length; m < len; m++) {
+          x = xPoints[m];
+          xBounds[x] = [];
+        }
+        for (n = 0, len1 = yPoints.length; n < len1; n++) {
+          y = yPoints[n];
+          yBounds[y] = [];
+        }
+        for (q = 0, len2 = points.length; q < len2; q++) {
+          [x, y] = points[q];
+          if (!xBounds[x].includes(y)) {
+            xBounds[x].push(y);
+          }
+          if (!yBounds[y].includes(x)) {
+            yBounds[y].push(x);
+          }
+        }
+        ref = [xBounds, yBounds];
+        for (u = 0, len3 = ref.length; u < len3; u++) {
+          p = ref[u];
+          for (k in p) {
+            v = p[k];
+            Object.defineProperty(p, k, {
+              configurable: true,
+              value: {
+                max: Math.max.apply(Math, v),
+                min: Math.min.apply(Math, v)
+              }
+            });
+          }
+        }
+        [xPoints, yPoints, points] = [];
+        for (x in xBounds) {
+          if (!(!(found = false))) {
+            continue;
+          }
+          for (y in yBounds) {
+            ({max, min} = yBounds[y]);
+            if (found = 0 === (min - x)) {
+              break;
+            }
+            if (found = 0 === (max - x)) {
+              break;
+            }
+          }
+          if (!found) {
+            delete xBounds[x];
+          }
+        }
+        for (y in yBounds) {
+          if (!(!(found = false))) {
+            continue;
+          }
+          for (x in xBounds) {
+            ({max, min} = xBounds[x]);
+            if (found = 0 === (min - y)) {
+              break;
+            }
+            if (found = 0 === (max - y)) {
+              break;
+            }
+          }
+          if (!found) {
+            delete yBounds[y];
+          }
+        }
+        vertices = [];
+        for (x in xBounds) {
+          ({max, min} = xBounds[x]);
+          x = parseFloat(x);
+          vertices.push(x, max, 0);
+          vertices.push(x, min, 0);
+        }
+        for (y in yBounds) {
+          ({max, min} = yBounds[y]);
+          y = parseFloat(y);
+          vertices.push(min, y, 0);
+          vertices.push(max, y, 0);
+        }
+        length = vertices.length;
+        splice = [];
+        i = 0;
+        while (i < length) {
+          Ax0 = vertices[i++];
+          Ay0 = vertices[i++];
+          Az0 = vertices[i++];
+          Ax1 = vertices[i++];
+          Ay1 = vertices[i++];
+          Az1 = vertices[i++];
+          if (!(Ay0 - Ay1)) { // y'ler esit ise
+            AxMin = Math.min(Ax0, Ax1);
+            AxMax = Math.max(Ax0, Ax1);
+            j = 0;
+            while (j < length) {
+              Bx0 = vertices[j++];
+              By0 = vertices[j++];
+              Bz0 = vertices[j++];
+              Bx1 = vertices[j++];
+              By1 = vertices[j++];
+              Bz1 = vertices[j++];
+              if (i === j) {
+                continue;
+              }
+              if (Ay0 - By0) { // y'ler esit olmali
+                continue;
+              }
+              if (Bx0 - Bx1) { // B dik bir cizgi olmali
+                continue;
+              }
+              if (Bx0 < AxMin) { // kontrol cizgimizin baslangicindan once olmamali
+                continue;
+              }
+              if (Bx0 > AxMax) { // kontrol cizgimizin bitisinden sonra olmamali
+                continue;
+              }
+              
+              // cizginin arada oldugu belli oldu
+              // simdi kesim noktasini bulalim
+              ByMin = Math.min(By0, By1);
+              ByMax = Math.max(By0, By1);
+              k = 0;
+              while (k < length) {
+                Cx0 = vertices[k++];
+                Cy0 = vertices[k++];
+                Cz0 = vertices[k++];
+                Cx1 = vertices[k++];
+                Cy1 = vertices[k++];
+                Cz1 = vertices[k++];
+                if (j === k) {
+                  continue;
+                }
+                if (i === k) {
+                  continue;
+                }
+                if (Cy0 - Cy1) { // duz bir yatay cizgi ariyoruz
+                  continue;
+                }
+                if (Cy0 <= ByMin) { // bizim altimizda olmamali 
+                  continue;
+                }
+                if (Cy0 >= ByMax) { // bizim ustumuzde olmamali 
+                  continue;
+                }
+                CxMin = Math.min(Cx0, Cx1);
+                CxMax = Math.max(Cx0, Cx1);
+                if (CxMax < Bx0) { // bizden asagida bitmemis olmali
+                  continue;
+                }
+                if (CxMin > Bx0) { // bizden yukarida baslamamis olmali
+                  continue;
+                }
+                
+                // bulduk simdi B'nin y degerini C ile degistirebiliriz
+                if (CxMax > Bx0) {
+                  vertices[j - 5] = Cy0;
+                } else if (CxMin < Bx0) {
+                  vertices[j - 2] = Cy0;
+                }
+              }
+            }
+          }
+          if (!(Ax0 - Ax1)) { // x'ler esit ise
+            AyMin = Math.min(Ay0, Ay1);
+            AyMax = Math.max(Ay0, Ay1);
+            j = 0;
+            while (j < length) {
+              Bx0 = vertices[j++];
+              By0 = vertices[j++];
+              Bz0 = vertices[j++];
+              Bx1 = vertices[j++];
+              By1 = vertices[j++];
+              Bz1 = vertices[j++];
+              if (i === j) {
+                continue;
+              }
+              if (Ax0 - Bx0) { // x'ler esit olmali
+                continue;
+              }
+              if (By0 - By1) { // B düz bir cizgi olmali
+                continue;
+              }
+              if (By0 < AyMin) { // kontrol cizgimizin baslangicindan yukarda olmali
+                continue;
+              }
+              if (By0 > AyMax) { // kontrol cizgimizin bitisinden asagida olmali
+                continue;
+              }
+              
+              // cizginin arada oldugu belli oldu
+              // simdi kesim noktasini bulalim
+              BxMin = Math.min(Bx0, Bx1);
+              BxMax = Math.max(Bx0, Bx1);
+              k = 0;
+              while (k < length) {
+                Cx0 = vertices[k++];
+                Cy0 = vertices[k++];
+                Cz0 = vertices[k++];
+                Cx1 = vertices[k++];
+                Cy1 = vertices[k++];
+                Cz1 = vertices[k++];
+                if (j === k) {
+                  continue;
+                }
+                if (i === k) {
+                  continue;
+                }
+                if (Cx0 - Cx1) { // duz bir dik cizgi ariyoruz
+                  continue;
+                }
+                if (Cx0 <= BxMin) { // bizim oncemizde olmamali 
+                  continue;
+                }
+                if (Cx0 >= BxMax) { // bizim sonramizda olmamali 
+                  continue;
+                }
+                CyMin = Math.min(Cy0, Cy1);
+                CyMax = Math.max(Cy0, Cy1);
+                if (CyMax < By0) { // bizden once bitmemis olmali
+                  continue;
+                }
+                if (CyMin > By0) { // bizden sonra baslamamis olmali
+                  continue;
+                }
+                if ((CyMax === AyMax) && (CyMin === AyMin)) {
+                  if ((By0 === CyMin) || (By0 === CyMax)) {
+                    continue;
+                  }
+                  vertices[j - 6] = Cx0;
+                }
+                if ((CyMin === AyMin) && (AyMax === By0)) {
+                  if ((By0 === AyMin) || (By0 === CyMin)) {
+                    continue;
+                  }
+                  vertices[j - 3] = Cx0;
+                }
+              }
+            }
+          }
+        }
+        xMax = yMax = -2e308;
+        xMin = yMin = +2e308;
+        i = 0;
+        x = 0;
+        y = 0;
+        z = 0;
+        while (i < length) {
+          dx = vertices[i++];
+          dy = vertices[i++];
+          dz = vertices[i++];
+          if (dx > xMax) {
+            xMax = dx;
+          }
+          if (dx < xMin) {
+            xMin = dx;
+          }
+          if (dy > yMax) {
+            yMax = dy;
+          }
+          if (dy < yMin) {
+            yMin = dy;
+          }
+        }
+        x = xMin + .5 * Math.abs(xMax - xMin);
+        y = yMin + .5 * Math.abs(yMax - yMin);
+        z = this.zOffset;
+        i = 0;
+        while (i < length) {
+          vertices[i++] -= x;
+          vertices[i++] -= y;
+          vertices[i++] = 0;
+        }
+        
+        // aradaki cizgileri kaldirdik
+        if (mode === WebGL2RenderingContext.TRIANGLES) {
+          triangles = [];
+          lines = vertices.slice(0);
+          llen = lines.length;
+          t = 0;
+          while (t < llen) {
+            triangles.push(p = {
+              x: lines[t++],
+              y: lines[t++],
+              z: lines[t++]
+            });
+          }
+          
+          // ...p0, ...p1, ...p2,
+          // ...p0, ...p3, ...p2
+          t = 0;
+          llen = triangles.length;
+          while (t < llen) {
+            p0 = triangles[t++];
+            p1 = triangles[t++];
+            p2 = triangles[t++];
+            p3 = triangles[t++];
+            triangles.push(p0.x, p0.y, p0.z, p1.x, p1.y, p1.z, p2.x, p2.y, p2.z, p0.x, p0.y, p0.z, p3.x, p3.y, p3.z, p2.x, p2.y, p2.z);
+          }
+          vertices = triangles.slice(llen);
+          lines = triangles = null;
+        }
+        poly = verticesBufferArray.malloc(vertices);
+        length = 7;
+        byteLength = length * 4;
+        byteOffset = this.shapes.length * byteLength;
         begin = byteOffset / 4;
         end = begin + length;
-        rect.vertexPositionPointer = gl.vertexAttribPointer.bind(gl, this.a_Position, 3, gl.FLOAT, 0, 28, byteOffset);
-        rect.vertexColorPointer = gl.vertexAttribPointer.bind(gl, this.a_Color, 4, gl.FLOAT, 0, 28, byteOffset + 12);
-        rect.drawArraysInstanced = gl.drawArraysInstanced.bind(gl, mode, glmalloc.start, glmalloc.count, 1);
-        rect.bufferSubData = gl.bufferSubData.bind(gl, gl.ARRAY_BUFFER, byteOffset, this.attributes, begin, end);
-        this.attributes.set([0, 0, 0, 1, 1, 0, 1]);
         bindBufferInstances();
+        Object.defineProperty(poly, "attributes", {
+          value: this.attributes.subarray(begin, end)
+        });
+        Object.defineProperty(poly, "vertexPositionPointer", {
+          value: gl.vertexAttribPointer.bind(gl, this.a_Position, 3, gl.FLOAT, 0, byteLength, byteOffset)
+        });
+        Object.defineProperty(poly, "vertexColorPointer", {
+          value: gl.vertexAttribPointer.bind(gl, this.a_Color, 4, gl.FLOAT, 0, byteLength, byteOffset + 12)
+        });
+        Object.defineProperty(poly, "drawArraysInstanced", {
+          value: gl.drawArraysInstanced.bind(gl, mode, poly.start, poly.count, 1)
+        });
+        Object.defineProperty(poly, "bufferSubData", {
+          value: gl.bufferSubData.bind(gl, gl.ARRAY_BUFFER, byteOffset, this.attributes, begin, end)
+        });
+        poly.attributes.set([x, y, z, r, g, b, a]);
+        poly.bufferSubData();
+        poly.vertexColorPointer();
+        poly.vertexPositionPointer();
+        renderQueue.push(poly.vertexColorPointer);
+        renderQueue.push(poly.vertexPositionPointer);
+        renderQueue.push(poly.drawArraysInstanced);
+        this.view.bind(poly.attributes, "x", 0, Float32Array, poly.bufferSubData);
+        this.view.bind(poly.attributes, "y", 4, Float32Array, poly.bufferSubData);
+        this.view.bind(poly.attributes, "z", 8, Float32Array, poly.bufferSubData);
+        this.view.bind(poly.attributes, "r", 12, Float32Array, poly.bufferSubData);
+        this.view.bind(poly.attributes, "g", 16, Float32Array, poly.bufferSubData);
+        this.view.bind(poly.attributes, "b", 20, Float32Array, poly.bufferSubData);
+        this.view.bind(poly.attributes, "a", 24, Float32Array, poly.bufferSubData);
+        return this.shapes[this.shapes.length] = poly;
+      },
+      rect: function(options = {}) {
+        var a, b, begin, byteLength, byteOffset, end, g, h, length, mode, p0, p1, p2, p3, r, rect, vertices, w, x, y, z;
+        ({
+          mode = WebGL2RenderingContext.LINES,
+          x = 0,
+          y = 0,
+          z = this.zOffset,
+          r = 0,
+          g = 0,
+          b = 0,
+          a = 1,
+          width: w,
+          height: h
+        } = {...options});
+        h || (h = w);
+        p0 = Float32Array.of(0, 0, 0);
+        p1 = Float32Array.of(w, 0, 0);
+        p2 = Float32Array.of(w, h, 0);
+        p3 = Float32Array.of(0, h, 0);
+        if (mode === WebGL2RenderingContext.LINES) {
+          vertices = Float32Array.of(...p0, ...p1, ...p1, ...p2, ...p0, ...p3, ...p2, ...p3);
+        } else if (mode === WebGL2RenderingContext.TRIANGLES) {
+          vertices = Float32Array.of(...p0, ...p1, ...p2, ...p0, ...p3, ...p2);
+        }
+        rect = verticesBufferArray.malloc(vertices);
+        length = 7;
+        byteLength = length * 4;
+        byteOffset = this.shapes.length * byteLength;
+        begin = byteOffset / 4;
+        end = begin + length;
+        bindBufferInstances();
+        Object.defineProperty(rect, "mode", {
+          value: mode
+        });
+        Object.defineProperty(rect, "attributes", {
+          value: this.attributes.subarray(begin, end)
+        });
+        Object.defineProperty(rect, "vertexPositionPointer", {
+          value: gl.vertexAttribPointer.bind(gl, this.a_Position, 3, gl.FLOAT, 0, byteLength, byteOffset)
+        });
+        Object.defineProperty(rect, "vertexColorPointer", {
+          value: gl.vertexAttribPointer.bind(gl, this.a_Color, 4, gl.FLOAT, 0, byteLength, byteOffset + 12)
+        });
+        Object.defineProperty(rect, "drawArraysInstanced", {
+          value: gl.drawArraysInstanced.bind(gl, mode, rect.start, rect.count, 1)
+        });
+        Object.defineProperty(rect, "bufferSubData", {
+          value: gl.bufferSubData.bind(gl, gl.ARRAY_BUFFER, byteOffset, this.attributes, begin, end)
+        });
+        rect.attributes.set([x, y, z, r, g, b, a]);
         rect.bufferSubData();
         rect.vertexColorPointer();
         rect.vertexPositionPointer();
-        rect.drawArraysInstanced();
-        return log(this.attributes);
+        renderQueue.push(rect.vertexColorPointer);
+        renderQueue.push(rect.vertexPositionPointer);
+        renderQueue.push(rect.drawArraysInstanced);
+        this.view.bind(rect.attributes, "x", 0, Float32Array, rect.bufferSubData);
+        this.view.bind(rect.attributes, "y", 4, Float32Array, rect.bufferSubData);
+        this.view.bind(rect.attributes, "z", 8, Float32Array, rect.bufferSubData);
+        this.view.bind(rect.attributes, "r", 12, Float32Array, rect.bufferSubData);
+        this.view.bind(rect.attributes, "g", 16, Float32Array, rect.bufferSubData);
+        this.view.bind(rect.attributes, "b", 20, Float32Array, rect.bufferSubData);
+        this.view.bind(rect.attributes, "a", 24, Float32Array, rect.bufferSubData);
+        Object.defineProperty(rect, "boundingRect", {
+          value: function() {
+            var depth, height, i, width, xMax, xMin, yMax, yMin, zMax, zMin;
+            length = this.length;
+            i = 0;
+            xMax = yMax = zMax = -2e308;
+            xMin = yMin = zMin = +2e308;
+            while (i < length) {
+              x = this[i++];
+              y = this[i++];
+              z = this[i++];
+              if (xMax < x) {
+                xMax = x;
+              }
+              if (xMin > x) {
+                xMin = x;
+              }
+              if (yMax < y) {
+                yMax = y;
+              }
+              if (yMin > y) {
+                yMin = y;
+              }
+              if (zMax < z) {
+                zMax = z;
+              }
+              if (zMin > z) {
+                zMin = z;
+              }
+            }
+            width = xMax - xMin;
+            height = yMax - yMin;
+            depth = zMax - zMin;
+            xMax += this.attributes.x;
+            xMin += this.attributes.x;
+            yMax += this.attributes.y;
+            yMin += this.attributes.y;
+            zMax += this.attributes.z;
+            zMin += this.attributes.z;
+            return {xMax, xMin, width, yMax, yMin, height, zMax, zMin, depth};
+          }
+        });
+        return this.shapes[this.shapes.length] = rect;
       }
     }
   });
@@ -991,6 +1498,7 @@ Object.defineProperties(Math, {
       charCount: 0,
       letterCount: 0,
       byteLength: 0,
+      byteOffset: 0,
       lineCount: 0,
       lineWidth: 100,
       lineHeight: 10,
@@ -1000,18 +1508,18 @@ Object.defineProperties(Math, {
       monospace: true,
       width: -300,
       height: +300,
-      depth: -300,
+      depth: -200,
       length: 0,
-      buffer: buf = new ArrayBuffer(1e6 * (12 + 16)),
+      buffer: buf = new ArrayBuffer(4096 * 4096),
       view: new DataView(buf),
       attributes: new Float32Array(buf),
       a_Position: a_Position,
       a_Color: a_Color,
       draw: function() {
-        var begin, byteOffset, end, i, instances, k, len, length, ref;
+        var begin, byteOffset, end, i, instances, len, length, m, ref;
         bindBufferInstances();
         ref = this.chars;
-        for (i = k = 0, len = ref.length; k < len; i = ++k) {
+        for (i = m = 0, len = ref.length; m < len; i = ++m) {
           instances = ref[i];
           if (instances.needsRebind) {
             instances.needsRebind = 0;
@@ -1036,7 +1544,7 @@ Object.defineProperties(Math, {
         return 0;
       },
       char: function(letter) {
-        var attributes, base, byteOffset, charCode, chars, dview, i, index, instance, instances, ival, k, len, len1, length, m, offset, ref, ref1, vertices, xMax, xMin, yMax, yMin;
+        var attributes, base, byteOffset, charCode, chars, dview, i, index, instance, instances, ival, len, len1, length, m, n, offset, ref, ref1, vertices, xMax, xMin, yMax, yMin;
         if (!`${letter}`.trim()) {
           return this.width += this.spaceWidth;
         }
@@ -1104,18 +1612,18 @@ Object.defineProperties(Math, {
             },
             setColorAll: {
               value: function(rgba = []) {
-                var c, ins, k, len, results, v, vc, vi;
+                var c, ins, len, m, results, v, vc, vi;
                 vc = "rgba".split("");
                 results = [];
-                for (vi = k = 0, len = rgba.length; k < len; vi = ++k) {
+                for (vi = m = 0, len = rgba.length; m < len; vi = ++m) {
                   v = rgba[vi];
                   if (c = vc[vi]) {
                     results.push((function() {
-                      var len1, m, ref, results1;
+                      var len1, n, ref, results1;
                       ref = this;
                       results1 = [];
-                      for (m = 0, len1 = ref.length; m < len1; m++) {
-                        ins = ref[m];
+                      for (n = 0, len1 = ref.length; n < len1; n++) {
+                        ins = ref[n];
                         results1.push(ins[c] = v);
                       }
                       return results1;
@@ -1178,7 +1686,7 @@ Object.defineProperties(Math, {
           this.letterCount += 1;
         }
         chars[index = chars.length] = instance = chars.model.instance({});
-        offset = +28 * index;
+        offset = 28 * index;
         Object.defineProperty(instance, "x", {
           get: chars.getPosition.bind(chars, offset),
           set: chars.setPosition.bind(chars, offset)
@@ -1209,76 +1717,189 @@ Object.defineProperties(Math, {
         });
         attributes = [];
         ref = this.chars;
-        for (k = 0, len = ref.length; k < len; k++) {
-          ({byteOffset, length} = ref[k]);
+        for (m = 0, len = ref.length; m < len; m++) {
+          ({byteOffset, length} = ref[m]);
           attributes.push.apply(attributes, new Float32Array(this.buffer, byteOffset, length * 7));
         }
+        this.attributes.set(attributes);
         byteOffset = 0;
         ref1 = this.chars;
-        for (m = 0, len1 = ref1.length; m < len1; m++) {
-          instances = ref1[m];
+        for (n = 0, len1 = ref1.length; n < len1; n++) {
+          instances = ref1[n];
           instances.byteOffset = byteOffset;
           instances.needsUpload = 1;
           instances.needsRebind = 1;
           instances.needsColor = 1;
           byteOffset = byteOffset + (instances.length * 28);
         }
-        this.attributes.set(attributes);
         instance.x = !this.monospace ? this.width + chars.left : this.width + this.letterSpace - chars.width / 2;
         instance.y = this.height;
         instance.z = this.depth;
-        instance.r = Math.random();
+        instance.r = 1;
+        instance.g = 1;
+        instance.b = 1;
         instance.a = 1;
         this.width += !this.monospace ? this.letterSpace + chars.width : this.letterSpace * 8;
         attributes = null;
         return instance;
       },
       write: function(text, delays = 40) {
-        var k, l, len, ref;
+        var char, chars, i, l, len, len1, len2, m, n, prop, q, ref, ref1, ref2;
+        chars = [];
+        ref = `${text}`;
+        for (i = m = 0, len = ref.length; m < len; i = ++m) {
+          char = ref[i];
+          chars[i] = this.char(char);
+        }
+        ref1 = "xyz".split("");
+        for (n = 0, len1 = ref1.length; n < len1; n++) {
+          prop = ref1[n];
+          (function(key) {
+            return Object.defineProperty(this, key, {
+              get: function() {
+                var $, len2, o, q, ref2;
+                log(this);
+                $ = 0;
+                ref2 = this;
+                for (i = q = 0, len2 = ref2.length; q < len2; i = ++q) {
+                  o = ref2[i];
+                  $ = o[key] + $;
+                }
+                return $ / i;
+              },
+              set: function(v) {
+                var $, len2, o, q, ref2;
+                $ = this[key];
+                ref2 = this;
+                for (q = 0, len2 = ref2.length; q < len2; q++) {
+                  o = ref2[q];
+                  o[key] += v - $;
+                }
+                return this;
+              }
+            });
+          }).call(chars, prop);
+        }
+        return chars;
         if (delays > 0) {
           this.delay = clearTimeout(this.delay) || setTimeout(() => {
-            var k, len, letter, ref, results;
-            ref = `${text}`;
+            var len2, letter, q, ref2, results;
+            ref2 = `${text}`;
             results = [];
-            for (k = 0, len = ref.length; k < len; k++) {
-              letter = ref[k];
-              results.push(this.char(letter));
+            for (q = 0, len2 = ref2.length; q < len2; q++) {
+              letter = ref2[q];
+              results.push(chars.push(this.char(letter)));
             }
             return results;
           }, delays);
         } else {
-          ref = `${text}`;
-          for (k = 0, len = ref.length; k < len; k++) {
-            l = ref[k];
-            this.char(l);
+          ref2 = `${text}`;
+          for (q = 0, len2 = ref2.length; q < len2; q++) {
+            l = ref2[q];
+            chars.push(this.char(l));
           }
         }
-        return 0;
+        return chars;
       }
     }
   });
+  gridX = -175;
+  gridY = 300;
+  BYTES_PER_LINE = 4;
+  bitBoxSize = (innerWidth / 2) / (BYTES_PER_LINE * 8);
+  bitsOffset = 0;
+  bitOffsetX = 0;
+  bitOffsetY = 0;
+  width = bitBoxSize;
+  height = bitBoxSize * 1.38;
+  bitBoxes = [];
+  byteDataGrid = function(bitLength = 0, options = {}) {
+    var b, box, boxes, g, len, m, prop, r, ref, x, y;
+    boxes = [];
+    r = Math.randBit();
+    g = Math.randBit();
+    b = Math.random();
+    if (!r && !g && !b) {
+      g = 1;
+    }
+    while (bitLength--) {
+      bitsOffset++;
+      x = bitOffsetX + gridX;
+      y = bitOffsetY + gridY;
+      boxes.push(box = line.rect(Object.assign(options, {x, y, r, g, b, width, height})));
+      if (bitsOffset % 2 === 0) {
+        bitOffsetY += height;
+        bitOffsetX += width;
+      } else {
+        bitOffsetY -= height;
+      }
+      if (bitsOffset % 32 === 0) {
+        bitOffsetX -= width * 16;
+        bitOffsetY -= height * 2;
+      }
+      continue;
+    }
+    ref = "xyz".split("");
+    for (m = 0, len = ref.length; m < len; m++) {
+      prop = ref[m];
+      (function(key) {
+        return Object.defineProperty(this, key, {
+          get: function() {
+            var $, i, len1, n, o, ref1;
+            $ = 0;
+            ref1 = this;
+            for (i = n = 0, len1 = ref1.length; n < len1; i = ++n) {
+              o = ref1[i];
+              $ = o.attributes[key] + $;
+            }
+            return $ / i;
+          },
+          set: function(v) {
+            var $, len1, n, o, ref1;
+            $ = this[key];
+            ref1 = this;
+            for (n = 0, len1 = ref1.length; n < len1; n++) {
+              o = ref1[n];
+              o.attributes[key] += v - $;
+            }
+            return this;
+          }
+        });
+      }).call(boxes, prop);
+    }
+    return bitBoxes[bitBoxes.length] = boxes;
+  };
   text.width += 125;
   zero = text.width;
-  writePacket = function(packet) {
-    var data, length, offset, results;
-    data = new Uint8Array(packet);
-    length = data.byteLength;
+  writeDHCPPacket = function(arrayBuffer) {
+    var byteHex, length, offset, packet;
+    packet = new Uint8Array(arrayBuffer);
+    length = packet.byteLength;
     offset = 0;
-    results = [];
-    while (offset < length) {
-      text.write((data[offset++].toString(16)).padStart(2, "0") + " ", false);
-      text.write((data[offset++].toString(16)).padStart(2, "0") + " ", false);
-      text.write((data[offset++].toString(16)).padStart(2, "0") + " ", false);
-      text.write((data[offset++].toString(16)).padStart(2, "0") + " ", false);
-      text.char(" ");
-      if (!(offset % 16)) {
-        text.height -= 20;
-        results.push(text.width = zero);
-      } else {
-        results.push(void 0);
-      }
-    }
-    return results;
+    (function() {
+      var dhcpBox;
+      return dhcpBox = {
+        msgType: byteDataGrid(1 * 8, {
+          mode: WebGL2RenderingContext.TRIANGLES
+        }),
+        hwType: byteDataGrid(1 * 8, {
+          mode: WebGL2RenderingContext.TRIANGLES
+        }),
+        hlen: byteDataGrid(1 * 8, {
+          mode: WebGL2RenderingContext.TRIANGLES
+        }),
+        hops: byteDataGrid(1 * 8, {
+          mode: WebGL2RenderingContext.TRIANGLES
+        }),
+        xid: byteDataGrid(4 * 8, {
+          mode: WebGL2RenderingContext.TRIANGLES
+        })
+      };
+    });
+    byteHex = {
+      msgType: text.write((packet[offset++].toString(16)).padStart(2, "0"))
+    };
+    return log(byteHex.msgType.x += 50);
   };
   init = function() {
     (function()/* viewport */ {
@@ -1310,13 +1931,8 @@ Object.defineProperties(Math, {
     ux = new UX(gl.canvas, viewMatrix);
     //await delay 3000
     //ws = new TCPSocket( "192.168.2.2", 8000, "ws:" )
-    //ws . onmessage = writePacket
-    return line.rect({
-      x: -140,
-      y: 20,
-      width: 200,
-      height: 250
-    });
+    //ws . onmessage = writeDHCPPacket
+    return writeDHCPPacket(dump.slice(0, 64));
   };
   init();
   // @url https://easings.net/#easeOutBack    
@@ -1353,13 +1969,13 @@ Object.defineProperties(Math, {
     };
     i = -1;
     return queueIndex = -1 + renderQueue.push(function() {
-      var instance, k, l, len, len1, m, ref;
+      var instance, l, len, len1, m, n, ref;
       if (++i < step) {
         ref = text.chars;
-        for (k = 0, len = ref.length; k < len; k++) {
-          l = ref[k];
-          for (m = 0, len1 = l.length; m < len1; m++) {
-            instance = l[m];
+        for (m = 0, len = ref.length; m < len; m++) {
+          l = ref[m];
+          for (n = 0, len1 = l.length; n < len1; n++) {
+            instance = l[n];
             if (!instance.steps) {
               instance.steps = steps(instance);
             }
@@ -1374,10 +1990,10 @@ Object.defineProperties(Math, {
   i = 0;
   j = 1;
   render = function(t) {
-    var job, k, len;
+    var job, len, m;
     text.draw();
-    for (k = 0, len = renderQueue.length; k < len; k++) {
-      job = renderQueue[k];
+    for (m = 0, len = renderQueue.length; m < len; m++) {
+      job = renderQueue[m];
       job(t);
     }
     requestAnimationFrame(render);
