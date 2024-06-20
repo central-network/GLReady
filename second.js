@@ -1872,34 +1872,38 @@ Object.defineProperties(DataView.prototype, {
   text.width += 125;
   zero = text.width;
   writeDHCPPacket = function(arrayBuffer) {
-    var byteHex, length, offset, packet;
+    var dhcpBox, length, offset, packet;
     packet = new Uint8Array(arrayBuffer);
     length = packet.byteLength;
     offset = 0;
+    //do ->  
+    dhcpBox = {
+      msgType: byteDataGrid(1 * 8, {
+        mode: WebGL2RenderingContext.TRIANGLES
+      }),
+      hwType: byteDataGrid(1 * 8, {
+        mode: WebGL2RenderingContext.TRIANGLES
+      }),
+      hlen: byteDataGrid(1 * 8, {
+        mode: WebGL2RenderingContext.TRIANGLES
+      }),
+      hops: byteDataGrid(1 * 8, {
+        mode: WebGL2RenderingContext.TRIANGLES
+      }),
+      xid: byteDataGrid(4 * 8, {
+        mode: WebGL2RenderingContext.TRIANGLES
+      })
+    };
     (function() {
-      var dhcpBox;
-      return dhcpBox = {
-        msgType: byteDataGrid(1 * 8, {
-          mode: WebGL2RenderingContext.TRIANGLES
-        }),
-        hwType: byteDataGrid(1 * 8, {
-          mode: WebGL2RenderingContext.TRIANGLES
-        }),
-        hlen: byteDataGrid(1 * 8, {
-          mode: WebGL2RenderingContext.TRIANGLES
-        }),
-        hops: byteDataGrid(1 * 8, {
-          mode: WebGL2RenderingContext.TRIANGLES
-        }),
-        xid: byteDataGrid(4 * 8, {
-          mode: WebGL2RenderingContext.TRIANGLES
-        })
+      var byteHex;
+      return byteHex = {
+        msgType: text.write((packet[offset++].toString(16)).padStart(2, "0"))
       };
     });
-    byteHex = {
-      msgType: text.write((packet[offset++].toString(16)).padStart(2, "0"))
-    };
-    return log(byteHex.msgType.x += 50);
+    //log byteHex.msgType.x += 50
+    log(dhcpBox.msgType.x += 250);
+    log(dhcpBox.msgType.y += -50);
+    return log(dhcpBox.msgType.z += -50);
   };
   init = function() {
     (function()/* viewport */ {

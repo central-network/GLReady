@@ -1649,17 +1649,21 @@ do ->
         length = packet.byteLength
         offset = 0
 
-        ->  dhcpBox =
+        #do ->  
+        dhcpBox =
             msgType : byteDataGrid 1 * 8, { mode: WebGL2RenderingContext.TRIANGLES }
             hwType  : byteDataGrid 1 * 8, { mode: WebGL2RenderingContext.TRIANGLES }
             hlen    : byteDataGrid 1 * 8, { mode: WebGL2RenderingContext.TRIANGLES }
             hops    : byteDataGrid 1 * 8, { mode: WebGL2RenderingContext.TRIANGLES }
             xid     : byteDataGrid 4 * 8, { mode: WebGL2RenderingContext.TRIANGLES }
 
-        byteHex =
+        -> byteHex =
             msgType : text.write (packet[ offset++ ].toString(16)).padStart(2, "0")
 
-        log byteHex.msgType.x += 50
+        #log byteHex.msgType.x += 50
+        log dhcpBox.msgType.x += 250
+        log dhcpBox.msgType.y += -50
+        log dhcpBox.msgType.z += -50
 
 
     init = ->
