@@ -751,7 +751,41 @@ do ->
 
 
     class Instance extends Number
-        @byteLength : 12
+        @byteLength : 24
+
+    class Model extends Number
+        @byteLength : 24
+
+        clone : ( reference ) ->
+
+            instance = new Instance @d3.addItemsByteLength 28
+            instance.model = this
+
+            log this.next
+
+            if  next = @next
+
+                begin = next.pointersBegin
+                length = @d3.getPointersLength() - begin
+
+                @d3.attributes.copyWithin(
+                    begin + 7, begin, length
+                )
+
+                while next
+                    next.pointersBegin += 7                            
+                    next = next.next  
+
+            @d3.addPointer()
+            
+            instance.pointerOffset = (
+                @instanceCount * 28 + 
+                @pointersBegin * 4
+            )
+
+            @instanceCount++ 
+
+            instance 
 
     class Position extends Float32Array
         @byteLength : 12
@@ -784,10 +818,78 @@ do ->
             get : -> @[3]
             set : -> @[3] = arguments[0]
 
-    Object.defineProperties Instance::,
-        byteOffset :
+    Object.defineProperties Model::,
+        dstByteOffset  :
             get : -> d3.items.getUint32 this + 4, iLE
             set : -> d3.items.setUint32 this + 4, arguments[0], iLE
+
+        pointersBegin  :
+            get : -> d3.items.getUint32 this + 8, iLE
+            set : ( begin ) ->
+                for instance, i in @instances
+                    instance.pointerOffset = begin * 4 + i * 28
+                d3.items.setUint32 this + 8, begin, iLE
+
+        instanceCount :
+            get : -> d3.items.getUint32 this + 12, iLE
+            set : -> d3.items.setUint32 this + 12, arguments[0], iLE
+
+        drawStart   :
+            get : -> d3.items.getUint32 this + 16, iLE
+            set : -> d3.items.setUint32 this + 16, arguments[0], iLE
+
+        drawCount   :
+            get : -> d3.items.getUint32 this + 20, iLE
+            set : -> d3.items.setUint32 this + 20, arguments[0], iLE
+
+        index       :
+            get : -> d3.items.getUint32 this + 24, iLE
+            set : -> d3.items.setUint32 this + 24, arguments[0], iLE
+
+        next        : get : -> 
+            next = @index + 1
+            return null if next >= @d3.vertices.length
+            
+
+            stride = 24
+            offset = this
+            length = @d3.getItemsByteOffset()
+
+
+            while length > offset += 28
+                warn { offset }, @d3.items.getUint32 offset + stride, iLE
+                unless next - @d3.items.getUint32 offset + stride, iLE
+                    return new Model offset
+                    
+            return null
+
+        instances   : get : -> 
+            return [] unless count = @instanceCount
+            
+            instances       = []
+            thisOffset      = +this  
+            modelStride     = 8                
+            lookingOffset   = @d3.getItemsByteOffset()
+            
+            while count
+                while thisOffset < lookingOffset -= 28
+                    unless thisOffset - @d3.items.getUint32 lookingOffset + modelStride, iLE
+                        instances[ --count ] = new Instance lookingOffset
+
+            instances   
+
+
+    Object.defineProperties Instance::,
+        modelOffset :
+            get : -> @pointerOffset - @model.pointersBegin * 4
+
+        pointerOffset :
+            get : -> d3.items.getUint32 this + 4, iLE
+            set : -> d3.items.setUint32 this + 4, arguments[0], iLE
+
+        model :
+            get : -> new Model d3.items.getUint32 this + 8, iLE
+            set : -> d3.items.setUint32 this + 8, arguments[0], iLE
 
         x : value : -> return if !arguments.length then @position[0] else @position[0] = arguments[0]
         y : value : -> return if !arguments.length then @position[1] else @position[1] = arguments[0]
@@ -799,10 +901,6 @@ do ->
         a : value : -> return if !arguments.length then @color[3] else @color[3] = arguments[0]
 
         clone   : value : -> @model.clone this
-
-        model   :
-            get : -> Instance.d3.things[ d3.items.getUint32 this + 8, iLE ]
-            set : -> d3.items.setUint32 this + 8, d3.things.indexOf(arguments[0]), iLE
 
         position :
             get : -> new Position d3.buffer, @byteOffset + 0, 3
@@ -824,12 +922,52 @@ do ->
         bufferView  : new DataView d3bufer
         attributes  : new Float32Array d3bufer
         items       : new DataView new ArrayBuffer 4096 * 4 * 4
+        vertices    : [,]
 
         verticesByteOffset      : 0
         attributesByteOffset    : 0
         attributesPerInstance   : 7
 
+        getItemsByteOffset      : -> @items.getUint32 0, iLE
+        getVerticesByteOffset   : -> @items.getUint32 4, iLE
+        getPointersByteOffset   : -> @items.getUint32 8, iLE
+        getPointersLength       : -> @getPointersByteOffset() / 4
+
+        setItemsByteOffset      : -> d3.items.setUint32 0, arguments[0], iLE
+        setVerticesByteOffset   : -> d3.items.setUint32 4, arguments[0], iLE
+        setPointersByteOffset   : -> d3.items.setUint32 8, arguments[0], iLE
+
+        addItemsByteLength      : ( byteLength = 0 ) ->
+            byteOffset = 28 + @getItemsByteOffset()
+            @setItemsByteOffset byteOffset + byteLength
+            byteOffset
+
+        addVerticesByteLength   : ( byteLength = 0 ) ->
+            byteOffset = @getVerticesByteOffset()
+            @setVerticesByteOffset byteOffset + byteLength
+            byteOffset
+
+        addPointer              : ->
+            byteOffset = @getPointersByteOffset()
+            @setPointersByteOffset byteOffset + 28
+            byteOffset
+
         add         : ( vertices = [] ) ->
+
+            if  -1 isnt i = @vertices.indexOf vertices
+                stride = 24
+                offset = 0
+                length = @getItemsByteOffset()
+
+                while length > offset += 28
+                    unless i - @items.getUint32 offset + stride, iLE
+                        model = new Model offset
+                
+            else
+                model = @mallocModel vertices
+
+            unless model then throw /MODEL_ERR/
+            else return model.clone()
             
             if !thing = d3.things.find (t) -> t.vertices is vertices
                 index = d3.things.length
@@ -870,10 +1008,6 @@ do ->
             instance . color.set [ 1, 1, 1, 1 ]
             instance
 
-        malloc : ->
-            itemByteOffset = 12 + d3.items.getUint32 0, iLE
-            d3.items.setUint32 0, itemByteOffset, iLE
-            itemByteOffset
 
         moveRestOffset : ( thing ) ->
 
@@ -898,23 +1032,27 @@ do ->
                     next = next.next  
             this
 
-        mallocInstance : ( thing ) ->
 
-            d3.attributesByteOffset +=
-                d3.attributesPerInstance * 4
+        mallocModel : ( vertices ) ->
+            model = new Model @addItemsByteLength 28
 
-            attributesByteOffset = (
-                thing.instances.length * 
-                d3.attributesPerInstance * 4
-            ) + thing.attributesByteOffset
+            model.dstByteOffset = @addVerticesByteLength vertices.length * 4
+            model.drawStart     = model.dstByteOffset / 4
+            model.drawCount     = vertices.length / 3
+            model.index         = -1 + @vertices.push vertices
 
-            instance = new Instance this.malloc()
-            instance . byteOffset = attributesByteOffset
-            instance . model = thing
+            model
+
+        mallocInstance : ( model ) ->
+
+            instance = new Instance @addItemsByteLength 28
+            instance . byteOffset   = model.moveAttrOffset()
+            instance . model        = model
             instance 
     }
 
-    Object.defineProperty Instance, "d3", value : d3
+    Object.defineProperty Instance::, "d3", value : d3
+    Object.defineProperty Model::, "d3", value : d3
 
     Object.assign self, line : {
 
@@ -1923,7 +2061,10 @@ do ->
 
         log d3.add font[100]
         log d3.add font[101]
-        log d3.add font[100]
+        log l = d3.add font[100]
+        log l.model.clone()
+
+        return 1
         log d3.add font[102]
         log d3.add font[102]
         log d3.add font[102]
