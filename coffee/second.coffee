@@ -1,5 +1,37 @@
 #`import font from "./ibmplex.json" with { type: "json" }`
 #sessionStorage.setItem "font", JSON.stringify font
+###
+fontToTriangles = ->
+            for charCode, vertices of font
+                length = vertices.length
+
+                i = 0
+                j = -3
+
+                triangles = new Float32Array length * (9/6)
+                
+                while i < length
+                    
+                    p0 = vertices.slice i, i += 3
+                    triangles.set p0, j += 3
+                    triangles.set p0, j + 9
+                    
+                    p1 = vertices.slice i, i += 3
+                    triangles.set p1, j += 3
+                    
+                    p2 = vertices.slice i, i += 3
+                    triangles.set p2, j += 3
+                    triangles.set p2, j + 6
+                    
+                    p3 = vertices.slice i, i += 3
+                    triangles.set p3, j += 3
+
+                font[charCode] = Array.from triangles
+
+            sessionStorage.setItem "font", JSON.stringify font
+            localStorage.setItem "font", JSON.stringify font
+###
+
 #fetch("test.dump").then( (r) -> r.blob() ).then( (b) -> b.arrayBuffer() ).then (udp) -> 
 #    sessionStorage.setItem "dump", new Uint8Array( udp ).join(" ")
 
@@ -717,6 +749,172 @@ do ->
             
             @store()
 
+
+    class Instance extends Number
+        @byteLength : 12
+
+    class Position extends Float32Array
+        @byteLength : 12
+
+    class Color extends Float32Array
+        @byteLength : 16
+
+    Object.defineProperties Position::,
+        x :
+            get : -> @[0]
+            set : -> @[0] = arguments[0]
+        y :
+            get : -> @[1]
+            set : -> @[1] = arguments[0]
+        z :
+            get : -> @[2]
+            set : -> @[2] = arguments[0]
+
+    Object.defineProperties Color::,
+        r :
+            get : -> @[0]
+            set : -> @[0] = arguments[0]
+        g :
+            get : -> @[1]
+            set : -> @[1] = arguments[0]
+        b :
+            get : -> @[2]
+            set : -> @[2] = arguments[0]
+        a :
+            get : -> @[3]
+            set : -> @[3] = arguments[0]
+
+    Object.defineProperties Instance::,
+        byteOffset :
+            get : -> d3.items.getUint32 this + 4, iLE
+            set : -> d3.items.setUint32 this + 4, arguments[0], iLE
+
+        x : value : -> return if !arguments.length then @position[0] else @position[0] = arguments[0]
+        y : value : -> return if !arguments.length then @position[1] else @position[1] = arguments[0]
+        z : value : -> return if !arguments.length then @position[2] else @position[2] = arguments[0]
+
+        r : value : -> return if !arguments.length then @color[0] else @color[0] = arguments[0]
+        g : value : -> return if !arguments.length then @color[1] else @color[1] = arguments[0]
+        b : value : -> return if !arguments.length then @color[2] else @color[2] = arguments[0]
+        a : value : -> return if !arguments.length then @color[3] else @color[3] = arguments[0]
+
+        clone   : value : -> @model.clone this
+
+        model   :
+            get : -> Instance.d3.things[ d3.items.getUint32 this + 8, iLE ]
+            set : -> d3.items.setUint32 this + 8, d3.things.indexOf(arguments[0]), iLE
+
+        position :
+            get : -> new Position d3.buffer, @byteOffset + 0, 3
+            set : ( xyz = [] ) ->
+                subarray = @position
+                subarray[i] = v for v, i in xyz
+                this
+
+        color   :
+            get : -> new Color d3.buffer, @byteOffset + 12, 4
+            set : ( rgba = [] ) ->
+                subarray = @color
+                subarray[i] = v for v, i in rgba
+                this
+
+    Object.assign self, d3 : {
+        things      : []
+        buffer      : d3bufer = new ArrayBuffer 1e6 * ( 12 + 16 )
+        bufferView  : new DataView d3bufer
+        attributes  : new Float32Array d3bufer
+        items       : new DataView new ArrayBuffer 4096 * 4 * 4
+
+        verticesByteOffset      : 0
+        attributesByteOffset    : 0
+        attributesPerInstance   : 7
+
+        add         : ( vertices = [] ) ->
+            
+            if !thing = d3.things.find (t) -> t.vertices is vertices
+                index = d3.things.length
+                thing = d3.things[index] = { vertices }
+
+                d3.things[ index-1 ].next = thing if index
+
+                verticesByteLength      = vertices.length * 4
+                verticesByteOffset      = d3.verticesByteOffset
+                attributesByteOffset    = d3.attributesByteOffset
+
+                drawStart               = verticesByteOffset / 4
+                drawCount               = vertices.length / 3
+                
+                Object.assign thing, {
+                    attributesByteOffset,
+                    verticesByteLength,
+                    verticesByteOffset,
+                    drawStart,
+                    drawCount,
+                    instances : []
+                }
+
+                d3.verticesByteOffset +=
+                    verticesByteLength
+
+                Object.defineProperties thing, clone : value : ( reference ) ->
+
+                    instance = d3.mallocInstance this
+
+                    if  reference instanceof Instance
+                        instance.color.set reference.color
+                        instance.position.set reference.position
+
+                    thing.instances[ thing.instances.length ] = instance
+
+            instance = thing.clone()
+            instance . color.set [ 1, 1, 1, 1 ]
+            instance
+
+        malloc : ->
+            itemByteOffset = 12 + d3.items.getUint32 0, iLE
+            d3.items.setUint32 0, itemByteOffset, iLE
+            itemByteOffset
+
+        moveRestOffset : ( thing ) ->
+
+            if  next = thing.next
+                moveOffset = d3.attributesPerInstance * 4
+                moveBegin = next.attributesByteOffset / 4
+                copyLength = d3.attributesByteOffset / 4 - moveBegin
+
+                d3.attributes.copyWithin(
+                    moveBegin + d3.attributesPerInstance,
+                    moveBegin , copyLength
+                )
+
+                while next
+
+                    next.attributesByteOffset += moveOffset                            
+                    nextsInstanceIndex = next.instances.length
+
+                    while instance = next.instances[ --nextsInstanceIndex ]
+                        instance.byteOffset += moveOffset
+                        
+                    next = next.next  
+            this
+
+        mallocInstance : ( thing ) ->
+
+            d3.attributesByteOffset +=
+                d3.attributesPerInstance * 4
+
+            attributesByteOffset = (
+                thing.instances.length * 
+                d3.attributesPerInstance * 4
+            ) + thing.attributesByteOffset
+
+            instance = new Instance this.malloc()
+            instance . byteOffset = attributesByteOffset
+            instance . model = thing
+            instance 
+    }
+
+    Object.defineProperty Instance, "d3", value : d3
 
     Object.assign self, line : {
 
@@ -1717,9 +1915,28 @@ do ->
         #ws = new TCPSocket( "192.168.2.2", 8000, "ws:" )
         #ws . onmessage = writeDHCPPacket
 
-
         
-        writeDHCPPacket dump.slice(0, 64)
+        #writeDHCPPacket dump.slice(0, 64)
+        
+        
+
+
+        log d3.add font[100]
+        log d3.add font[101]
+        log d3.add font[100]
+        log d3.add font[102]
+        log d3.add font[102]
+        log d3.add font[102]
+        log d3.add font[100]
+        log d3.add font[102]
+        log d3.add font[102]
+        log d3.add font[102]
+        warn i = d3.add font[101]
+        error i.position.x += 10
+        error i.color = [1, 0.4]
+        warn i.clone()
+        log d3
+        
 
     init()
 
