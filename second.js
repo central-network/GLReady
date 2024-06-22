@@ -111,7 +111,7 @@ Object.defineProperties(DataView.prototype, {
 });
 
 (function() {
-  var BYTES_PER_LINE, Color, Instance, M4, Model, Position, TCPSocket, UX, a_Color, a_Position, a_Vertices, arrClearColor, backgroundColor, bindBufferInstances, bindBufferVertices, bitBoxSize, bitBoxes, bitOffsetX, bitOffsetY, bitsOffset, buf, byteDataGrid, d3bufer, easing, fshader, gl, glClear, glClearColor, gridX, gridY, height, i, init, instanceCount, instancesBufferArray, j, pointCount, program, render, renderQueue, u_ViewMatrix, ux, verticesBufferArray, verticesOffset, viewMatrix, vshader, width, writeDHCPPacket, ws, zero;
+  var BYTES_PER_LINE, Color, Instance, M4, Model, Position, TCPSocket, UX, a_Color, a_Position, a_Vertices, arrClearColor, backgroundColor, bindBufferInstances, bindBufferVertices, bitBoxSize, bitBoxes, bitOffsetX, bitOffsetY, bitsOffset, buf, byteDataGrid, d3DataArray, d3data, d3definitions, d3headers, d3length, easing, fshader, gl, glClear, glClearColor, gridX, gridY, height, i, init, instanceCount, instancesBufferArray, j, pointCount, program, render, u_ViewMatrix, ux, verticesBufferArray, verticesOffset, viewMatrix, vshader, width, writeDHCPPacket, ws, zero;
   M4 = (function() {
     var Camera;
 
@@ -826,7 +826,7 @@ Object.defineProperties(DataView.prototype, {
   ux = null;
   ws = null;
   gl = document.getElementById("gl").getContext("webgl2");
-  renderQueue = [];
+  self.renderQueue = [(function() {})];
   program = gl.createProgram();
   vshader = gl.createShader(gl.VERTEX_SHADER);
   fshader = gl.createShader(gl.FRAGMENT_SHADER);
@@ -849,11 +849,7 @@ Object.defineProperties(DataView.prototype, {
   verticesBufferArray = new Float32Array(new ArrayBuffer(1e8));
   instancesBufferArray = new Float32Array(new ArrayBuffer(1e7));
   bindBufferInstances = gl.bindBuffer.bind(gl, gl.ARRAY_BUFFER, gl.createBuffer());
-  bindBufferInstances();
-  gl.bufferData(gl.ARRAY_BUFFER, instancesBufferArray.byteLength, gl.DYNAMIC_READ);
   bindBufferVertices = gl.bindBuffer.bind(gl, gl.ARRAY_BUFFER, gl.createBuffer());
-  bindBufferVertices();
-  gl.bufferData(gl.ARRAY_BUFFER, verticesBufferArray.byteLength, gl.STATIC_DRAW);
   a_Position = gl.getAttribLocation(program, 'a_Position');
   a_Vertices = gl.getAttribLocation(program, 'a_Vertices');
   a_Color = gl.getAttribLocation(program, "a_Color");
@@ -983,23 +979,36 @@ Object.defineProperties(DataView.prototype, {
   }).call(this);
   Model = class Model extends Number {
     clone(reference) {
-      var begin, instance, length, next;
+      var demo, instance, next, prev;
+      d3.addPointer();
       if (next = this.next) {
-        begin = next.pointersOffset / 4;
-        length = this.d3.getPointersLength() - begin;
-        this.d3.attributes.copyWithin(begin + 7, begin, length);
-        while (next) {
-          next.pointersOffset += 28;
-          next = next.next;
-        }
-      } else {
-        this.pointersOffset = this.d3.getPointersByteOffset();
+        new this.Float32Array(next.pointersOffset, d3.getPointersLength() + 7).copyWithin(7, 0);
       }
-      this.d3.addPointersByteLength();
-      instance = new Instance(this.d3.addItemsByteLength(28));
+      instance = new Instance(d3.addItemsByteLength(28));
       instance.model = this;
       instance.modelOffset = this.instanceCount++ * 28;
       instance.pointerOffset = instance.modelOffset + this.pointersOffset;
+      (demo = function() {
+        var s;
+        s = Math.random() > 0.5 ? 100 : -100;
+        instance.color.set([Math.random(), Math.random(), 1, 1]);
+        return instance.position.set([Math.random() * s, Math.random() * s * 2, Math.random() * -10]);
+      })();
+      prev = this;
+      while (prev = prev.prev) {
+        if (prev.instanceCount) {
+          requestAnimationFrame(prev.upload.bind(prev));
+        }
+      }
+      next = this;
+      while (next = next.next) {
+        if (!next.instanceCount) {
+          continue;
+        }
+        next.pointersOffset += 28;
+        requestAnimationFrame(next.upload.bind(next));
+      }
+      requestAnimationFrame(this.upload.bind(this));
       return instance;
     }
 
@@ -1075,15 +1084,15 @@ Object.defineProperties(DataView.prototype, {
   Object.defineProperties(Model.prototype, {
     dstByteOffset: {
       get: function() {
-        return d3.items.getUint32(this + 4, iLE);
+        return this.getUint32(this + 4, iLE);
       },
       set: function() {
-        return d3.items.setUint32(this + 4, arguments[0], iLE);
+        return this.setUint32(this + 4, arguments[0], iLE);
       }
     },
     pointersOffset: {
       get: function() {
-        return d3.items.getUint32(this + 8, iLE);
+        return this.getUint32(this + 8, iLE);
       },
       set: function(byteOffset) {
         var i, instance, len, m, offset, ref;
@@ -1093,53 +1102,124 @@ Object.defineProperties(DataView.prototype, {
           instance.modelOffset = offset = i * 28;
           instance.pointerOffset = offset + byteOffset;
         }
-        return d3.items.setUint32(this + 8, byteOffset, iLE);
+        return this.setUint32(this + 8, byteOffset, iLE);
       }
     },
     instanceCount: {
       get: function() {
-        return d3.items.getUint32(this + 12, iLE);
+        return this.getUint32(this + 12, iLE);
       },
       set: function() {
-        return d3.items.setUint32(this + 12, arguments[0], iLE);
+        return this.setUint32(this + 12, arguments[0], iLE);
       }
     },
     drawStart: {
       get: function() {
-        return d3.items.getUint32(this + 16, iLE);
+        return this.getUint32(this + 16, iLE);
       },
       set: function() {
-        return d3.items.setUint32(this + 16, arguments[0], iLE);
+        return this.setUint32(this + 16, arguments[0], iLE);
       }
     },
     drawCount: {
       get: function() {
-        return d3.items.getUint32(this + 20, iLE);
+        return this.getUint32(this + 20, iLE);
       },
       set: function() {
-        return d3.items.setUint32(this + 20, arguments[0], iLE);
+        return this.setUint32(this + 20, arguments[0], iLE);
       }
     },
     index: {
       get: function() {
-        return d3.items.getUint32(this + 24, iLE);
+        return this.getUint16(this + 24, iLE);
       },
       set: function() {
-        return d3.items.setUint32(this + 24, arguments[0], iLE);
+        return this.setUint16(this + 24, arguments[0], iLE);
+      }
+    },
+    renderIndex: {
+      get: function() {
+        return this.getUint16(this + 26, iLE);
+      },
+      set: function() {
+        return this.setUint16(this + 26, arguments[0], iLE);
+      }
+    },
+    vertices: {
+      get: function() {
+        return Float32Array.from(d3.vertices[this.index]);
+      }
+    },
+    bufferSubData: {
+      value: function() {
+        return this.rebind().bufferSubData();
+      },
+      configurable: true
+    },
+    rebind: {
+      value: function() {
+        var begin, length, offset;
+        instanceCount = this.instanceCount;
+        offset = this.pointersOffset;
+        begin = offset / 4;
+        length = instanceCount * 7;
+        Object.defineProperty(this, "bufferSubData", {
+          value: gl.bufferSubData.bind(gl, gl.ARRAY_BUFFER, offset, this.attibutes, begin, length),
+          configurable: true
+        });
+        renderQueue.splice(this.renderIndex, 1, (function(p0, p1, tf, dm, op, oc, s, c, i) {
+          this.vertexAttribPointer(p0, 3, tf, 0, 28, op);
+          this.vertexAttribPointer(p1, 4, tf, 0, 28, oc);
+          return this.drawArraysInstanced(dm, s, c, i);
+        }).bind(gl, a_Position, a_Color, gl.FLOAT, gl.TRIANGLES, offset, offset + 12, this.drawStart, this.drawCount, instanceCount));
+        return this;
+      }
+    },
+    reload: {
+      value: function() {
+        bindBufferVertices();
+        gl.bufferSubData(gl.ARRAY_BUFFER, this.dstByteOffset, this.vertices);
+        gl.enableVertexAttribArray(a_Vertices);
+        gl.vertexAttribPointer(a_Vertices, 3, gl.FLOAT, false, 0, 0); // location // size (num values to pull from buffer per iteration) // type of data in buffer // normalize // stride (0 = compute from size and type above) // offset in buffer
+        return this;
+      }
+    },
+    upload: {
+      value: function() {
+        bindBufferInstances();
+        this.bufferSubData();
+        return this;
+      }
+    },
+    prev: {
+      get: function() {
+        var offset, prev, stride;
+        prev = this.index - 1;
+        if (prev < 0) {
+          return null;
+        }
+        stride = 24;
+        offset = this;
+        while (0 <= (offset -= 28)) {
+          if (!(prev - this.getUint16(offset + stride, iLE))) {
+            return new Model(offset);
+          }
+        }
+        return null;
       }
     },
     next: {
       get: function() {
         var length, next, offset, stride;
         next = this.index + 1;
-        if (next >= this.d3.vertices.length) {
+        if (next >= d3.vertices.length) {
           return null;
         }
         stride = 24;
         offset = this;
-        length = this.d3.getItemsByteOffset();
+        length = d3.getItemsByteOffset();
         while (length > (offset += 28)) {
-          if (!(next - this.d3.items.getUint32(offset + stride, iLE))) {
+          if (!(next - this.getUint16(offset + stride, iLE))) {
             return new Model(offset);
           }
         }
@@ -1155,10 +1235,10 @@ Object.defineProperties(DataView.prototype, {
         instances = [];
         thisOffset = +this;
         modelStride = 8;
-        lookingOffset = this.d3.getItemsByteOffset();
+        lookingOffset = d3.getItemsByteOffset();
         while (count) {
           while (thisOffset < (lookingOffset -= 28)) {
-            if (!(thisOffset - this.d3.items.getUint32(lookingOffset + modelStride, iLE))) {
+            if (!(thisOffset - this.getUint32(lookingOffset + modelStride, iLE))) {
               instances[--count] = new Instance(lookingOffset);
             }
           }
@@ -1170,90 +1250,45 @@ Object.defineProperties(DataView.prototype, {
   Object.defineProperties(Instance.prototype, {
     modelOffset: {
       get: function() {
-        return d3.items.getUint32(this + 12, iLE);
+        return this.getUint32(this + 12, iLE);
       },
       set: function() {
-        return d3.items.setUint32(this + 12, arguments[0], iLE);
+        return this.setUint32(this + 12, arguments[0], iLE);
       }
     },
     pointerOffset: {
       get: function() {
-        return d3.items.getUint32(this + 4, iLE);
+        return this.getUint32(this + 4, iLE);
       },
       set: function() {
-        return d3.items.setUint32(this + 4, arguments[0], iLE);
+        return this.setUint32(this + 4, arguments[0], iLE);
       }
     },
     model: {
       get: function() {
-        return new Model(d3.items.getUint32(this + 8, iLE));
+        return new Model(this.getUint32(this + 8, iLE));
       },
       set: function() {
-        return d3.items.setUint32(this + 8, arguments[0], iLE);
+        return this.setUint32(this + 8, arguments[0], iLE);
       }
     },
-    x: {
+    rebind: {
       value: function() {
-        if (!arguments.length) {
-          return this.position[0];
-        } else {
-          return this.position[0] = arguments[0];
-        }
+        var begin, offset;
+        offset = this.pointerOffset;
+        begin = offset / 4;
+        Object.defineProperty(this, "upload", {
+          value: gl.bufferSubData.bind(gl, gl.ARRAY_BUFFER, offset, this.attibutes, begin, 7),
+          configurable: true
+        });
+        return this;
       }
     },
-    y: {
+    upload: {
       value: function() {
-        if (!arguments.length) {
-          return this.position[1];
-        } else {
-          return this.position[1] = arguments[0];
-        }
-      }
-    },
-    z: {
-      value: function() {
-        if (!arguments.length) {
-          return this.position[2];
-        } else {
-          return this.position[2] = arguments[0];
-        }
-      }
-    },
-    r: {
-      value: function() {
-        if (!arguments.length) {
-          return this.color[0];
-        } else {
-          return this.color[0] = arguments[0];
-        }
-      }
-    },
-    g: {
-      value: function() {
-        if (!arguments.length) {
-          return this.color[1];
-        } else {
-          return this.color[1] = arguments[0];
-        }
-      }
-    },
-    b: {
-      value: function() {
-        if (!arguments.length) {
-          return this.color[2];
-        } else {
-          return this.color[2] = arguments[0];
-        }
-      }
-    },
-    a: {
-      value: function() {
-        if (!arguments.length) {
-          return this.color[3];
-        } else {
-          return this.color[3] = arguments[0];
-        }
-      }
+        return this.rebind().upload();
+      },
+      configurable: true
     },
     clone: {
       value: function() {
@@ -1262,7 +1297,7 @@ Object.defineProperties(DataView.prototype, {
     },
     position: {
       get: function() {
-        return new Position(d3.buffer, this.pointerOffset + 0, 3);
+        return new this.Position(this.pointerOffset, 3);
       },
       set: function(xyz = []) {
         var i, len, m, subarray, v;
@@ -1271,12 +1306,12 @@ Object.defineProperties(DataView.prototype, {
           v = xyz[i];
           subarray[i] = v;
         }
-        return this;
+        return this.upload();
       }
     },
     color: {
       get: function() {
-        return new Color(d3.buffer, this.pointerOffset + 12, 4);
+        return new this.Color(this.pointerOffset + 12, 4);
       },
       set: function(rgba = []) {
         var i, len, m, subarray, v;
@@ -1285,37 +1320,33 @@ Object.defineProperties(DataView.prototype, {
           v = rgba[i];
           subarray[i] = v;
         }
-        return this;
+        return this.upload();
       }
     }
   });
   Object.assign(self, {
     d3: {
-      buffer: d3bufer = new ArrayBuffer(1e6 * (12 + 16)),
-      bufferView: new DataView(d3bufer),
-      attributes: new Float32Array(d3bufer),
-      items: new DataView(new ArrayBuffer(4096 * 4 * 4)),
       vertices: [, ],
       getItemsByteOffset: function() {
-        return this.items.getUint32(0, iLE);
+        return this.getUint32(0, iLE);
       },
       getVerticesByteOffset: function() {
-        return this.items.getUint32(4, iLE);
+        return this.getUint32(4, iLE);
       },
       getPointersByteOffset: function() {
-        return this.items.getUint32(8, iLE);
+        return this.getUint32(8, iLE);
       },
       getPointersLength: function() {
         return this.getPointersByteOffset() / 4;
       },
       setItemsByteOffset: function() {
-        return d3.items.setUint32(0, arguments[0], iLE);
+        return this.setUint32(0, arguments[0], iLE);
       },
       setVerticesByteOffset: function() {
-        return d3.items.setUint32(4, arguments[0], iLE);
+        return this.setUint32(4, arguments[0], iLE);
       },
       setPointersByteOffset: function() {
-        return d3.items.setUint32(8, arguments[0], iLE);
+        return this.setUint32(8, arguments[0], iLE);
       },
       addItemsByteLength: function(byteLength = 28) {
         var byteOffset;
@@ -1323,51 +1354,96 @@ Object.defineProperties(DataView.prototype, {
         this.setItemsByteOffset(byteOffset + 28);
         return byteOffset;
       },
-      addVerticesByteLength: function(byteLength = 0) {
-        var byteOffset;
+      addVertices: function(vertices) {
+        var byteLength, byteOffset;
         byteOffset = this.getVerticesByteOffset();
-        this.setVerticesByteOffset(byteOffset + byteLength);
+        byteLength = byteOffset + vertices.length * 4;
+        this.setVerticesByteOffset(byteLength);
         return byteOffset;
       },
-      addPointersByteLength: function(byteLength = 28) {
+      addPointer: function(byteLength = 28) {
         var byteOffset;
         byteOffset = this.getPointersByteOffset();
-        this.setPointersByteOffset(byteOffset + byteLength);
+        byteLength = byteLength + byteOffset;
+        bindBufferInstances();
+        this.setPointersByteOffset(byteLength);
+        gl.bufferData(gl.ARRAY_BUFFER, byteLength + 28, gl.DYNAMIC_READ);
         return byteOffset;
       },
-      add: function(vertices = []) {
+      add: function(vertices) {
         var i, length, model, offset, stride;
         if (-1 !== (i = this.vertices.indexOf(vertices))) {
           stride = 24;
           offset = 0;
           length = this.getItemsByteOffset();
           while (length > (offset += 28)) {
-            if (!(i - this.items.getUint32(offset + stride, iLE))) {
+            if (!(i - this.getUint16(offset + stride, iLE))) {
               model = new Model(offset);
             }
           }
         } else {
           model = new Model(this.addItemsByteLength(28));
-          model.dstByteOffset = this.addVerticesByteLength(vertices.length * 4);
-          model.drawStart = model.dstByteOffset / 4;
+          model.dstByteOffset = this.addVertices(vertices);
+          model.index = this.vertices.push(vertices) - 1;
+          model.renderIndex = renderQueue.push(function() {}) - 1;
+          model.drawStart = model.dstByteOffset / 12;
           model.drawCount = vertices.length / 3;
-          model.index = -1 + this.vertices.push(vertices);
-          model;
+          model.pointersOffset = this.getPointersByteOffset();
+          model.reload();
         }
         if (!model) {
           throw /MODEL_ERR/;
-        } else {
-          return model.clone();
         }
+        return model.clone();
       }
     }
   });
-  Object.defineProperty(Instance.prototype, "d3", {
-    value: d3
+  d3data = new DataView(new ArrayBuffer(1e6 * 28));
+  d3headers = new DataView(new ArrayBuffer(1e5 * 28));
+  d3length = d3data.byteLength / 4;
+  d3DataArray = function(TypedArray, dcount = d3data.byteLength / 4) {
+    return function(byteOffset, length) {
+      log({byteOffset, length});
+      return new TypedArray(d3.buffer, byteOffset || 0, length || dcount);
+    };
+  };
+  Object.defineProperties(d3, d3definitions = {
+    buffer: {
+      value: d3data.buffer
+    },
+    attibutes: {
+      value: new Float32Array(d3data.buffer)
+    },
+    getUint32: {
+      value: d3headers.getUint32.bind(d3headers)
+    },
+    setUint32: {
+      value: d3headers.setUint32.bind(d3headers)
+    },
+    getUint16: {
+      value: d3headers.getUint16.bind(d3headers)
+    },
+    setUint16: {
+      value: d3headers.setUint16.bind(d3headers)
+    },
+    getFloat32: {
+      value: d3data.getFloat32.bind(d3data)
+    },
+    setFloat32: {
+      value: d3data.setFloat32.bind(d3data)
+    },
+    Float32Array: {
+      value: d3DataArray(Float32Array)
+    },
+    Position: {
+      value: d3DataArray(Position)
+    },
+    Color: {
+      value: d3DataArray(Color)
+    }
   });
-  Object.defineProperty(Model.prototype, "d3", {
-    value: d3
-  });
+  Object.defineProperties(Instance.prototype, d3definitions);
+  Object.defineProperties(Model.prototype, d3definitions);
   Object.defineProperty(d3, "models", {
     get: function() {
       var index, length, mcount, models, offset, stride;
@@ -1377,10 +1453,11 @@ Object.defineProperties(DataView.prototype, {
       stride = 24;
       models = [];
       while (length > (offset += 28)) {
-        if (index = this.items.getUint32(offset + stride, iLE)) {
-          if (mcount > index) {
-            models.push(new Model(offset));
+        if (index = this.getUint16(offset + stride, iLE)) {
+          if (!(mcount > index)) {
+            continue;
           }
+          models.push(new Model(offset));
         }
       }
       return models;
@@ -2360,14 +2437,13 @@ Object.defineProperties(DataView.prototype, {
     })();
     glClearColor();
     glClear();
-    bindBufferInstances();
-    gl.enableVertexAttribArray(a_Position);
-    gl.vertexAttribDivisor(a_Position, 1);
-    gl.enableVertexAttribArray(a_Color);
-    gl.vertexAttribDivisor(a_Color, 1);
     bindBufferVertices();
+    gl.bufferData(gl.ARRAY_BUFFER, 1e7 * 4, gl.STATIC_DRAW);
     gl.enableVertexAttribArray(a_Vertices);
-    gl.vertexAttribPointer(a_Vertices, 3, gl.FLOAT, false, 0, 0); // location // size (num values to pull from buffer per iteration) // type of data in buffer // normalize // stride (0 = compute from size and type above) // offset in buffer
+    gl.enableVertexAttribArray(a_Position);
+    gl.enableVertexAttribArray(a_Color);
+    gl.vertexAttribDivisor(a_Position, 1);
+    gl.vertexAttribDivisor(a_Color, 1);
     if (!sessionStorage.viewMatrix) {
       viewMatrix.store();
     }
@@ -2383,7 +2459,8 @@ Object.defineProperties(DataView.prototype, {
     //ws . onmessage = writeDHCPPacket
 
     //writeDHCPPacket dump.slice(0, 64)
-    log(d3.add(font[100]));
+    log(i = d3.add(font[100]));
+    warn(self.l = i.clone());
     log(d3.add(font[101]));
     log(d3.add(font[102]));
     log(d3.add(font[102]));
@@ -2396,7 +2473,8 @@ Object.defineProperties(DataView.prototype, {
     error(i.position.x += 10);
     error(i.color = [1, 0.4]);
     warn(i.clone());
-    return log(d3);
+    log(d3);
+    return bindBufferVertices();
   };
   init();
   // @url https://easings.net/#easeOutBack    
@@ -2455,7 +2533,6 @@ Object.defineProperties(DataView.prototype, {
   j = 1;
   render = function(t) {
     var job, len, m;
-    text.draw();
     for (m = 0, len = renderQueue.length; m < len; m++) {
       job = renderQueue[m];
       job(t);

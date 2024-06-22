@@ -635,7 +635,7 @@ do ->
     ws = null
     gl = document.getElementById("gl").getContext "webgl2"
 
-    renderQueue = []
+    self.renderQueue = [(->)]
 
     program = gl.createProgram()
     vshader = gl.createShader gl.VERTEX_SHADER
@@ -665,13 +665,7 @@ do ->
     instancesBufferArray = new Float32Array new ArrayBuffer 1e7
 
     bindBufferInstances = gl.bindBuffer.bind gl, gl.ARRAY_BUFFER, gl.createBuffer()
-    bindBufferInstances()
-    gl.bufferData gl.ARRAY_BUFFER, instancesBufferArray.byteLength, gl.DYNAMIC_READ
-
     bindBufferVertices  = gl.bindBuffer.bind gl, gl.ARRAY_BUFFER, gl.createBuffer()
-    bindBufferVertices()
-    gl.bufferData gl.ARRAY_BUFFER, verticesBufferArray.byteLength, gl.STATIC_DRAW
-
 
     a_Position      = gl.getAttribLocation  program, 'a_Position'
     a_Vertices      = gl.getAttribLocation  program, 'a_Vertices'
@@ -755,30 +749,35 @@ do ->
 
     class Model extends Number
 
-        clone : ( reference ) ->
+        clone   : ( reference ) ->
+
+            d3.addPointer()
 
             if  next = @next
-                begin = next.pointersOffset / 4
-                length = @d3.getPointersLength() - begin
-
-                @d3.attributes.copyWithin(
-                    begin + 7, begin, length
-                )
-
-                while next
-                    next.pointersOffset += 28
-                    next = next.next  
-
-            else
-                @pointersOffset =
-                    @d3.getPointersByteOffset()
-                    
-            @d3.addPointersByteLength()
-
-            instance                = new Instance @d3.addItemsByteLength 28
+                new this.Float32Array( next.pointersOffset, 
+                    d3.getPointersLength() + 7 ).copyWithin( 7, 0 )
+                
+            instance                = new Instance d3.addItemsByteLength 28
             instance.model          = this
             instance.modelOffset    = @instanceCount++ * 28
             instance.pointerOffset  = instance.modelOffset + @pointersOffset 
+
+            do  demo = ->
+                s = if Math.random() > 0.5 then 100 else -100 
+                instance.color.set      [Math.random(), Math.random(),1,1]
+                instance.position.set   [Math.random()*s, Math.random()*s * 2, Math.random()*-10]
+
+            prev = this
+            while prev = prev.prev when prev.instanceCount
+                requestAnimationFrame prev.upload.bind prev
+
+            next = this
+            while next = next.next when next.instanceCount
+                next.pointersOffset += 28
+                requestAnimationFrame next.upload.bind next
+
+            requestAnimationFrame this.upload.bind this
+
             instance 
 
     class Position extends Float32Array
@@ -814,45 +813,114 @@ do ->
 
     Object.defineProperties Model::,
         dstByteOffset  :
-            get : -> d3.items.getUint32 this + 4, iLE
-            set : -> d3.items.setUint32 this + 4, arguments[0], iLE
+            get : -> @getUint32 this + 4, iLE
+            set : -> @setUint32 this + 4, arguments[0], iLE
 
         pointersOffset :
-            get : -> d3.items.getUint32 this + 8, iLE
+            get : -> @getUint32 this + 8, iLE
             set : ( byteOffset ) ->
-                
+
                 for instance, i in @instances
                     instance.modelOffset = offset = i * 28
                     instance.pointerOffset = offset + byteOffset
 
-                d3.items.setUint32 this + 8, byteOffset, iLE
+                @setUint32 this + 8, byteOffset, iLE
 
         instanceCount :
-            get : -> d3.items.getUint32 this + 12, iLE
-            set : -> d3.items.setUint32 this + 12, arguments[0], iLE
+            get : -> @getUint32 this + 12, iLE
+            set : -> @setUint32 this + 12, arguments[0], iLE
 
         drawStart   :
-            get : -> d3.items.getUint32 this + 16, iLE
-            set : -> d3.items.setUint32 this + 16, arguments[0], iLE
+            get : -> @getUint32 this + 16, iLE
+            set : -> @setUint32 this + 16, arguments[0], iLE
 
         drawCount   :
-            get : -> d3.items.getUint32 this + 20, iLE
-            set : -> d3.items.setUint32 this + 20, arguments[0], iLE
+            get : -> @getUint32 this + 20, iLE
+            set : -> @setUint32 this + 20, arguments[0], iLE
 
         index       :
-            get : -> d3.items.getUint32 this + 24, iLE
-            set : -> d3.items.setUint32 this + 24, arguments[0], iLE
+            get : -> @getUint16 this + 24, iLE
+            set : -> @setUint16 this + 24, arguments[0], iLE
 
-        next        : get : -> 
-            next = @index + 1
-            return null if next >= @d3.vertices.length
+        renderIndex :
+            get : -> @getUint16 this + 26, iLE
+            set : -> @setUint16 this + 26, arguments[0], iLE
+
+        vertices    : get   : ->
+            Float32Array.from d3.vertices[ @index ]
+
+        bufferSubData       :
+            value           : -> @rebind().bufferSubData()
+            configurable    : on
+
+        rebind              : value : ->
+            instanceCount   = @instanceCount
+            offset          = @pointersOffset
+            begin           = offset / 4
+            length          = instanceCount * 7
+
+            Object.defineProperty this, "bufferSubData",
+                value : gl.bufferSubData.bind(
+                    gl, gl.ARRAY_BUFFER, offset, @attibutes, begin, length
+                )
+                configurable : on
+
+            renderQueue.splice( @renderIndex, 1, (( p0, p1, tf, dm, op, oc, s, c, i) ->
+                @vertexAttribPointer p0, 3, tf, 0, 28, op
+                @vertexAttribPointer p1, 4, tf, 0, 28, oc
+                @drawArraysInstanced dm, s, c, i
+            ).bind( gl, 
+                a_Position, a_Color,
+                gl.FLOAT, gl.TRIANGLES
+                offset, offset + 12, 
+                @drawStart, @drawCount, instanceCount
+            ))
+
+            this
+
+        reload      : value : ->
+            bindBufferVertices()
+            gl.bufferSubData gl.ARRAY_BUFFER, @dstByteOffset, @vertices
+            gl.enableVertexAttribArray a_Vertices
+            gl.vertexAttribPointer(
+                a_Vertices,  # location
+                3,           # size (num values to pull from buffer per iteration)
+                gl.FLOAT,    # type of data in buffer
+                false,       # normalize
+                0, # stride (0 = compute from size and type above)
+                0  # offset in buffer
+            )
+
+            this
+            
+        upload      : value : ->
+            bindBufferInstances()
+            @bufferSubData()
+            this
+
+        prev        : get : -> 
+            prev = @index - 1
+            return null if prev < 0
 
             stride = 24
             offset = this
-            length = @d3.getItemsByteOffset()
+
+            while 0 <= offset -= 28
+                unless prev - @getUint16 offset + stride, iLE
+                    return new Model offset
+                    
+            return null
+
+        next        : get : -> 
+            next = @index + 1
+            return null if next >= d3.vertices.length
+
+            stride = 24
+            offset = this
+            length = d3.getItemsByteOffset()
 
             while length > offset += 28
-                unless next - @d3.items.getUint32 offset + stride, iLE
+                unless next - @getUint16 offset + stride, iLE
                     return new Model offset
                     
             return null
@@ -863,86 +931,99 @@ do ->
             instances       = []
             thisOffset      = +this  
             modelStride     = 8                
-            lookingOffset   = @d3.getItemsByteOffset()
+            lookingOffset   = d3.getItemsByteOffset()
             
-            while count
-                while thisOffset < lookingOffset -= 28
-                    unless thisOffset - @d3.items.getUint32 lookingOffset + modelStride, iLE
-                        instances[ --count ] = new Instance lookingOffset
+            while count then while thisOffset < lookingOffset -= 28
+                unless thisOffset - @getUint32 lookingOffset + modelStride, iLE
+                    instances[ --count ] = new Instance lookingOffset
 
             instances   
 
 
     Object.defineProperties Instance::,
-        modelOffset :
-            get : -> d3.items.getUint32 this + 12, iLE
-            set : -> d3.items.setUint32 this + 12, arguments[0], iLE
 
-        pointerOffset :
-            get : -> d3.items.getUint32 this + 4, iLE
-            set : -> d3.items.setUint32 this + 4, arguments[0], iLE
+        modelOffset     :
+            get : -> @getUint32 this + 12, iLE
+            set : -> @setUint32 this + 12, arguments[0], iLE
 
-        model :
-            get : -> new Model d3.items.getUint32 this + 8, iLE
-            set : -> d3.items.setUint32 this + 8, arguments[0], iLE
+        pointerOffset   :
+            get : -> @getUint32 this + 4, iLE
+            set : -> @setUint32 this + 4, arguments[0], iLE
 
-        x : value : -> return if !arguments.length then @position[0] else @position[0] = arguments[0]
-        y : value : -> return if !arguments.length then @position[1] else @position[1] = arguments[0]
-        z : value : -> return if !arguments.length then @position[2] else @position[2] = arguments[0]
+        model           :
+            get : -> new Model @getUint32 this + 8, iLE
+            set : -> @setUint32 this + 8, arguments[0], iLE
 
-        r : value : -> return if !arguments.length then @color[0] else @color[0] = arguments[0]
-        g : value : -> return if !arguments.length then @color[1] else @color[1] = arguments[0]
-        b : value : -> return if !arguments.length then @color[2] else @color[2] = arguments[0]
-        a : value : -> return if !arguments.length then @color[3] else @color[3] = arguments[0]
+        rebind          : value : ->
+            offset = @pointerOffset
+            begin = offset / 4
 
-        clone   : value : -> @model.clone this
+            Object.defineProperty this, "upload",
+                value : gl.bufferSubData.bind( gl, gl.ARRAY_BUFFER,
+                    offset, @attibutes, begin, 7
+                )
+                configurable : on
 
-        position :
-            get : -> new Position d3.buffer, @pointerOffset + 0, 3
+            this
+
+        upload           :
+            value               : -> @rebind().upload()
+            configurable        : on
+
+        clone           : value : -> @model.clone this
+
+        position        :
+            get : -> new this.Position @pointerOffset, 3
             set : ( xyz = [] ) ->
                 subarray = @position
                 subarray[i] = v for v, i in xyz
-                this
+                @upload()
 
-        color   :
-            get : -> new Color d3.buffer, @pointerOffset + 12, 4
+        color           :
+            get : -> new this.Color @pointerOffset + 12, 4
             set : ( rgba = [] ) ->
                 subarray = @color
                 subarray[i] = v for v, i in rgba
-                this
+                @upload()
 
     Object.assign self, d3 : {
-        buffer      : d3bufer = new ArrayBuffer 1e6 * ( 12 + 16 )
-        bufferView  : new DataView d3bufer
-        attributes  : new Float32Array d3bufer
-        items       : new DataView new ArrayBuffer 4096 * 4 * 4
         vertices    : [,]
 
-        getItemsByteOffset      : -> @items.getUint32 0, iLE
-        getVerticesByteOffset   : -> @items.getUint32 4, iLE
-        getPointersByteOffset   : -> @items.getUint32 8, iLE
+        getItemsByteOffset      : -> @getUint32 0, iLE
+        getVerticesByteOffset   : -> @getUint32 4, iLE
+        getPointersByteOffset   : -> @getUint32 8, iLE
+
         getPointersLength       : -> @getPointersByteOffset() / 4
 
-        setItemsByteOffset      : -> d3.items.setUint32 0, arguments[0], iLE
-        setVerticesByteOffset   : -> d3.items.setUint32 4, arguments[0], iLE
-        setPointersByteOffset   : -> d3.items.setUint32 8, arguments[0], iLE
+        setItemsByteOffset      : -> @setUint32 0, arguments[0], iLE
+        setVerticesByteOffset   : -> @setUint32 4, arguments[0], iLE
+        setPointersByteOffset   : -> @setUint32 8, arguments[0], iLE
 
         addItemsByteLength      : ( byteLength = 28 ) ->
             byteOffset = 28 + @getItemsByteOffset()
             @setItemsByteOffset byteOffset + 28
             byteOffset
 
-        addVerticesByteLength   : ( byteLength = 0 ) ->
+        addVertices             : ( vertices ) ->
+            
             byteOffset = @getVerticesByteOffset()
-            @setVerticesByteOffset byteOffset + byteLength
+            byteLength = byteOffset + vertices.length * 4 
+
+            @setVerticesByteOffset byteLength
+            
             byteOffset
 
-        addPointersByteLength   : ( byteLength = 28 ) ->
+        addPointer              : ( byteLength = 28 ) ->
             byteOffset = @getPointersByteOffset()
-            @setPointersByteOffset byteOffset + byteLength
+            byteLength = byteLength + byteOffset
+
+            bindBufferInstances()
+            @setPointersByteOffset byteLength
+            gl.bufferData gl.ARRAY_BUFFER, byteLength + 28, gl.DYNAMIC_READ
+            
             byteOffset
 
-        add         : ( vertices = [] ) ->
+        add                     : ( vertices ) ->
 
             if  -1 isnt i = @vertices.indexOf vertices
                 stride = 24
@@ -950,26 +1031,62 @@ do ->
                 length = @getItemsByteOffset()
 
                 while length > offset += 28
-                    unless i - @items.getUint32 offset + stride, iLE
+                    unless i - @getUint16 offset + stride, iLE
                         model = new Model offset
                 
             else
                 model = new Model @addItemsByteLength 28
+                
+                model.dstByteOffset  = @addVertices( vertices )
+                model.index          = @vertices.push( vertices ) - 1
+                model.renderIndex    = renderQueue.push( -> ) - 1
+                model.drawStart      = model.dstByteOffset / 12
+                model.drawCount      = vertices.length / 3
+                model.pointersOffset = @getPointersByteOffset()
 
-                model.dstByteOffset = @addVerticesByteLength vertices.length * 4
-                model.drawStart     = model.dstByteOffset / 4
-                model.drawCount     = vertices.length / 3
-                model.index         = -1 + @vertices.push vertices
-    
-                model
+                model.reload()
 
-            unless model then throw /MODEL_ERR/
-            else return model.clone()
+            unless model
+                throw /MODEL_ERR/
+            
+            model.clone()
 
     }
 
-    Object.defineProperty Instance::, "d3", value : d3
-    Object.defineProperty Model::, "d3", value : d3
+    d3data      = new DataView new ArrayBuffer 1e6 * 28
+    d3headers   = new DataView new ArrayBuffer 1e5 * 28
+    
+    d3length    = d3data.byteLength / 4
+
+    d3DataArray =
+        ( TypedArray, dcount = d3data.byteLength / 4 ) ->
+            ( byteOffset, length ) ->
+                log { byteOffset, length } 
+                new TypedArray( d3.buffer,
+                    byteOffset || 0, length || dcount
+                )
+
+    Object.defineProperties d3, d3definitions = {
+        buffer       : value : d3data.buffer
+        attibutes    : value : new Float32Array d3data.buffer
+
+        getUint32    : value : d3headers.getUint32.bind d3headers
+        setUint32    : value : d3headers.setUint32.bind d3headers
+        
+        getUint16    : value : d3headers.getUint16.bind d3headers
+        setUint16    : value : d3headers.setUint16.bind d3headers
+        
+        getFloat32   : value : d3data.getFloat32.bind d3data
+        setFloat32   : value : d3data.setFloat32.bind d3data
+
+        Float32Array : value : d3DataArray( Float32Array )
+        Position     : value : d3DataArray( Position )
+        Color        : value : d3DataArray( Color )
+    }
+
+    Object.defineProperties Instance::, d3definitions
+    Object.defineProperties    Model::, d3definitions
+
     Object.defineProperty d3, "models", get : ->
         offset = 0
         length = @getItemsByteOffset()
@@ -978,8 +1095,9 @@ do ->
         models = []
 
         while length > offset += 28
-            if  index = @items.getUint32 offset + stride, iLE
-                models.push new Model offset if mcount > index
+            if  index = @getUint16 offset + stride, iLE
+                continue unless mcount > index
+                models.push new Model offset
                 
         models
 
@@ -1950,24 +2068,15 @@ do ->
         glClearColor()
         glClear()
 
-        bindBufferInstances()
-
-        gl.enableVertexAttribArray a_Position
-        gl.vertexAttribDivisor a_Position, 1
-
-        gl.enableVertexAttribArray a_Color
-        gl.vertexAttribDivisor a_Color, 1
-
         bindBufferVertices()
+        gl.bufferData gl.ARRAY_BUFFER, 1e7 * 4, gl.STATIC_DRAW
+        
         gl.enableVertexAttribArray a_Vertices
-        gl.vertexAttribPointer(
-            a_Vertices,  # location
-            3,           # size (num values to pull from buffer per iteration)
-            gl.FLOAT,    # type of data in buffer
-            false,       # normalize
-            0, # stride (0 = compute from size and type above)
-            0  # offset in buffer
-        )
+        gl.enableVertexAttribArray a_Position
+        gl.enableVertexAttribArray a_Color
+        
+        gl.vertexAttribDivisor a_Position, 1
+        gl.vertexAttribDivisor a_Color, 1
 
         if !sessionStorage.viewMatrix
             viewMatrix.store() 
@@ -1987,9 +2096,12 @@ do ->
         
         
 
+        log i= d3.add font[100]
+        warn self.l = i.clone()
 
-        log d3.add font[100]
+
         log d3.add font[101]
+
         log d3.add font[102]
         log d3.add font[102]
         log d3.add font[102]
@@ -2002,6 +2114,7 @@ do ->
         error i.color = [1, 0.4]
         warn i.clone()
         log d3
+        bindBufferVertices()
         
 
     init()
@@ -2053,8 +2166,6 @@ do ->
     j = 1
 
     render = ( t ) ->
-        text.draw()
-
         job t for job in renderQueue
         requestAnimationFrame render
 
