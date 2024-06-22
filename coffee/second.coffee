@@ -743,13 +743,25 @@ do ->
             
             @store()
 
-
-    class Instance extends Number
+    class Instance      extends Number
         @byteLength : 28
 
-    class Model extends Number
+    class Model         extends Number
 
-        clone   : ( reference ) ->
+        instance    : ( index ) -> 
+            return null unless count = @instanceCount
+            
+            thisOffset      = +this  
+            modelStride     = 8                
+            lookingOffset   = d3.getItemsByteOffset()
+            
+            while count then while thisOffset < lookingOffset -= 28
+                unless thisOffset - @getUint32 lookingOffset + modelStride, iLE
+                    return new Instance lookingOffset if index is --count
+
+            null  
+
+        clone       : ( reference, linkPositions = off, linkColors = off ) ->
 
             d3.addPointer()
 
@@ -757,15 +769,33 @@ do ->
                 new this.Float32Array( next.pointersOffset, 
                     d3.getPointersLength() + 7 ).copyWithin( 7, 0 )
                 
-            instance                = new Instance d3.addItemsByteLength 28
+            instance                = new Instance d3.mallocItem()
             instance.model          = this
-            instance.modelOffset    = @instanceCount++ * 28
-            instance.pointerOffset  = instance.modelOffset + @pointersOffset 
+            instance.pointerOffset  =
+                @pointersOffset + ( 28 * @instanceCount++ )
 
-            do  demo = ->
-                s = if Math.random() > 0.5 then 100 else -100 
-                instance.color.set      [Math.random(), Math.random(),1,1]
-                instance.position.set   [Math.random()*s, Math.random()*s * 2, Math.random()*-10]
+            if  reference
+
+                if   linkColors
+                     instance.link reference.color
+                else instance.color.set reference.color
+
+                if   linkPositions
+                     instance.link reference.position
+                else instance.position.set reference.position
+
+            else
+
+                do  demo = ->
+                    s = if Math.random() > 0.5 then 100 else -100 
+                    instance.color.set      [Math.random(), Math.random(),1,1]
+
+                    instance.position.x = Math.random()*s
+                    instance.position.y = Math.random()*s * 2
+                    instance.position.z = Math.random()*-10
+
+                    instance.position.upload()
+
 
             prev = this
             while prev = prev.prev when prev.instanceCount
@@ -778,75 +808,140 @@ do ->
 
             requestAnimationFrame this.upload.bind this
 
+
             instance 
 
-    class Position extends Float32Array
-        toObject : ->
+    class Attribute     extends Number
+        set : ( value ) ->
+            if  value instanceof @constructor
+                value = value.subarray
 
-    class Color extends Float32Array
-        toObject : ->
+            @subarray.set value.slice 0, @length
+            @upload()
+
+        upload : ->
+            attributes  = @attributes
+            subarray    = @subarray
+            begin       = @begin
+            length      = @length - 1
+
+            for instance in @links
+                offset  = begin + instance.pointerOffset / 4
+                i = 0
+
+                while i < length
+                    attributes[ offset++ ] =
+                        subarray[ i++ ]
+                    
+                instance.upload()
+
+            this
+
+    Object.defineProperties Attribute::,
+        subarray    : get : ->
+            new this.Float32Array this + 12, @length
+
+        links       : get : ->
+            offset  = @stride + 0  
+            length  = d3.getItemsByteOffset()
+            attrvl  = +this    
+
+            links = []
+            while length > offset += 28
+                unless attrvl - @getUint32 offset, iLE
+                    links.push new Instance offset - @stride
+            links
+
+        instance    : get : ->
+            offset  = @stride + 0  
+            length  = d3.getItemsByteOffset()
+            attrvl  = +this    
+            
+            while length > offset += 28
+                unless attrvl - @getUint32 offset, iLE
+                    return new Instance offset - @stride
+
+            null
+
+    class Position      extends Attribute
+        stride      : 16         
+        length      : 3 
+        begin       : 0
 
     Object.defineProperties Position::,
-        x :
-            get : -> @[0]
-            set : -> @[0] = arguments[0]
-        y :
-            get : -> @[1]
-            set : -> @[1] = arguments[0]
-        z :
-            get : -> @[2]
-            set : -> @[2] = arguments[0]
+        x           :
+            get     : -> @getFloat32 this + 12, iLE
+            set     : -> @setFloat32 this + 12, arguments[0], iLE
+
+        y           :
+            get     : -> @getFloat32 this + 16, iLE
+            set     : -> @setFloat32 this + 16, arguments[0], iLE
+
+        z           :
+            get     : -> @getFloat32 this + 20, iLE
+            set     : -> @setFloat32 this + 20, arguments[0], iLE
+
+    class Color         extends Attribute
+        stride      : 20 
+        length      : 4 
+        begin       : 3
 
     Object.defineProperties Color::,
-        r :
-            get : -> @[0]
-            set : -> @[0] = arguments[0]
-        g :
-            get : -> @[1]
-            set : -> @[1] = arguments[0]
-        b :
-            get : -> @[2]
-            set : -> @[2] = arguments[0]
-        a :
-            get : -> @[3]
-            set : -> @[3] = arguments[0]
+        r           :
+            get     : -> @getFloat32 this + 12, iLE
+            set     : -> @setFloat32 this + 12, arguments[0], iLE
+
+        g           :
+            get     : -> @getFloat32 this + 16, iLE
+            set     : -> @setFloat32 this + 16, arguments[0], iLE
+
+        b           :
+            get     : -> @getFloat32 this + 20, iLE
+            set     : -> @setFloat32 this + 20, arguments[0], iLE
+
+        a           :
+            get     : -> @getFloat32 this + 24, iLE
+            set     : -> @setFloat32 this + 24, arguments[0], iLE
+
 
     Object.defineProperties Model::,
-        dstByteOffset  :
+
+        dstByteOffset       :
             get : -> @getUint32 this + 4, iLE
             set : -> @setUint32 this + 4, arguments[0], iLE
 
-        pointersOffset :
+        pointersOffset      :
             get : -> @getUint32 this + 8, iLE
             set : ( byteOffset ) ->
-
-                for instance, i in @instances
-                    instance.modelOffset = offset = i * 28
-                    instance.pointerOffset = offset + byteOffset
-
                 @setUint32 this + 8, byteOffset, iLE
 
-        instanceCount :
+                for instance in @instances
+                    instance . pointerOffset = byteOffset
+                    byteOffset += 28
+
+                this
+
+        instanceCount       :
             get : -> @getUint32 this + 12, iLE
             set : -> @setUint32 this + 12, arguments[0], iLE
 
-        drawStart   :
+        drawStart           :
             get : -> @getUint32 this + 16, iLE
             set : -> @setUint32 this + 16, arguments[0], iLE
 
-        drawCount   :
+        drawCount           :
             get : -> @getUint32 this + 20, iLE
             set : -> @setUint32 this + 20, arguments[0], iLE
 
-        index       :
+        index               :
             get : -> @getUint16 this + 24, iLE
             set : -> @setUint16 this + 24, arguments[0], iLE
 
-        renderIndex :
+        renderIndex         :
             get : -> @getUint16 this + 26, iLE
             set : -> @setUint16 this + 26, arguments[0], iLE
 
-        vertices    : get   : ->
+        vertices            : get   : ->
             Float32Array.from d3.vertices[ @index ]
 
         bufferSubData       :
@@ -861,7 +956,7 @@ do ->
 
             Object.defineProperty this, "bufferSubData",
                 value : gl.bufferSubData.bind(
-                    gl, gl.ARRAY_BUFFER, offset, @attibutes, begin, length
+                    gl, gl.ARRAY_BUFFER, offset, @attributes, begin, length
                 )
                 configurable : on
 
@@ -878,54 +973,25 @@ do ->
 
             this
 
-        reload      : value : ->
+        bufferData          : value : ->
             bindBufferVertices()
+
             gl.bufferSubData gl.ARRAY_BUFFER, @dstByteOffset, @vertices
+            gl.vertexAttribPointer a_Vertices, 3, gl.FLOAT, no, 12, 0
             gl.enableVertexAttribArray a_Vertices
-            gl.vertexAttribPointer(
-                a_Vertices,  # location
-                3,           # size (num values to pull from buffer per iteration)
-                gl.FLOAT,    # type of data in buffer
-                false,       # normalize
-                0, # stride (0 = compute from size and type above)
-                0  # offset in buffer
-            )
 
             this
             
-        upload      : value : ->
+        upload              : value : ->
             bindBufferInstances()
-            @bufferSubData()
+            @bufferSubData();
             this
 
-        prev        : get : -> 
-            prev = @index - 1
-            return null if prev < 0
+        prev                : get   : -> d3.model @index - 1
 
-            stride = 24
-            offset = this
+        next                : get   : -> d3.model @index + 1
 
-            while 0 <= offset -= 28
-                unless prev - @getUint16 offset + stride, iLE
-                    return new Model offset
-                    
-            return null
-
-        next        : get : -> 
-            next = @index + 1
-            return null if next >= d3.vertices.length
-
-            stride = 24
-            offset = this
-            length = d3.getItemsByteOffset()
-
-            while length > offset += 28
-                unless next - @getUint16 offset + stride, iLE
-                    return new Model offset
-                    
-            return null
-
-        instances   : get : -> 
+        instances           : get   : -> 
             return [] unless count = @instanceCount
             
             instances       = []
@@ -939,16 +1005,27 @@ do ->
 
             instances   
 
-
     Object.defineProperties Instance::,
-
-        modelOffset     :
-            get : -> @getUint32 this + 12, iLE
-            set : -> @setUint32 this + 12, arguments[0], iLE
 
         pointerOffset   :
             get : -> @getUint32 this + 4, iLE
             set : -> @setUint32 this + 4, arguments[0], iLE
+
+        parent          :
+            get : -> new Instance o if o = @getUint32 this + 12, iLE
+            set : -> @setUint32 this + 12, arguments[0], iLE
+
+        children        : get : ->
+            instances       = []
+            stride          = 12                
+            offset          = stride + ( i = 0 )  
+            length          = d3.getItemsByteOffset()
+            
+            while length > offset += 28
+                unless this - @getUint32 offset, iLE
+                    instances[ i++ ] = new Instance offset - stride
+
+            instances 
 
         model           :
             get : -> new Model @getUint32 this + 8, iLE
@@ -960,57 +1037,69 @@ do ->
 
             Object.defineProperty this, "upload",
                 value : gl.bufferSubData.bind( gl, gl.ARRAY_BUFFER,
-                    offset, @attibutes, begin, 7
+                    offset, @attributes, begin, 7
                 )
                 configurable : on
 
             this
 
-        upload           :
-            value               : -> @rebind().upload()
-            configurable        : on
+        upload          : configurable: on, value : ->
+            dstByteOffset = @pointerOffset
+            gl.bufferSubData( gl.ARRAY_BUFFER,
+                dstByteOffset, @attributes, dstByteOffset / 4, 7
+            )
 
-        clone           : value : -> @model.clone this
+        clone           : value : ( linkPositions = off, linkColors = off ) ->
+            @model.clone this, linkPositions, linkColors
 
         position        :
-            get : -> new this.Position @pointerOffset, 3
-            set : ( xyz = [] ) ->
-                subarray = @position
-                subarray[i] = v for v, i in xyz
-                @upload()
+            get : ->
+                if !offset = @getUint32 this + Position::stride, iLE
+                    offset = d3.mallocItem()
+                    @setUint32 this + Position::stride, offset, iLE
+                new Position offset
+
+            set : ( value ) -> @position.set value
+
+        link            :
+            value : ( instance ) ->
+                if  instance instanceof Position
+                    @setUint32 this + Position::stride, instance, iLE
+
+                if  instance instanceof Color
+                    @setUint32 this + Color::stride, instance, iLE
+
+                if  instance instanceof Instance
+                    @link instance.position
+                    @link instance.color
+
+                this
 
         color           :
-            get : -> new this.Color @pointerOffset + 12, 4
-            set : ( rgba = [] ) ->
-                subarray = @color
-                subarray[i] = v for v, i in rgba
-                @upload()
+            get : ->
+                if !offset = @getUint32 this + Color::stride, iLE
+                    offset = d3.mallocItem()
+                    @setUint32 this + Color::stride, offset, iLE
+                new Color offset
+
+            set : ( value ) -> @color.set value
 
     Object.assign self, d3 : {
+
         vertices    : [,]
 
         getItemsByteOffset      : -> @getUint32 0, iLE
-        getVerticesByteOffset   : -> @getUint32 4, iLE
         getPointersByteOffset   : -> @getUint32 8, iLE
-
         getPointersLength       : -> @getPointersByteOffset() / 4
 
-        setItemsByteOffset      : -> @setUint32 0, arguments[0], iLE
-        setVerticesByteOffset   : -> @setUint32 4, arguments[0], iLE
-        setPointersByteOffset   : -> @setUint32 8, arguments[0], iLE
-
-        addItemsByteLength      : ( byteLength = 28 ) ->
+        mallocItem              : ( byteLength = 28 ) ->
             byteOffset = 28 + @getItemsByteOffset()
-            @setItemsByteOffset byteOffset + 28
+            @setUint32 0, byteOffset + 28, iLE
             byteOffset
 
         addVertices             : ( vertices ) ->
-            
-            byteOffset = @getVerticesByteOffset()
-            byteLength = byteOffset + vertices.length * 4 
-
-            @setVerticesByteOffset byteLength
-            
+            byteOffset = @getUint32 4, iLE
+            @setUint32 4, byteOffset + vertices.length * 4, iLE
             byteOffset
 
         addPointer              : ( byteLength = 28 ) ->
@@ -1018,24 +1107,27 @@ do ->
             byteLength = byteLength + byteOffset
 
             bindBufferInstances()
-            @setPointersByteOffset byteLength
+            @setUint32 8, byteLength, iLE
             gl.bufferData gl.ARRAY_BUFFER, byteLength + 28, gl.DYNAMIC_READ
             
             byteOffset
 
+        model                   : ( index ) ->
+            stride = 24
+            offset = @getItemsByteOffset() + stride
+
+            while 0 < offset -= 28
+                unless index - @getUint16 offset, iLE
+                    model = new Model offset - stride
+
+            model
+
         add                     : ( vertices ) ->
-
             if  -1 isnt i = @vertices.indexOf vertices
-                stride = 24
-                offset = 0
-                length = @getItemsByteOffset()
-
-                while length > offset += 28
-                    unless i - @getUint16 offset + stride, iLE
-                        model = new Model offset
+                model = @model i
                 
             else
-                model = new Model @addItemsByteLength 28
+                model = new Model @mallocItem()
                 
                 model.dstByteOffset  = @addVertices( vertices )
                 model.index          = @vertices.push( vertices ) - 1
@@ -1044,31 +1136,40 @@ do ->
                 model.drawCount      = vertices.length / 3
                 model.pointersOffset = @getPointersByteOffset()
 
-                model.reload()
+                model.bufferData()
 
             unless model
                 throw /MODEL_ERR/
             
             model.clone()
 
+        getModels               : ->
+            offset = 0
+            length = @getItemsByteOffset()
+            mcount = @vertices.length
+            stride = 24
+            models = []
+
+            while length > offset += 28
+                if  index = @getUint16 offset + stride, iLE
+                    continue unless mcount > index
+                    models.push new Model offset
+                    
+            models
+
     }
 
     d3data      = new DataView new ArrayBuffer 1e6 * 28
     d3headers   = new DataView new ArrayBuffer 1e5 * 28
-    
     d3length    = d3data.byteLength / 4
+    d3DataArray = ( TypedArray, dcount = d3data.byteLength / 4 ) ->
+        ( byteOffset, length ) -> new TypedArray( d3.buffer,
+            byteOffset || 0, length || dcount
+        )
 
-    d3DataArray =
-        ( TypedArray, dcount = d3data.byteLength / 4 ) ->
-            ( byteOffset, length ) ->
-                log { byteOffset, length } 
-                new TypedArray( d3.buffer,
-                    byteOffset || 0, length || dcount
-                )
-
-    Object.defineProperties d3, d3definitions = {
+    Object.defineProperties         d3, d3definitions = {
         buffer       : value : d3data.buffer
-        attibutes    : value : new Float32Array d3data.buffer
+        attributes    : value : new Float32Array d3data.buffer
 
         getUint32    : value : d3headers.getUint32.bind d3headers
         setUint32    : value : d3headers.setUint32.bind d3headers
@@ -1079,27 +1180,13 @@ do ->
         getFloat32   : value : d3data.getFloat32.bind d3data
         setFloat32   : value : d3data.setFloat32.bind d3data
 
-        Float32Array : value : d3DataArray( Float32Array )
-        Position     : value : d3DataArray( Position )
-        Color        : value : d3DataArray( Color )
+        Float32Array : value : d3DataArray Float32Array 
     }
-
-    Object.defineProperties Instance::, d3definitions
-    Object.defineProperties    Model::, d3definitions
-
-    Object.defineProperty d3, "models", get : ->
-        offset = 0
-        length = @getItemsByteOffset()
-        mcount = @vertices.length
-        stride = 24
-        models = []
-
-        while length > offset += 28
-            if  index = @getUint16 offset + stride, iLE
-                continue unless mcount > index
-                models.push new Model offset
-                
-        models
+    Object.defineProperties  Attribute::, d3definitions
+    
+    Object.defineProperties   Instance::, d3definitions
+    
+    Object.defineProperties      Model::, d3definitions
 
     Object.assign self, line : {
 
@@ -1686,7 +1773,6 @@ do ->
 
             @shapes[ @shapes.length ] = rect
     }
-
     Object.assign self, text : {
         vertices    : font
         letters     : {}

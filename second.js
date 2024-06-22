@@ -111,7 +111,7 @@ Object.defineProperties(DataView.prototype, {
 });
 
 (function() {
-  var BYTES_PER_LINE, Color, Instance, M4, Model, Position, TCPSocket, UX, a_Color, a_Position, a_Vertices, arrClearColor, backgroundColor, bindBufferInstances, bindBufferVertices, bitBoxSize, bitBoxes, bitOffsetX, bitOffsetY, bitsOffset, buf, byteDataGrid, d3DataArray, d3data, d3definitions, d3headers, d3length, easing, fshader, gl, glClear, glClearColor, gridX, gridY, height, i, init, instanceCount, instancesBufferArray, j, pointCount, program, render, u_ViewMatrix, ux, verticesBufferArray, verticesOffset, viewMatrix, vshader, width, writeDHCPPacket, ws, zero;
+  var Attribute, BYTES_PER_LINE, Color, Instance, M4, Model, Position, TCPSocket, UX, a_Color, a_Position, a_Vertices, arrClearColor, backgroundColor, bindBufferInstances, bindBufferVertices, bitBoxSize, bitBoxes, bitOffsetX, bitOffsetY, bitsOffset, buf, byteDataGrid, d3DataArray, d3data, d3definitions, d3headers, d3length, easing, fshader, gl, glClear, glClearColor, gridX, gridY, height, i, init, instanceCount, instancesBufferArray, j, pointCount, program, render, u_ViewMatrix, ux, verticesBufferArray, verticesOffset, viewMatrix, vshader, width, writeDHCPPacket, ws, zero;
   M4 = (function() {
     var Camera;
 
@@ -978,22 +978,57 @@ Object.defineProperties(DataView.prototype, {
 
   }).call(this);
   Model = class Model extends Number {
-    clone(reference) {
+    instance(index) {
+      var count, lookingOffset, modelStride, thisOffset;
+      if (!(count = this.instanceCount)) {
+        return null;
+      }
+      thisOffset = +this;
+      modelStride = 8;
+      lookingOffset = d3.getItemsByteOffset();
+      while (count) {
+        while (thisOffset < (lookingOffset -= 28)) {
+          if (!(thisOffset - this.getUint32(lookingOffset + modelStride, iLE))) {
+            if (index === --count) {
+              return new Instance(lookingOffset);
+            }
+          }
+        }
+      }
+      return null;
+    }
+
+    clone(reference, linkPositions = false, linkColors = false) {
       var demo, instance, next, prev;
       d3.addPointer();
       if (next = this.next) {
         new this.Float32Array(next.pointersOffset, d3.getPointersLength() + 7).copyWithin(7, 0);
       }
-      instance = new Instance(d3.addItemsByteLength(28));
+      instance = new Instance(d3.mallocItem());
       instance.model = this;
-      instance.modelOffset = this.instanceCount++ * 28;
-      instance.pointerOffset = instance.modelOffset + this.pointersOffset;
-      (demo = function() {
-        var s;
-        s = Math.random() > 0.5 ? 100 : -100;
-        instance.color.set([Math.random(), Math.random(), 1, 1]);
-        return instance.position.set([Math.random() * s, Math.random() * s * 2, Math.random() * -10]);
-      })();
+      instance.pointerOffset = this.pointersOffset + (28 * this.instanceCount++);
+      if (reference) {
+        if (linkColors) {
+          instance.link(reference.color);
+        } else {
+          instance.color.set(reference.color);
+        }
+        if (linkPositions) {
+          instance.link(reference.position);
+        } else {
+          instance.position.set(reference.position);
+        }
+      } else {
+        (demo = function() {
+          var s;
+          s = Math.random() > 0.5 ? 100 : -100;
+          instance.color.set([Math.random(), Math.random(), 1, 1]);
+          instance.position.x = Math.random() * s;
+          instance.position.y = Math.random() * s * 2;
+          instance.position.z = Math.random() * -10;
+          return instance.position.upload();
+        })();
+      }
       prev = this;
       while (prev = prev.prev) {
         if (prev.instanceCount) {
@@ -1013,71 +1048,152 @@ Object.defineProperties(DataView.prototype, {
     }
 
   };
-  Position = class Position extends Float32Array {
-    toObject() {}
+  Attribute = class Attribute extends Number {
+    set(value) {
+      if (value instanceof this.constructor) {
+        value = value.subarray;
+      }
+      this.subarray.set(value.slice(0, this.length));
+      return this.upload();
+    }
+
+    upload() {
+      var attributes, begin, i, instance, len, length, m, offset, ref, subarray;
+      attributes = this.attributes;
+      subarray = this.subarray;
+      begin = this.begin;
+      length = this.length - 1;
+      ref = this.links;
+      for (m = 0, len = ref.length; m < len; m++) {
+        instance = ref[m];
+        offset = begin + instance.pointerOffset / 4;
+        i = 0;
+        while (i < length) {
+          attributes[offset++] = subarray[i++];
+        }
+        instance.upload();
+      }
+      return this;
+    }
 
   };
-  Color = class Color extends Float32Array {
-    toObject() {}
+  Object.defineProperties(Attribute.prototype, {
+    subarray: {
+      get: function() {
+        return new this.Float32Array(this + 12, this.length);
+      }
+    },
+    links: {
+      get: function() {
+        var attrvl, length, links, offset;
+        offset = this.stride + 0;
+        length = d3.getItemsByteOffset();
+        attrvl = +this;
+        links = [];
+        while (length > (offset += 28)) {
+          if (!(attrvl - this.getUint32(offset, iLE))) {
+            links.push(new Instance(offset - this.stride));
+          }
+        }
+        return links;
+      }
+    },
+    instance: {
+      get: function() {
+        var attrvl, length, offset;
+        offset = this.stride + 0;
+        length = d3.getItemsByteOffset();
+        attrvl = +this;
+        while (length > (offset += 28)) {
+          if (!(attrvl - this.getUint32(offset, iLE))) {
+            return new Instance(offset - this.stride);
+          }
+        }
+        return null;
+      }
+    }
+  });
+  Position = (function() {
+    class Position extends Attribute {};
 
-  };
+    Position.prototype.stride = 16;
+
+    Position.prototype.length = 3;
+
+    Position.prototype.begin = 0;
+
+    return Position;
+
+  }).call(this);
   Object.defineProperties(Position.prototype, {
     x: {
       get: function() {
-        return this[0];
+        return this.getFloat32(this + 12, iLE);
       },
       set: function() {
-        return this[0] = arguments[0];
+        return this.setFloat32(this + 12, arguments[0], iLE);
       }
     },
     y: {
       get: function() {
-        return this[1];
+        return this.getFloat32(this + 16, iLE);
       },
       set: function() {
-        return this[1] = arguments[0];
+        return this.setFloat32(this + 16, arguments[0], iLE);
       }
     },
     z: {
       get: function() {
-        return this[2];
+        return this.getFloat32(this + 20, iLE);
       },
       set: function() {
-        return this[2] = arguments[0];
+        return this.setFloat32(this + 20, arguments[0], iLE);
       }
     }
   });
+  Color = (function() {
+    class Color extends Attribute {};
+
+    Color.prototype.stride = 20;
+
+    Color.prototype.length = 4;
+
+    Color.prototype.begin = 3;
+
+    return Color;
+
+  }).call(this);
   Object.defineProperties(Color.prototype, {
     r: {
       get: function() {
-        return this[0];
+        return this.getFloat32(this + 12, iLE);
       },
       set: function() {
-        return this[0] = arguments[0];
+        return this.setFloat32(this + 12, arguments[0], iLE);
       }
     },
     g: {
       get: function() {
-        return this[1];
+        return this.getFloat32(this + 16, iLE);
       },
       set: function() {
-        return this[1] = arguments[0];
+        return this.setFloat32(this + 16, arguments[0], iLE);
       }
     },
     b: {
       get: function() {
-        return this[2];
+        return this.getFloat32(this + 20, iLE);
       },
       set: function() {
-        return this[2] = arguments[0];
+        return this.setFloat32(this + 20, arguments[0], iLE);
       }
     },
     a: {
       get: function() {
-        return this[3];
+        return this.getFloat32(this + 24, iLE);
       },
       set: function() {
-        return this[3] = arguments[0];
+        return this.setFloat32(this + 24, arguments[0], iLE);
       }
     }
   });
@@ -1095,14 +1211,15 @@ Object.defineProperties(DataView.prototype, {
         return this.getUint32(this + 8, iLE);
       },
       set: function(byteOffset) {
-        var i, instance, len, m, offset, ref;
+        var instance, len, m, ref;
+        this.setUint32(this + 8, byteOffset, iLE);
         ref = this.instances;
-        for (i = m = 0, len = ref.length; m < len; i = ++m) {
-          instance = ref[i];
-          instance.modelOffset = offset = i * 28;
-          instance.pointerOffset = offset + byteOffset;
+        for (m = 0, len = ref.length; m < len; m++) {
+          instance = ref[m];
+          instance.pointerOffset = byteOffset;
+          byteOffset += 28;
         }
-        return this.setUint32(this + 8, byteOffset, iLE);
+        return this;
       }
     },
     instanceCount: {
@@ -1164,7 +1281,7 @@ Object.defineProperties(DataView.prototype, {
         begin = offset / 4;
         length = instanceCount * 7;
         Object.defineProperty(this, "bufferSubData", {
-          value: gl.bufferSubData.bind(gl, gl.ARRAY_BUFFER, offset, this.attibutes, begin, length),
+          value: gl.bufferSubData.bind(gl, gl.ARRAY_BUFFER, offset, this.attributes, begin, length),
           configurable: true
         });
         renderQueue.splice(this.renderIndex, 1, (function(p0, p1, tf, dm, op, oc, s, c, i) {
@@ -1175,12 +1292,12 @@ Object.defineProperties(DataView.prototype, {
         return this;
       }
     },
-    reload: {
+    bufferData: {
       value: function() {
         bindBufferVertices();
         gl.bufferSubData(gl.ARRAY_BUFFER, this.dstByteOffset, this.vertices);
+        gl.vertexAttribPointer(a_Vertices, 3, gl.FLOAT, false, 12, 0);
         gl.enableVertexAttribArray(a_Vertices);
-        gl.vertexAttribPointer(a_Vertices, 3, gl.FLOAT, false, 0, 0); // location // size (num values to pull from buffer per iteration) // type of data in buffer // normalize // stride (0 = compute from size and type above) // offset in buffer
         return this;
       }
     },
@@ -1193,37 +1310,12 @@ Object.defineProperties(DataView.prototype, {
     },
     prev: {
       get: function() {
-        var offset, prev, stride;
-        prev = this.index - 1;
-        if (prev < 0) {
-          return null;
-        }
-        stride = 24;
-        offset = this;
-        while (0 <= (offset -= 28)) {
-          if (!(prev - this.getUint16(offset + stride, iLE))) {
-            return new Model(offset);
-          }
-        }
-        return null;
+        return d3.model(this.index - 1);
       }
     },
     next: {
       get: function() {
-        var length, next, offset, stride;
-        next = this.index + 1;
-        if (next >= d3.vertices.length) {
-          return null;
-        }
-        stride = 24;
-        offset = this;
-        length = d3.getItemsByteOffset();
-        while (length > (offset += 28)) {
-          if (!(next - this.getUint16(offset + stride, iLE))) {
-            return new Model(offset);
-          }
-        }
-        return null;
+        return d3.model(this.index + 1);
       }
     },
     instances: {
@@ -1248,20 +1340,38 @@ Object.defineProperties(DataView.prototype, {
     }
   });
   Object.defineProperties(Instance.prototype, {
-    modelOffset: {
-      get: function() {
-        return this.getUint32(this + 12, iLE);
-      },
-      set: function() {
-        return this.setUint32(this + 12, arguments[0], iLE);
-      }
-    },
     pointerOffset: {
       get: function() {
         return this.getUint32(this + 4, iLE);
       },
       set: function() {
         return this.setUint32(this + 4, arguments[0], iLE);
+      }
+    },
+    parent: {
+      get: function() {
+        var o;
+        if (o = this.getUint32(this + 12, iLE)) {
+          return new Instance(o);
+        }
+      },
+      set: function() {
+        return this.setUint32(this + 12, arguments[0], iLE);
+      }
+    },
+    children: {
+      get: function() {
+        var i, instances, length, offset, stride;
+        instances = [];
+        stride = 12;
+        offset = stride + (i = 0);
+        length = d3.getItemsByteOffset();
+        while (length > (offset += 28)) {
+          if (!(this - this.getUint32(offset, iLE))) {
+            instances[i++] = new Instance(offset - stride);
+          }
+        }
+        return instances;
       }
     },
     model: {
@@ -1278,49 +1388,64 @@ Object.defineProperties(DataView.prototype, {
         offset = this.pointerOffset;
         begin = offset / 4;
         Object.defineProperty(this, "upload", {
-          value: gl.bufferSubData.bind(gl, gl.ARRAY_BUFFER, offset, this.attibutes, begin, 7),
+          value: gl.bufferSubData.bind(gl, gl.ARRAY_BUFFER, offset, this.attributes, begin, 7),
           configurable: true
         });
         return this;
       }
     },
     upload: {
+      configurable: true,
       value: function() {
-        return this.rebind().upload();
-      },
-      configurable: true
+        var dstByteOffset;
+        dstByteOffset = this.pointerOffset;
+        return gl.bufferSubData(gl.ARRAY_BUFFER, dstByteOffset, this.attributes, dstByteOffset / 4, 7);
+      }
     },
     clone: {
-      value: function() {
-        return this.model.clone(this);
+      value: function(linkPositions = false, linkColors = false) {
+        return this.model.clone(this, linkPositions, linkColors);
       }
     },
     position: {
       get: function() {
-        return new this.Position(this.pointerOffset, 3);
-      },
-      set: function(xyz = []) {
-        var i, len, m, subarray, v;
-        subarray = this.position;
-        for (i = m = 0, len = xyz.length; m < len; i = ++m) {
-          v = xyz[i];
-          subarray[i] = v;
+        var offset;
+        if (!(offset = this.getUint32(this + Position.prototype.stride, iLE))) {
+          offset = d3.mallocItem();
+          this.setUint32(this + Position.prototype.stride, offset, iLE);
         }
-        return this.upload();
+        return new Position(offset);
+      },
+      set: function(value) {
+        return this.position.set(value);
+      }
+    },
+    link: {
+      value: function(instance) {
+        if (instance instanceof Position) {
+          this.setUint32(this + Position.prototype.stride, instance, iLE);
+        }
+        if (instance instanceof Color) {
+          this.setUint32(this + Color.prototype.stride, instance, iLE);
+        }
+        if (instance instanceof Instance) {
+          this.link(instance.position);
+          this.link(instance.color);
+        }
+        return this;
       }
     },
     color: {
       get: function() {
-        return new this.Color(this.pointerOffset + 12, 4);
-      },
-      set: function(rgba = []) {
-        var i, len, m, subarray, v;
-        subarray = this.color;
-        for (i = m = 0, len = rgba.length; m < len; i = ++m) {
-          v = rgba[i];
-          subarray[i] = v;
+        var offset;
+        if (!(offset = this.getUint32(this + Color.prototype.stride, iLE))) {
+          offset = d3.mallocItem();
+          this.setUint32(this + Color.prototype.stride, offset, iLE);
         }
-        return this.upload();
+        return new Color(offset);
+      },
+      set: function(value) {
+        return this.color.set(value);
       }
     }
   });
@@ -1330,35 +1455,22 @@ Object.defineProperties(DataView.prototype, {
       getItemsByteOffset: function() {
         return this.getUint32(0, iLE);
       },
-      getVerticesByteOffset: function() {
-        return this.getUint32(4, iLE);
-      },
       getPointersByteOffset: function() {
         return this.getUint32(8, iLE);
       },
       getPointersLength: function() {
         return this.getPointersByteOffset() / 4;
       },
-      setItemsByteOffset: function() {
-        return this.setUint32(0, arguments[0], iLE);
-      },
-      setVerticesByteOffset: function() {
-        return this.setUint32(4, arguments[0], iLE);
-      },
-      setPointersByteOffset: function() {
-        return this.setUint32(8, arguments[0], iLE);
-      },
-      addItemsByteLength: function(byteLength = 28) {
+      mallocItem: function(byteLength = 28) {
         var byteOffset;
         byteOffset = 28 + this.getItemsByteOffset();
-        this.setItemsByteOffset(byteOffset + 28);
+        this.setUint32(0, byteOffset + 28, iLE);
         return byteOffset;
       },
       addVertices: function(vertices) {
-        var byteLength, byteOffset;
-        byteOffset = this.getVerticesByteOffset();
-        byteLength = byteOffset + vertices.length * 4;
-        this.setVerticesByteOffset(byteLength);
+        var byteOffset;
+        byteOffset = this.getUint32(4, iLE);
+        this.setUint32(4, byteOffset + vertices.length * 4, iLE);
         return byteOffset;
       },
       addPointer: function(byteLength = 28) {
@@ -1366,35 +1478,56 @@ Object.defineProperties(DataView.prototype, {
         byteOffset = this.getPointersByteOffset();
         byteLength = byteLength + byteOffset;
         bindBufferInstances();
-        this.setPointersByteOffset(byteLength);
+        this.setUint32(8, byteLength, iLE);
         gl.bufferData(gl.ARRAY_BUFFER, byteLength + 28, gl.DYNAMIC_READ);
         return byteOffset;
       },
-      add: function(vertices) {
-        var i, length, model, offset, stride;
-        if (-1 !== (i = this.vertices.indexOf(vertices))) {
-          stride = 24;
-          offset = 0;
-          length = this.getItemsByteOffset();
-          while (length > (offset += 28)) {
-            if (!(i - this.getUint16(offset + stride, iLE))) {
-              model = new Model(offset);
-            }
+      model: function(index) {
+        var model, offset, stride;
+        stride = 24;
+        offset = this.getItemsByteOffset() + stride;
+        while (0 < (offset -= 28)) {
+          if (!(index - this.getUint16(offset, iLE))) {
+            model = new Model(offset - stride);
           }
+        }
+        return model;
+      },
+      add: function(vertices) {
+        var i, model;
+        if (-1 !== (i = this.vertices.indexOf(vertices))) {
+          model = this.model(i);
         } else {
-          model = new Model(this.addItemsByteLength(28));
+          model = new Model(this.mallocItem());
           model.dstByteOffset = this.addVertices(vertices);
           model.index = this.vertices.push(vertices) - 1;
           model.renderIndex = renderQueue.push(function() {}) - 1;
           model.drawStart = model.dstByteOffset / 12;
           model.drawCount = vertices.length / 3;
           model.pointersOffset = this.getPointersByteOffset();
-          model.reload();
+          model.bufferData();
         }
         if (!model) {
           throw /MODEL_ERR/;
         }
         return model.clone();
+      },
+      getModels: function() {
+        var index, length, mcount, models, offset, stride;
+        offset = 0;
+        length = this.getItemsByteOffset();
+        mcount = this.vertices.length;
+        stride = 24;
+        models = [];
+        while (length > (offset += 28)) {
+          if (index = this.getUint16(offset + stride, iLE)) {
+            if (!(mcount > index)) {
+              continue;
+            }
+            models.push(new Model(offset));
+          }
+        }
+        return models;
       }
     }
   });
@@ -1403,7 +1536,6 @@ Object.defineProperties(DataView.prototype, {
   d3length = d3data.byteLength / 4;
   d3DataArray = function(TypedArray, dcount = d3data.byteLength / 4) {
     return function(byteOffset, length) {
-      log({byteOffset, length});
       return new TypedArray(d3.buffer, byteOffset || 0, length || dcount);
     };
   };
@@ -1411,7 +1543,7 @@ Object.defineProperties(DataView.prototype, {
     buffer: {
       value: d3data.buffer
     },
-    attibutes: {
+    attributes: {
       value: new Float32Array(d3data.buffer)
     },
     getUint32: {
@@ -1434,35 +1566,11 @@ Object.defineProperties(DataView.prototype, {
     },
     Float32Array: {
       value: d3DataArray(Float32Array)
-    },
-    Position: {
-      value: d3DataArray(Position)
-    },
-    Color: {
-      value: d3DataArray(Color)
     }
   });
+  Object.defineProperties(Attribute.prototype, d3definitions);
   Object.defineProperties(Instance.prototype, d3definitions);
   Object.defineProperties(Model.prototype, d3definitions);
-  Object.defineProperty(d3, "models", {
-    get: function() {
-      var index, length, mcount, models, offset, stride;
-      offset = 0;
-      length = this.getItemsByteOffset();
-      mcount = this.vertices.length;
-      stride = 24;
-      models = [];
-      while (length > (offset += 28)) {
-        if (index = this.getUint16(offset + stride, iLE)) {
-          if (!(mcount > index)) {
-            continue;
-          }
-          models.push(new Model(offset));
-        }
-      }
-      return models;
-    }
-  });
   Object.assign(self, {
     line: {
       shapes: [],
