@@ -999,7 +999,7 @@ Object.defineProperties(DataView.prototype, {
     }
 
     clone(reference, linkPositions = false, linkColors = false) {
-      var demo, instance, next, prev;
+      var instance, next, prev;
       d3.addPointer();
       if (next = this.next) {
         new this.Float32Array(next.pointersOffset, d3.getPointersLength() + 7).copyWithin(7, 0);
@@ -1019,15 +1019,15 @@ Object.defineProperties(DataView.prototype, {
           instance.position.set(reference.position);
         }
       } else {
-        (demo = function() {
+        requestIdleCallback((function() {
           var s;
-          s = Math.random() > 0.5 ? 100 : -100;
-          instance.color.set([Math.random(), Math.random(), 1, 1]);
-          instance.position.x = Math.random() * s;
-          instance.position.y = Math.random() * s * 2;
-          instance.position.z = Math.random() * -10;
-          return instance.position.upload();
-        })();
+          s = Math.random() > 0.5 ? 10 : -10;
+          this.color.set([Math.random(), Math.random(), 1, 1]);
+          this.position.x = Math.random() * s;
+          this.position.y = Math.random() * s * 2;
+          this.position.z = Math.random() * -10;
+          return this.position.upload();
+        }).bind(instance));
       }
       prev = this;
       while (prev = prev.prev) {
@@ -1053,25 +1053,39 @@ Object.defineProperties(DataView.prototype, {
       if (value instanceof this.constructor) {
         value = value.subarray;
       }
-      this.subarray.set(value.slice(0, this.length));
-      return this.upload();
+      if (value instanceof Model) {
+        value = value[this.label];
+      }
+      this.subarray.set(value);
+      return this.upload(this.subarray);
     }
 
-    upload() {
-      var attributes, begin, i, instance, len, length, m, offset, ref, subarray;
-      attributes = this.attributes;
+    inherit(array) {
+      var length, subarray;
+      length = Math.min(this.length, array.length);
       subarray = this.subarray;
-      begin = this.begin;
-      length = this.length - 1;
+      while (length--) {
+        array[length] += subarray[length];
+      }
+      return this.upload(array, true);
+    }
+
+    upload(array = this.subarray, inheriting = false) {
+      var instance, len, len1, link, m, n, prop, ref, ref1, stride;
+      prop = this.inherits && this.label;
+      stride = this.begin * 4;
       ref = this.links;
       for (m = 0, len = ref.length; m < len; m++) {
-        instance = ref[m];
-        offset = begin + instance.pointerOffset / 4;
-        i = 0;
-        while (i < length) {
-          attributes[offset++] = subarray[i++];
+        link = ref[m];
+        link.upload(array, stride);
+        if (!inheriting) {
+          continue;
         }
-        instance.upload();
+        ref1 = link.children;
+        for (n = 0, len1 = ref1.length; n < len1; n++) {
+          instance = ref1[n];
+          instance[prop].inherit(array);
+        }
       }
       return this;
     }
@@ -1121,6 +1135,10 @@ Object.defineProperties(DataView.prototype, {
     Position.prototype.length = 3;
 
     Position.prototype.begin = 0;
+
+    Position.prototype.inherits = true;
+
+    Position.prototype.label = "position";
 
     return Position;
 
@@ -1303,8 +1321,14 @@ Object.defineProperties(DataView.prototype, {
     },
     upload: {
       value: function() {
+        var i, len, m, ref;
         bindBufferInstances();
         this.bufferSubData();
+        ref = this.instances;
+        for (m = 0, len = ref.length; m < len; m++) {
+          i = ref[m];
+          i.upload();
+        }
         return this;
       }
     },
@@ -1382,24 +1406,15 @@ Object.defineProperties(DataView.prototype, {
         return this.setUint32(this + 8, arguments[0], iLE);
       }
     },
-    rebind: {
-      value: function() {
-        var begin, offset;
-        offset = this.pointerOffset;
-        begin = offset / 4;
-        Object.defineProperty(this, "upload", {
-          value: gl.bufferSubData.bind(gl, gl.ARRAY_BUFFER, offset, this.attributes, begin, 7),
-          configurable: true
-        });
-        return this;
-      }
-    },
     upload: {
-      configurable: true,
-      value: function() {
-        var dstByteOffset;
+      value: function(source, stride) {
+        var begin, dstByteOffset;
         dstByteOffset = this.pointerOffset;
-        return gl.bufferSubData(gl.ARRAY_BUFFER, dstByteOffset, this.attributes, dstByteOffset / 4, 7);
+        if (!source) {
+          begin = dstByteOffset / 4;
+          return gl.bufferSubData(gl.ARRAY_BUFFER, dstByteOffset, this.attributes, begin, 7);
+        }
+        return gl.bufferSubData(gl.ARRAY_BUFFER, dstByteOffset + stride, source.slice(0));
       }
     },
     clone: {
@@ -1479,7 +1494,9 @@ Object.defineProperties(DataView.prototype, {
         byteLength = byteLength + byteOffset;
         bindBufferInstances();
         this.setUint32(8, byteLength, iLE);
-        gl.bufferData(gl.ARRAY_BUFFER, byteLength + 28, gl.DYNAMIC_READ);
+        if (!byteOffset) {
+          gl.bufferData(gl.ARRAY_BUFFER, 1e6 * 4, gl.DYNAMIC_READ);
+        }
         return byteOffset;
       },
       model: function(index) {

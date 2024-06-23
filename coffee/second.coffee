@@ -785,17 +785,18 @@ do ->
                 else instance.position.set reference.position
 
             else
+                requestIdleCallback (->
 
-                do  demo = ->
-                    s = if Math.random() > 0.5 then 100 else -100 
-                    instance.color.set      [Math.random(), Math.random(),1,1]
+                    s = if Math.random() > 0.5 then 10 else -10 
+                    @color.set  [Math.random(), Math.random(),1,1]
 
-                    instance.position.x = Math.random()*s
-                    instance.position.y = Math.random()*s * 2
-                    instance.position.z = Math.random()*-10
+                    @position.x = Math.random()*s
+                    @position.y = Math.random()*s * 2
+                    @position.z = Math.random()*-10
 
-                    instance.position.upload()
+                    @position.upload()
 
+                ).bind( instance )
 
             prev = this
             while prev = prev.prev when prev.instanceCount
@@ -806,8 +807,7 @@ do ->
                 next.pointersOffset += 28
                 requestAnimationFrame next.upload.bind next
 
-            requestAnimationFrame this.upload.bind this
-
+            requestAnimationFrame @upload.bind this
 
             instance 
 
@@ -816,24 +816,33 @@ do ->
             if  value instanceof @constructor
                 value = value.subarray
 
-            @subarray.set value.slice 0, @length
-            @upload()
+            if  value instanceof Model
+                value = value[ @label ]
 
-        upload : ->
-            attributes  = @attributes
-            subarray    = @subarray
-            begin       = @begin
-            length      = @length - 1
+            @subarray.set value
+            @upload @subarray
 
-            for instance in @links
-                offset  = begin + instance.pointerOffset / 4
-                i = 0
+        inherit : ( array ) ->
+            length   = Math.min @length, array.length
+            subarray = @subarray
 
-                while i < length
-                    attributes[ offset++ ] =
-                        subarray[ i++ ]
-                    
-                instance.upload()
+            while length--
+                array[ length ] +=
+                    subarray[ length ]
+
+            @upload array, on
+
+        upload : ( array = @subarray, inheriting = off ) ->
+            
+            prop = @inherits and @label
+            stride = @begin * 4
+
+            for link in @links
+                link.upload( array, stride )
+                continue unless inheriting
+
+                for instance in link.children
+                    instance[ prop ].inherit array
 
             this
 
@@ -867,6 +876,8 @@ do ->
         stride      : 16         
         length      : 3 
         begin       : 0
+        inherits    : on
+        label       : "position"
 
     Object.defineProperties Position::,
         x           :
@@ -985,6 +996,7 @@ do ->
         upload              : value : ->
             bindBufferInstances()
             @bufferSubData();
+            i.upload() for i in @instances
             this
 
         prev                : get   : -> d3.model @index - 1
@@ -1031,24 +1043,14 @@ do ->
             get : -> new Model @getUint32 this + 8, iLE
             set : -> @setUint32 this + 8, arguments[0], iLE
 
-        rebind          : value : ->
-            offset = @pointerOffset
-            begin = offset / 4
-
-            Object.defineProperty this, "upload",
-                value : gl.bufferSubData.bind( gl, gl.ARRAY_BUFFER,
-                    offset, @attributes, begin, 7
-                )
-                configurable : on
-
-            this
-
-        upload          : configurable: on, value : ->
+        upload          : value : ( source, stride ) ->
             dstByteOffset = @pointerOffset
-            gl.bufferSubData( gl.ARRAY_BUFFER,
-                dstByteOffset, @attributes, dstByteOffset / 4, 7
-            )
 
+            if !source
+                begin = dstByteOffset / 4
+                return gl.bufferSubData gl.ARRAY_BUFFER, dstByteOffset, @attributes, begin, 7
+            gl.bufferSubData gl.ARRAY_BUFFER, dstByteOffset + stride, source.slice 0
+            
         clone           : value : ( linkPositions = off, linkColors = off ) ->
             @model.clone this, linkPositions, linkColors
 
@@ -1108,7 +1110,8 @@ do ->
 
             bindBufferInstances()
             @setUint32 8, byteLength, iLE
-            gl.bufferData gl.ARRAY_BUFFER, byteLength + 28, gl.DYNAMIC_READ
+            if !byteOffset
+                gl.bufferData gl.ARRAY_BUFFER, 1e6 * 4, gl.DYNAMIC_READ
             
             byteOffset
 
