@@ -49,6 +49,11 @@ window.addEventListener "unhandledrejection", log
 font = JSON.parse sessionStorage.font
 dump = Uint8Array.from sessionStorage.dump.split " "
 
+for charCode, vertices of font
+    Object.defineProperty font, String.fromCharCode( charCode ),
+        value : font[ charCode ]
+self.font = font
+
 delay = -> new Promise (done) =>
     setTimeout done, arguments[0] or 1000
 
@@ -83,7 +88,7 @@ Object.defineProperties DataView::,
 
         return this
 
-do ->    
+no and do ->    
 
     class M4 extends Float32Array
 
@@ -955,39 +960,10 @@ do ->
         vertices            : get   : ->
             Float32Array.from d3.vertices[ @index ]
 
-        bufferSubData       :
-            value           : -> @rebind().bufferSubData()
-            configurable    : on
-
-        rebind              : value : ->
-            instanceCount   = @instanceCount
-            offset          = @pointersOffset
-            begin           = offset / 4
-            length          = instanceCount * 7
-
-            Object.defineProperty this, "bufferSubData",
-                value : gl.bufferSubData.bind(
-                    gl, gl.ARRAY_BUFFER, offset, @attributes, begin, length
-                )
-                configurable : on
-
-            renderQueue.splice( @renderIndex, 1, (( p0, p1, tf, dm, op, oc, s, c, i) ->
-                @vertexAttribPointer p0, 3, tf, 0, 28, op
-                @vertexAttribPointer p1, 4, tf, 0, 28, oc
-                @drawArraysInstanced dm, s, c, i
-            ).bind( gl, 
-                a_Position, a_Color,
-                gl.FLOAT, gl.TRIANGLES
-                offset, offset + 12, 
-                @drawStart, @drawCount, instanceCount
-            ))
-
-            this
-
-        bufferData          : value : ->
+        bufferData          : value : ( vertices ) ->
             bindBufferVertices()
 
-            gl.bufferSubData gl.ARRAY_BUFFER, @dstByteOffset, @vertices
+            gl.bufferSubData gl.ARRAY_BUFFER, @dstByteOffset, Float32Array.from vertices
             gl.vertexAttribPointer a_Vertices, 3, gl.FLOAT, no, 12, 0
             gl.enableVertexAttribArray a_Vertices
 
@@ -995,8 +971,29 @@ do ->
             
         upload              : value : ->
             bindBufferInstances()
-            @bufferSubData();
-            i.upload() for i in @instances
+
+            instanceCount   = @instanceCount
+            dstByteOffset   = @pointersOffset
+            begin           = dstByteOffset / 4
+            length          = instanceCount * 7
+            
+            gl.bufferSubData( gl.ARRAY_BUFFER,
+                dstByteOffset, @attributes, begin, length
+            )
+
+            renderQueue.splice( @renderIndex, 1, (( p0, p1, tf, dm, op, oc, s, c, i) ->
+                @vertexAttribPointer p0, 3, tf, 0, 28, op
+                @vertexAttribPointer p1, 4, tf, 0, 28, oc
+                @drawArraysInstanced dm, s, c, i
+            ).bind( gl, 
+                a_Position, a_Color, gl.FLOAT, gl.TRIANGLES
+                dstByteOffset, dstByteOffset + 12, 
+                @drawStart, @drawCount, instanceCount
+            ))
+
+            gl.enableVertexAttribArray a_Position
+            gl.enableVertexAttribArray a_Color
+            
             this
 
         prev                : get   : -> d3.model @index - 1
@@ -1004,17 +1001,16 @@ do ->
         next                : get   : -> d3.model @index + 1
 
         instances           : get   : -> 
-            return [] unless count = @instanceCount
-            
-            instances       = []
-            thisOffset      = +this  
-            modelStride     = 8                
-            lookingOffset   = d3.getItemsByteOffset()
-            
-            while count then while thisOffset < lookingOffset -= 28
-                unless thisOffset - @getUint32 lookingOffset + modelStride, iLE
-                    instances[ --count ] = new Instance lookingOffset
+            stride = 8                
+            matchs = +this
+            offset = 0 + stride 
+            length = d3.getItemsByteOffset()
 
+            instances = []
+            while offset < length
+                if  0 is matchs - @getUint32 offset, iLE
+                    instances.push new Instance offset - stride
+                offset += 28
             instances   
 
     Object.defineProperties Instance::,
@@ -1028,15 +1024,16 @@ do ->
             set : -> @setUint32 this + 12, arguments[0], iLE
 
         children        : get : ->
-            instances       = []
-            stride          = 12                
-            offset          = stride + ( i = 0 )  
-            length          = d3.getItemsByteOffset()
+            stride = 12                
+            mathcs = +this
+            offset = 0 + stride
+            length = d3.getItemsByteOffset()
             
-            while length > offset += 28
-                unless this - @getUint32 offset, iLE
-                    instances[ i++ ] = new Instance offset - stride
-
+            instances = []
+            while offset < length
+                if  0 is matchs - @getUint32 offset, iLE
+                    instances.push new Instance offset - stride
+                offset += 28
             instances 
 
         model           :
@@ -1049,6 +1046,7 @@ do ->
             if !source
                 begin = dstByteOffset / 4
                 return gl.bufferSubData gl.ARRAY_BUFFER, dstByteOffset, @attributes, begin, 7
+
             gl.bufferSubData gl.ARRAY_BUFFER, dstByteOffset + stride, source.slice 0
             
         clone           : value : ( linkPositions = off, linkColors = off ) ->
@@ -1088,7 +1086,7 @@ do ->
 
     Object.assign self, d3 : {
 
-        vertices    : [,]
+        vertices    : [null]
 
         getItemsByteOffset      : -> @getUint32 0, iLE
         getPointersByteOffset   : -> @getUint32 8, iLE
@@ -1110,24 +1108,29 @@ do ->
 
             bindBufferInstances()
             @setUint32 8, byteLength, iLE
+
             if !byteOffset
                 gl.bufferData gl.ARRAY_BUFFER, 1e6 * 4, gl.DYNAMIC_READ
             
             byteOffset
 
         model                   : ( index ) ->
-            stride = 24
-            offset = @getItemsByteOffset() + stride
+            return unless index
 
-            while 0 < offset -= 28
+            stride = 24
+            offset = stride
+            length = @getItemsByteOffset()
+
+            while offset < length
                 unless index - @getUint16 offset, iLE
                     model = new Model offset - stride
+                offset += 28
 
             model
 
         add                     : ( vertices ) ->
-            if  -1 isnt i = @vertices.indexOf vertices
-                model = @model i
+            if  @vertices.includes vertices
+                model = @model @vertices.indexOf vertices
                 
             else
                 model = new Model @mallocItem()
@@ -1139,7 +1142,7 @@ do ->
                 model.drawCount      = vertices.length / 3
                 model.pointersOffset = @getPointersByteOffset()
 
-                model.bufferData()
+                model.bufferData vertices
 
             unless model
                 throw /MODEL_ERR/
@@ -2182,29 +2185,7 @@ do ->
 
         
         #writeDHCPPacket dump.slice(0, 64)
-        
-        
-
-        log i= d3.add font[100]
-        warn self.l = i.clone()
-
-
-        log d3.add font[101]
-
-        log d3.add font[102]
-        log d3.add font[102]
-        log d3.add font[102]
-        log d3.add font[100]
-        log d3.add font[102]
-        log d3.add font[102]
-        log d3.add font[102]
-        warn i = d3.add font[101]
-        error i.position.x += 10
-        error i.color = [1, 0.4]
-        warn i.clone()
-        log d3
-        bindBufferVertices()
-        
+        #log de = [ d3.add(font.f) ]
 
     init()
 
@@ -2261,3 +2242,171 @@ do ->
         j *= -1 unless ++i % 240
 
     render 0
+
+
+
+    
+do ->
+
+    BUFFER_BYTEOFFSET =   0
+    BUFFER_ALLOCCOUNT =   4
+    BUFFER_INITIALLOC =  24
+
+    HEADER_BYTELENGTH = -24
+    HEADER_NEXTOFFSET = -20
+    HEADER_PARENT_PTR = -16           
+    HEADER_CLASSINDEX = -12           
+    HEADER_SCOPEINDEX =  -8           
+    HEADER_TYPEDARRAY =  -4
+    
+    view = new DataView buffer = new ArrayBuffer 2048
+    scope = []
+
+    view.setInt32 BUFFER_BYTEOFFSET, BUFFER_INITIALLOC, iLE
+    
+    view.setInt32 BUFFER_ALLOCCOUNT, 1, iLE
+
+    getBufferByteOffset = ->
+        view.getInt32 BUFFER_BYTEOFFSET, iLE
+   
+    setBufferByteOffset = ( value ) ->
+        view.setInt32 BUFFER_BYTEOFFSET, value, iLE
+
+    getBufferAllocCount = ->
+        view.getInt32 BUFFER_ALLOCCOUNT, iLE
+   
+    setBufferAllocCount = ( value ) ->
+        view.setInt32 BUFFER_ALLOCCOUNT, value, iLE
+
+    getHeaderByteLength = ( ptri ) ->
+        view.getInt32 ptri + HEADER_BYTELENGTH, iLE
+
+    setHeaderByteLength = ( ptri, value ) ->
+        view.setInt32 ptri + HEADER_BYTELENGTH, value, iLE
+
+    getHeaderParentPtri = ( ptri ) ->
+        view.getInt32 ptri + HEADER_PARENT_PTR, iLE
+
+    setHeaderParentPtri = ( ptri, value ) ->
+        view.setInt32 ptri + HEADER_PARENT_PTR, value, iLE
+
+    getHeaderClassIndex = ( ptri ) ->
+        view.getInt32 ptri + HEADER_CLASSINDEX, iLE
+
+    setHeaderClassIndex = ( ptri, value ) ->
+        view.setInt32 ptri + HEADER_CLASSINDEX, value, iLE
+
+    getHeaderScopeIndex = ( ptri ) ->
+        view.getInt32 ptri + HEADER_SCOPEINDEX, iLE
+
+    setHeaderScopeIndex = ( ptri, value ) ->
+        view.setInt32 ptri + HEADER_SCOPEINDEX, value, iLE
+
+    getHeaderTypedArray = ( ptri ) ->
+        view.getInt32 ptri + HEADER_TYPEDARRAY, iLE
+
+    setHeaderTypedArray = ( ptri, value ) ->
+        view.setInt32 ptri + HEADER_TYPEDARRAY, value, iLE
+
+    getPonterTypedArray = ( ptri = this ) ->
+        byteOffset = +ptri
+        byteLength = getHeaderByteLength byteOffset
+        classIndex = getHeaderClassIndex byteOffset
+
+        TypedArray = scope[ classIndex ].TypedArray
+        length     = byteLength / TypedArray.BYTES_PER_ELEMENT
+
+        new TypedArray buffer, byteOffset, length
+
+    getPonterHeaders    = ( ptri = this ) ->
+        byteOffset = ptri + HEADER_BYTELENGTH
+        length     = HEADER_BYTELENGTH / -4
+
+        new Int32Array buffer, byteOffset, length
+
+    getPointer          = ( ptri ) ->
+        clsi = getHeaderClassIndex ptri
+        new scope[ clsi ] ptri
+
+    getParent           = ( ptri = this ) ->
+        if  ptrj = getHeaderParentPtri ptri
+            return getPointer ptrj
+
+    setParent           = ( ptri, ptrj ) ->
+        setHeaderParentPtri ptri, ptrj ; ptri
+
+    getChildren         = ( ptri = this ) ->
+        childs = []
+        offset = BUFFER_INITIALLOC
+        length = getBufferByteOffset()
+
+        while length > offset -= HEADER_BYTELENGTH
+        
+            unless ptri - getHeaderParentPtri offset
+                childs.push getPointer offset
+
+            if blen = getHeaderByteLength offset
+                offset += blen
+            
+        childs
+
+    scope.push class Pointer extends Number
+        @TypedArray : Uint8Array
+
+        constructor : ( byteOffset ) ->
+            throw /E0/ unless 0 < super byteOffset
+
+        appendChild : ( ptrj ) ->
+            setParent ptrj, this
+
+    Object.defineProperties Pointer::,
+        toString : value : -> throw "toString"
+        subarray : get   : getPonterTypedArray
+        headers  : get   : getPonterHeaders
+        parent   : get   : getParent
+        children : get   : getChildren
+
+    extref = ( object ) ->
+        if -1 is i = scope.indexOf object
+            i += scope.push object
+        i
+
+    palloc = ( constructs = Pointer ) ->
+        ptri = malloc constructs.byteLength 
+        clsi = extref constructs
+
+        setHeaderClassIndex ptri, clsi
+        new constructs ptri
+
+    malloc = ( byteLength = 0 ) ->
+
+        allocCount = getBufferAllocCount()
+        byteOffset = getBufferByteOffset()
+
+        byteOffset = byteOffset - HEADER_BYTELENGTH
+        nextOffset = byteOffset + byteLength
+
+        if  mod = nextOffset % 8
+            nextOffset += 8 - mod
+
+        setBufferAllocCount allocCount + 1
+        setBufferByteOffset nextOffset
+        setHeaderByteLength byteOffset, byteLength
+
+        byteOffset
+
+    class Storage extends Pointer
+        @byteLength : 12  
+
+    storage = palloc Storage
+    
+    log storage
+    storage2 = new Storage malloc 22
+    log storage2
+    log storage2.appendChild storage
+    log scope
+    log view
+    log storage2.children
+    log storage.children
+    log storage.parent
+    log new Int32Array buffer, 0, 6 
