@@ -2248,6 +2248,151 @@ no and do ->
     
 do ->
 
+    view = new DataView buffer = new ArrayBuffer 2048
+    scope = [ null ]
+
+    Object.defineProperties Object,
+
+        allocateProperty : value : ( target, prop, desc ) ->
+
+            define = ( key, def, byteOffset ) ->
+
+                get = 0
+
+                if  "function" is typeof def.value
+                    switch def.typedArray
+
+                        when Uint8Array     then get = -> 
+                            if !val = view.getUint8 byteOffset + this
+                                return 0 unless val = def.value.call this 
+                                return @[ key ] = val
+                            val
+
+                        when Int16Array    then get = ->
+                            if !val = view.getInt16 byteOffset + this, iLE
+                                return 0 unless val = def.value.call this 
+                                return @[ key ] = val
+                            val
+
+                        when Uint16Array    then get = ->
+                            if !val = view.getUint16 byteOffset + this, iLE
+                                return 0 unless val = def.value.call this 
+                                return @[ key ] = val
+                            val
+
+                        when Int32Array     then get = ->
+                            if !val = view.getInt32 byteOffset + this, iLE
+                                return 0 unless val = def.value.call this 
+                                return @[ key ] = val
+                            val
+
+                        when Uint32Array    then get = ->
+                            if !val = view.getUint32 byteOffset + this, iLE
+                                return 0 unless val = def.value.call this 
+                                return @[ key ] = val
+                            val
+
+                        when Float32Array   then get = ->
+                            if !val = view.getFloat32 byteOffset + this, iLE
+                                return 0 unless val = def.value.call this 
+                                return @[ key ] = val
+                            val
+
+                        when BigUint64Array then get = ->
+                            if !val = view.getUint32 byteOffset + this, iLE
+                                if  val = def.value.call this
+                                    this[ key ] = BigInt val
+                            val
+
+                        else throw /ERR_DEF/
+
+                else switch def.typedArray
+                    when Uint8Array     then get = -> view.getUint8 byteOffset + this
+                    when Int16Array     then get = -> view.getInt16 byteOffset + this, iLE
+                    when Uint16Array    then get = -> view.getUint16 byteOffset + this, iLE
+                    when Int32Array     then get = -> view.getInt32 byteOffset + this, iLE
+                    when Uint32Array    then get = -> view.getUint32 byteOffset + this, iLE
+                    when Float32Array   then get = -> view.getFloat32 byteOffset + this, iLE
+                    when BigUint64Array then get = -> Number view.getBigUint64 byteOffset + this, iLE
+                    else throw /ERR_DEF/
+                        
+                switch def.typedArray
+                    when Uint8Array     then set = -> view.setUint8 byteOffset + this, arguments[0]
+                    when Int16Array     then set = -> view.setInt16 byteOffset + this, arguments[0], iLE
+                    when Uint16Array    then set = -> view.setUint16 byteOffset + this, arguments[0], iLE
+                    when Int32Array     then set = -> view.setInt32 byteOffset + this, arguments[0], iLE
+                    when Uint32Array    then set = -> view.setUint32 byteOffset + this, arguments[0], iLE
+                    when Float32Array   then set = -> view.setFloat32 byteOffset + this, arguments[0], iLE
+                    when BigUint64Array then set = -> view.setBigUint64 byteOffset + this, BigInt(arguments[0]), iLE
+                    else throw /ERR_DEF/
+
+                Object.defineProperty this, key, { get, set }
+
+            bpe = desc.typedArray.BYTES_PER_ELEMENT
+            byteOffset = target.byteLength
+
+            if  mod = byteOffset % bpe
+                byteOffset += bpe - mod
+
+            define.call( target.prototype,
+                prop, desc, byteOffset
+            )
+
+            target.byteLength = byteOffset + bpe
+
+            target
+
+        registerProperty : value : ( target, prop, desc ) ->
+
+            define = ( key, def, byteOffset ) ->
+
+                { required , inheritable } = def
+                switch true
+                    when "function" is typeof def.scopeIndex
+                        set = -> view.setInt32 byteOffset + this, arguments[0], iLE
+                        get = ->
+                            if !scpi = view.getInt32 byteOffset + this, iLE
+                                return undefined unless required
+                                scpi = @[ key ] = def.scopeIndex.call this 
+
+                            scope[ scpi ]
+
+                    when Boolean Class = def.instanceof
+                        set = -> view.setInt32 byteOffset + this, arguments[0], iLE
+                        get = ->
+                            if !ptri = view.getInt32 byteOffset + this, iLE
+
+                                if  inheritable
+                                    ptrj = +this
+                                    clsi = extref Class
+
+                                    while !ptri and ptrj
+                                        ptri = findChildren ptrj, clsi, off
+                                        ptrj = getHeaderParentPtri ptrj
+
+                                if !ptri and required
+                                    ptri = malloc Class
+                                    @appendChild ptri
+                            
+                            if  ptri
+                                @[ key ] = ptri
+
+                            new Class ptri
+
+                Object.defineProperty this, key, { get, set }
+
+            byteOffset = target.byteLength
+
+            if  mod = byteOffset % 4
+                byteOffset += 4 - mod
+
+            define.call( target.prototype,
+                prop, desc, byteOffset
+            )
+
+            target.byteLength = byteOffset + 4
+            target
+
     BUFFER_BYTEOFFSET =   0
     BUFFER_ALLOCCOUNT =   4
     BUFFER_INITIALLOC =  24
@@ -2259,11 +2404,8 @@ do ->
     HEADER_SCOPEINDEX =  -8           
     HEADER_TYPEDARRAY =  -4
     
-    view = new DataView buffer = new ArrayBuffer 2048
-    scope = []
-
     view.setInt32 BUFFER_BYTEOFFSET, BUFFER_INITIALLOC, iLE
-    
+
     view.setInt32 BUFFER_ALLOCCOUNT, 1, iLE
 
     getBufferByteOffset = ->
@@ -2283,6 +2425,12 @@ do ->
 
     setHeaderByteLength = ( ptri, value ) ->
         view.setInt32 ptri + HEADER_BYTELENGTH, value, iLE
+
+    getHeaderNextOffset = ( ptri ) ->
+        view.getInt32 ptri + HEADER_NEXTOFFSET, iLE
+
+    setHeaderNextOffset = ( ptri, value ) ->
+        view.setInt32 ptri + HEADER_NEXTOFFSET, value, iLE
 
     getHeaderParentPtri = ( ptri ) ->
         view.getInt32 ptri + HEADER_PARENT_PTR, iLE
@@ -2328,6 +2476,24 @@ do ->
         clsi = getHeaderClassIndex ptri
         new scope[ clsi ] ptri
 
+    getPointers         = ( clsi ) ->
+        matchs = []
+        offset = 48
+        length = getBufferByteOffset()
+
+        unless clsi
+            while length >= offset
+                matchs.push getPointer offset
+                offset = getHeaderNextOffset offset
+            return matchs
+
+        while length >= offset
+            unless clsi - getHeaderClassIndex offset
+                matchs.push getPointer offset
+            offset = getHeaderNextOffset offset
+
+        return matchs
+
     getParent           = ( ptri = this ) ->
         if  ptrj = getHeaderParentPtri ptri
             return getPointer ptrj
@@ -2337,48 +2503,41 @@ do ->
 
     getChildren         = ( ptri = this ) ->
         childs = []
-        offset = BUFFER_INITIALLOC
+        offset = 48
         length = getBufferByteOffset()
 
-        while length > offset -= HEADER_BYTELENGTH
-        
+        while length >= offset
             unless ptri - getHeaderParentPtri offset
                 childs.push getPointer offset
-
-            if blen = getHeaderByteLength offset
-                offset += blen
+            offset = getHeaderNextOffset offset
             
         childs
 
-    scope.push class Pointer extends Number
-        @TypedArray : Uint8Array
+    findChildren        = ( ptri, clsi, inheritable = on ) ->
+        if  Pointer.isPrototypeOf clsi
+            clsi = scope .indexOf clsi
 
-        constructor : ( byteOffset ) ->
-            throw /E0/ unless 0 < super byteOffset
+        ptrj = getChildren( ptri ).find ( i ) ->
+            0 is clsi - getHeaderClassIndex i
 
-        appendChild : ( ptrj ) ->
-            setParent ptrj, this
+        if !inheritable or ptrj
+            return ptrj
 
-    Object.defineProperties Pointer::,
-        toString : value : -> throw "toString"
-        subarray : get   : getPonterTypedArray
-        headers  : get   : getPonterHeaders
-        parent   : get   : getParent
-        children : get   : getChildren
+        findChildren getParent( ptri ) , clsi, on
+
 
     extref = ( object ) ->
         if -1 is i = scope.indexOf object
             i += scope.push object
         i
 
-    palloc = ( constructs = Pointer ) ->
-        ptri = malloc constructs.byteLength 
-        clsi = extref constructs
+    palloc = ( PtrSuper, PtrChild, options = {} ) ->
+        clsi = extref PtrSuper
+        clsj = extref PtrChild
 
-        setHeaderClassIndex ptri, clsi
-        new constructs ptri
-
-    malloc = ( byteLength = 0 ) ->
+    malloc = ( PtrClass = Pointer ) ->
+        byteLength = PtrClass.byteLength
+        classIndex = extref PtrClass
 
         allocCount = getBufferAllocCount()
         byteOffset = getBufferByteOffset()
@@ -2391,22 +2550,189 @@ do ->
 
         setBufferAllocCount allocCount + 1
         setBufferByteOffset nextOffset
+        
         setHeaderByteLength byteOffset, byteLength
+        setHeaderClassIndex byteOffset, classIndex
+        setHeaderNextOffset byteOffset, nextOffset - HEADER_BYTELENGTH 
 
-        byteOffset
+        ptri = new PtrClass byteOffset
+        ptri . oninit()
+        ptri
 
-    class Storage extends Pointer
-        @byteLength : 12  
 
-    storage = palloc Storage
-    
-    log storage
-    storage2 = new Storage malloc 22
-    log storage2
-    log storage2.appendChild storage
-    log scope
-    log view
-    log storage2.children
-    log storage.children
-    log storage.parent
-    log new Int32Array buffer, 0, 6 
+    class Pointer               extends Number
+    class Window                extends Pointer
+    class HTMLElement           extends Pointer
+    class HTMLDocument          extends HTMLElement
+    class HTMLBodyElement       extends HTMLElement
+    class HTMLCanvasElement     extends HTMLElement
+    class Screen                extends Pointer
+
+    Object.defineProperties Pointer,
+
+        TypedArray      :
+            configurable: on
+            value       : Uint8Array
+
+        byteLength      :
+            writable    : on
+            value       : 0
+
+    Object.defineProperties Pointer::,
+
+        toString        : value : ->
+            throw "toString"
+
+        subarray        :
+            get         : getPonterTypedArray
+
+        headers         :
+            get         : getPonterHeaders
+
+        children        : 
+            get         : getChildren
+
+        parent          :
+            get         : getParent
+            set         : -> setParent this, arguments[0]
+
+        oninit     : value : ->
+            this
+
+        appendChild     : value : ( node ) ->
+            if  node instanceof Pointer
+                return setParent node, this
+            return @extref.appendChild node
+
+    Object.defineProperties HTMLElement::,
+
+        document        : get   : ->
+            if  this instanceof HTMLDocument
+                return this
+            return @parent.document
+
+        window          : get   : ->
+            if  this instanceof HTMLDocument
+                return @parent
+            return @parent.window
+
+    Object.defineProperties HTMLDocument::,
+
+        createElement       : value : ( tagName ) ->
+            @extref.createElement tagName
+
+    Object.defineProperties HTMLCanvasElement::,
+
+        getContext          : value : ( type ) ->
+            @extref.getContext type
+
+        resizeToFullWindow  : value : ->
+            @resizeNode( @extref ).reloadContext()
+
+        resizeNode          : value : ( node, width, height, dpr = 1 ) ->
+            width               =  width || @window.extref.innerWidth
+            node.width          =  width * dpr
+            node.style.width    =  width + "px"
+
+            height              = height || @window.extref.innerHeight
+            node.height         = height * dpr
+            node.style.height   = height + "px"
+            node
+
+        reloadContext       : value : ->
+            @gl = 0
+            @gl.viewport 0, 0, width * dpr, height * dpr
+
+            0
+
+    Object.registerProperty Window, "document", {
+        required    : on
+        inheritable : off
+        instanceof  : HTMLDocument
+    }
+
+    Object.allocateProperty Window, "devicePixelRatio", {
+        typedArray  : Uint8Array
+        value       : ->
+            @extref.devicePixelRatio
+    }
+
+    Object.registerProperty Window, "screen", {
+        required    : on
+        inheritable : on
+        instanceof  : Screen
+    }
+
+    Object.registerProperty Window, "extref", {
+        required    : on
+        inheritable : off
+        scopeIndex  : ->
+            extref window
+    }
+
+    Object.registerProperty HTMLDocument, "extref", {
+        required    : on
+        inheritable : off
+        scopeIndex  : ->
+            extref @window.extref.document
+    }
+
+    Object.registerProperty Screen, "extref", {
+        required    : on
+        inheritable : off
+        scopeIndex  : ->
+            extref @window.extref.screen
+    }
+
+    Object.registerProperty HTMLBodyElement, "extref", {
+        required    : on
+        inheritable : off
+        scopeIndex  : ->
+            extref @document.extref.body
+    }
+
+    Object.registerProperty HTMLBodyElement, "scene", {
+        required    : on
+        inheritable : off
+        instanceof  : HTMLCanvasElement
+    }
+
+    Object.registerProperty HTMLCanvasElement, "extref", {
+        required    : on
+        inheritable : off
+        scopeIndex  : ->            
+            node = @document.createElement "canvas"
+            @parent.appendChild @resizeNode node
+            extref node
+    }
+
+    Object.registerProperty HTMLCanvasElement, "gl", {
+        required    : on
+        inheritable : off
+        scopeIndex  : ->
+            extref @getContext "webgl2"
+    }
+
+    Object.registerProperty HTMLDocument, "body", {
+        required    : on
+        inheritable : off
+        instanceof  : HTMLBodyElement
+    }
+
+    Object.allocateProperty HTMLCanvasElement, "width", {
+        typedArray  : Int16Array
+        value       : -> @window.extref.innerWidth
+    }
+
+    Object.allocateProperty HTMLCanvasElement, "height", {
+        typedArray  : Int16Array
+        value       : -> @window.extref.innerHeight
+    }
+
+    win = malloc Window
+
+    do  context = ->
+        body = win.document.body
+        scene = body.scene
+
+        log scene

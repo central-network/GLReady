@@ -2649,7 +2649,256 @@ false && (function() {
 })();
 
 (function() {
-  var BUFFER_ALLOCCOUNT, BUFFER_BYTEOFFSET, BUFFER_INITIALLOC, HEADER_BYTELENGTH, HEADER_CLASSINDEX, HEADER_NEXTOFFSET, HEADER_PARENT_PTR, HEADER_SCOPEINDEX, HEADER_TYPEDARRAY, Pointer, Storage, buffer, extref, getBufferAllocCount, getBufferByteOffset, getChildren, getHeaderByteLength, getHeaderClassIndex, getHeaderParentPtri, getHeaderScopeIndex, getHeaderTypedArray, getParent, getPointer, getPonterHeaders, getPonterTypedArray, malloc, palloc, scope, setBufferAllocCount, setBufferByteOffset, setHeaderByteLength, setHeaderClassIndex, setHeaderParentPtri, setHeaderScopeIndex, setHeaderTypedArray, setParent, storage, storage2, view;
+  var BUFFER_ALLOCCOUNT, BUFFER_BYTEOFFSET, BUFFER_INITIALLOC, HEADER_BYTELENGTH, HEADER_CLASSINDEX, HEADER_NEXTOFFSET, HEADER_PARENT_PTR, HEADER_SCOPEINDEX, HEADER_TYPEDARRAY, HTMLBodyElement, HTMLCanvasElement, HTMLDocument, HTMLElement, Pointer, Screen, Window, buffer, context, extref, findChildren, getBufferAllocCount, getBufferByteOffset, getChildren, getHeaderByteLength, getHeaderClassIndex, getHeaderNextOffset, getHeaderParentPtri, getHeaderScopeIndex, getHeaderTypedArray, getParent, getPointer, getPointers, getPonterHeaders, getPonterTypedArray, malloc, palloc, scope, setBufferAllocCount, setBufferByteOffset, setHeaderByteLength, setHeaderClassIndex, setHeaderNextOffset, setHeaderParentPtri, setHeaderScopeIndex, setHeaderTypedArray, setParent, view, win;
+  view = new DataView(buffer = new ArrayBuffer(2048));
+  scope = [null];
+  Object.defineProperties(Object, {
+    allocateProperty: {
+      value: function(target, prop, desc) {
+        var bpe, byteOffset, define, mod;
+        define = function(key, def, byteOffset) {
+          var get, set;
+          get = 0;
+          if ("function" === typeof def.value) {
+            switch (def.typedArray) {
+              case Uint8Array:
+                get = function() {
+                  var val;
+                  if (!(val = view.getUint8(byteOffset + this))) {
+                    if (!(val = def.value.call(this))) {
+                      return 0;
+                    }
+                    return this[key] = val;
+                  }
+                  return val;
+                };
+                break;
+              case Int16Array:
+                get = function() {
+                  var val;
+                  if (!(val = view.getInt16(byteOffset + this, iLE))) {
+                    if (!(val = def.value.call(this))) {
+                      return 0;
+                    }
+                    return this[key] = val;
+                  }
+                  return val;
+                };
+                break;
+              case Uint16Array:
+                get = function() {
+                  var val;
+                  if (!(val = view.getUint16(byteOffset + this, iLE))) {
+                    if (!(val = def.value.call(this))) {
+                      return 0;
+                    }
+                    return this[key] = val;
+                  }
+                  return val;
+                };
+                break;
+              case Int32Array:
+                get = function() {
+                  var val;
+                  if (!(val = view.getInt32(byteOffset + this, iLE))) {
+                    if (!(val = def.value.call(this))) {
+                      return 0;
+                    }
+                    return this[key] = val;
+                  }
+                  return val;
+                };
+                break;
+              case Uint32Array:
+                get = function() {
+                  var val;
+                  if (!(val = view.getUint32(byteOffset + this, iLE))) {
+                    if (!(val = def.value.call(this))) {
+                      return 0;
+                    }
+                    return this[key] = val;
+                  }
+                  return val;
+                };
+                break;
+              case Float32Array:
+                get = function() {
+                  var val;
+                  if (!(val = view.getFloat32(byteOffset + this, iLE))) {
+                    if (!(val = def.value.call(this))) {
+                      return 0;
+                    }
+                    return this[key] = val;
+                  }
+                  return val;
+                };
+                break;
+              case BigUint64Array:
+                get = function() {
+                  var val;
+                  if (!(val = view.getUint32(byteOffset + this, iLE))) {
+                    if (val = def.value.call(this)) {
+                      this[key] = BigInt(val);
+                    }
+                  }
+                  return val;
+                };
+                break;
+              default:
+                throw /ERR_DEF/;
+            }
+          } else {
+            switch (def.typedArray) {
+              case Uint8Array:
+                get = function() {
+                  return view.getUint8(byteOffset + this);
+                };
+                break;
+              case Int16Array:
+                get = function() {
+                  return view.getInt16(byteOffset + this, iLE);
+                };
+                break;
+              case Uint16Array:
+                get = function() {
+                  return view.getUint16(byteOffset + this, iLE);
+                };
+                break;
+              case Int32Array:
+                get = function() {
+                  return view.getInt32(byteOffset + this, iLE);
+                };
+                break;
+              case Uint32Array:
+                get = function() {
+                  return view.getUint32(byteOffset + this, iLE);
+                };
+                break;
+              case Float32Array:
+                get = function() {
+                  return view.getFloat32(byteOffset + this, iLE);
+                };
+                break;
+              case BigUint64Array:
+                get = function() {
+                  return Number(view.getBigUint64(byteOffset + this, iLE));
+                };
+                break;
+              default:
+                throw /ERR_DEF/;
+            }
+          }
+          switch (def.typedArray) {
+            case Uint8Array:
+              set = function() {
+                return view.setUint8(byteOffset + this, arguments[0]);
+              };
+              break;
+            case Int16Array:
+              set = function() {
+                return view.setInt16(byteOffset + this, arguments[0], iLE);
+              };
+              break;
+            case Uint16Array:
+              set = function() {
+                return view.setUint16(byteOffset + this, arguments[0], iLE);
+              };
+              break;
+            case Int32Array:
+              set = function() {
+                return view.setInt32(byteOffset + this, arguments[0], iLE);
+              };
+              break;
+            case Uint32Array:
+              set = function() {
+                return view.setUint32(byteOffset + this, arguments[0], iLE);
+              };
+              break;
+            case Float32Array:
+              set = function() {
+                return view.setFloat32(byteOffset + this, arguments[0], iLE);
+              };
+              break;
+            case BigUint64Array:
+              set = function() {
+                return view.setBigUint64(byteOffset + this, BigInt(arguments[0]), iLE);
+              };
+              break;
+            default:
+              throw /ERR_DEF/;
+          }
+          return Object.defineProperty(this, key, {get, set});
+        };
+        bpe = desc.typedArray.BYTES_PER_ELEMENT;
+        byteOffset = target.byteLength;
+        if (mod = byteOffset % bpe) {
+          byteOffset += bpe - mod;
+        }
+        define.call(target.prototype, prop, desc, byteOffset);
+        target.byteLength = byteOffset + bpe;
+        return target;
+      }
+    },
+    registerProperty: {
+      value: function(target, prop, desc) {
+        var byteOffset, define, mod;
+        define = function(key, def, byteOffset) {
+          var Class, get, inheritable, required, set;
+          ({required, inheritable} = def);
+          switch (true) {
+            case "function" === typeof def.scopeIndex:
+              set = function() {
+                return view.setInt32(byteOffset + this, arguments[0], iLE);
+              };
+              get = function() {
+                var scpi;
+                if (!(scpi = view.getInt32(byteOffset + this, iLE))) {
+                  if (!required) {
+                    return void 0;
+                  }
+                  scpi = this[key] = def.scopeIndex.call(this);
+                }
+                return scope[scpi];
+              };
+              break;
+            case Boolean(Class = def.instanceof):
+              set = function() {
+                return view.setInt32(byteOffset + this, arguments[0], iLE);
+              };
+              get = function() {
+                var clsi, ptri, ptrj;
+                if (!(ptri = view.getInt32(byteOffset + this, iLE))) {
+                  if (inheritable) {
+                    ptrj = +this;
+                    clsi = extref(Class);
+                    while (!ptri && ptrj) {
+                      ptri = findChildren(ptrj, clsi, false);
+                      ptrj = getHeaderParentPtri(ptrj);
+                    }
+                  }
+                  if (!ptri && required) {
+                    ptri = malloc(Class);
+                    this.appendChild(ptri);
+                  }
+                }
+                if (ptri) {
+                  this[key] = ptri;
+                }
+                return new Class(ptri);
+              };
+          }
+          return Object.defineProperty(this, key, {get, set});
+        };
+        byteOffset = target.byteLength;
+        if (mod = byteOffset % 4) {
+          byteOffset += 4 - mod;
+        }
+        define.call(target.prototype, prop, desc, byteOffset);
+        target.byteLength = byteOffset + 4;
+        return target;
+      }
+    }
+  });
   BUFFER_BYTEOFFSET = 0;
   BUFFER_ALLOCCOUNT = 4;
   BUFFER_INITIALLOC = 24;
@@ -2659,8 +2908,6 @@ false && (function() {
   HEADER_CLASSINDEX = -12;
   HEADER_SCOPEINDEX = -8;
   HEADER_TYPEDARRAY = -4;
-  view = new DataView(buffer = new ArrayBuffer(2048));
-  scope = [];
   view.setInt32(BUFFER_BYTEOFFSET, BUFFER_INITIALLOC, iLE);
   view.setInt32(BUFFER_ALLOCCOUNT, 1, iLE);
   getBufferByteOffset = function() {
@@ -2680,6 +2927,12 @@ false && (function() {
   };
   setHeaderByteLength = function(ptri, value) {
     return view.setInt32(ptri + HEADER_BYTELENGTH, value, iLE);
+  };
+  getHeaderNextOffset = function(ptri) {
+    return view.getInt32(ptri + HEADER_NEXTOFFSET, iLE);
+  };
+  setHeaderNextOffset = function(ptri, value) {
+    return view.setInt32(ptri + HEADER_NEXTOFFSET, value, iLE);
   };
   getHeaderParentPtri = function(ptri) {
     return view.getInt32(ptri + HEADER_PARENT_PTR, iLE);
@@ -2725,6 +2978,26 @@ false && (function() {
     clsi = getHeaderClassIndex(ptri);
     return new scope[clsi](ptri);
   };
+  getPointers = function(clsi) {
+    var length, matchs, offset;
+    matchs = [];
+    offset = 48;
+    length = getBufferByteOffset();
+    if (!clsi) {
+      while (length >= offset) {
+        matchs.push(getPointer(offset));
+        offset = getHeaderNextOffset(offset);
+      }
+      return matchs;
+    }
+    while (length >= offset) {
+      if (!(clsi - getHeaderClassIndex(offset))) {
+        matchs.push(getPointer(offset));
+      }
+      offset = getHeaderNextOffset(offset);
+    }
+    return matchs;
+  };
   getParent = function(ptri = this) {
     var ptrj;
     if (ptrj = getHeaderParentPtri(ptri)) {
@@ -2736,39 +3009,80 @@ false && (function() {
     return ptri;
   };
   getChildren = function(ptri = this) {
-    var blen, childs, length, offset;
+    var childs, length, offset;
     childs = [];
-    offset = BUFFER_INITIALLOC;
+    offset = 48;
     length = getBufferByteOffset();
-    while (length > (offset -= HEADER_BYTELENGTH)) {
+    while (length >= offset) {
       if (!(ptri - getHeaderParentPtri(offset))) {
         childs.push(getPointer(offset));
       }
-      if (blen = getHeaderByteLength(offset)) {
-        offset += blen;
-      }
+      offset = getHeaderNextOffset(offset);
     }
     return childs;
   };
-  scope.push(Pointer = (function() {
-    class Pointer extends Number {
-      constructor(byteOffset) {
-        if (!(0 < super(byteOffset))) {
-          throw /E0/;
-        }
-      }
-
-      appendChild(ptrj) {
-        return setParent(ptrj, this);
-      }
-
-    };
-
-    Pointer.TypedArray = Uint8Array;
-
-    return Pointer;
-
-  }).call(this));
+  findChildren = function(ptri, clsi, inheritable = true) {
+    var ptrj;
+    if (Pointer.isPrototypeOf(clsi)) {
+      clsi = scope.indexOf(clsi);
+    }
+    ptrj = getChildren(ptri).find(function(i) {
+      return 0 === clsi - getHeaderClassIndex(i);
+    });
+    if (!inheritable || ptrj) {
+      return ptrj;
+    }
+    return findChildren(getParent(ptri), clsi, true);
+  };
+  extref = function(object) {
+    var i;
+    if (-1 === (i = scope.indexOf(object))) {
+      i += scope.push(object);
+    }
+    return i;
+  };
+  palloc = function(PtrSuper, PtrChild, options = {}) {
+    var clsi, clsj;
+    clsi = extref(PtrSuper);
+    return clsj = extref(PtrChild);
+  };
+  malloc = function(PtrClass = Pointer) {
+    var allocCount, byteLength, byteOffset, classIndex, mod, nextOffset, ptri;
+    byteLength = PtrClass.byteLength;
+    classIndex = extref(PtrClass);
+    allocCount = getBufferAllocCount();
+    byteOffset = getBufferByteOffset();
+    byteOffset = byteOffset - HEADER_BYTELENGTH;
+    nextOffset = byteOffset + byteLength;
+    if (mod = nextOffset % 8) {
+      nextOffset += 8 - mod;
+    }
+    setBufferAllocCount(allocCount + 1);
+    setBufferByteOffset(nextOffset);
+    setHeaderByteLength(byteOffset, byteLength);
+    setHeaderClassIndex(byteOffset, classIndex);
+    setHeaderNextOffset(byteOffset, nextOffset - HEADER_BYTELENGTH);
+    ptri = new PtrClass(byteOffset);
+    ptri.oninit();
+    return ptri;
+  };
+  Pointer = class Pointer extends Number {};
+  Window = class Window extends Pointer {};
+  HTMLElement = class HTMLElement extends Pointer {};
+  HTMLDocument = class HTMLDocument extends HTMLElement {};
+  HTMLBodyElement = class HTMLBodyElement extends HTMLElement {};
+  HTMLCanvasElement = class HTMLCanvasElement extends HTMLElement {};
+  Screen = class Screen extends Pointer {};
+  Object.defineProperties(Pointer, {
+    TypedArray: {
+      configurable: true,
+      value: Uint8Array
+    },
+    byteLength: {
+      writable: true,
+      value: 0
+    }
+  });
   Object.defineProperties(Pointer.prototype, {
     toString: {
       value: function() {
@@ -2781,58 +3095,172 @@ false && (function() {
     headers: {
       get: getPonterHeaders
     },
-    parent: {
-      get: getParent
-    },
     children: {
       get: getChildren
+    },
+    parent: {
+      get: getParent,
+      set: function() {
+        return setParent(this, arguments[0]);
+      }
+    },
+    oninit: {
+      value: function() {
+        return this;
+      }
+    },
+    appendChild: {
+      value: function(node) {
+        if (node instanceof Pointer) {
+          return setParent(node, this);
+        }
+        return this.extref.appendChild(node);
+      }
     }
   });
-  extref = function(object) {
-    var i;
-    if (-1 === (i = scope.indexOf(object))) {
-      i += scope.push(object);
+  Object.defineProperties(HTMLElement.prototype, {
+    document: {
+      get: function() {
+        if (this instanceof HTMLDocument) {
+          return this;
+        }
+        return this.parent.document;
+      }
+    },
+    window: {
+      get: function() {
+        if (this instanceof HTMLDocument) {
+          return this.parent;
+        }
+        return this.parent.window;
+      }
     }
-    return i;
-  };
-  palloc = function(constructs = Pointer) {
-    var clsi, ptri;
-    ptri = malloc(constructs.byteLength);
-    clsi = extref(constructs);
-    setHeaderClassIndex(ptri, clsi);
-    return new constructs(ptri);
-  };
-  malloc = function(byteLength = 0) {
-    var allocCount, byteOffset, mod, nextOffset;
-    allocCount = getBufferAllocCount();
-    byteOffset = getBufferByteOffset();
-    byteOffset = byteOffset - HEADER_BYTELENGTH;
-    nextOffset = byteOffset + byteLength;
-    if (mod = nextOffset % 8) {
-      nextOffset += 8 - mod;
+  });
+  Object.defineProperties(HTMLDocument.prototype, {
+    createElement: {
+      value: function(tagName) {
+        return this.extref.createElement(tagName);
+      }
     }
-    setBufferAllocCount(allocCount + 1);
-    setBufferByteOffset(nextOffset);
-    setHeaderByteLength(byteOffset, byteLength);
-    return byteOffset;
-  };
-  Storage = (function() {
-    class Storage extends Pointer {};
-
-    Storage.byteLength = 12;
-
-    return Storage;
-
-  }).call(this);
-  storage = palloc(Storage);
-  log(storage);
-  storage2 = new Storage(malloc(22));
-  log(storage2);
-  log(storage2.appendChild(storage));
-  log(scope);
-  log(view);
-  log(storage2.children);
-  log(storage.children);
-  log(storage.parent);
-  return log(new Int32Array(buffer, 0, 6));
+  });
+  Object.defineProperties(HTMLCanvasElement.prototype, {
+    getContext: {
+      value: function(type) {
+        return this.extref.getContext(type);
+      }
+    },
+    resizeToFullWindow: {
+      value: function() {
+        return this.resizeNode(this.extref).reloadContext();
+      }
+    },
+    resizeNode: {
+      value: function(node, width, height, dpr = 1) {
+        width = width || this.window.extref.innerWidth;
+        node.width = width * dpr;
+        node.style.width = width + "px";
+        height = height || this.window.extref.innerHeight;
+        node.height = height * dpr;
+        node.style.height = height + "px";
+        return node;
+      }
+    },
+    reloadContext: {
+      value: function() {
+        this.gl = 0;
+        this.gl.viewport(0, 0, width * dpr, height * dpr);
+        return 0;
+      }
+    }
+  });
+  Object.registerProperty(Window, "document", {
+    required: true,
+    inheritable: false,
+    instanceof: HTMLDocument
+  });
+  Object.allocateProperty(Window, "devicePixelRatio", {
+    typedArray: Uint8Array,
+    value: function() {
+      return this.extref.devicePixelRatio;
+    }
+  });
+  Object.registerProperty(Window, "screen", {
+    required: true,
+    inheritable: true,
+    instanceof: Screen
+  });
+  Object.registerProperty(Window, "extref", {
+    required: true,
+    inheritable: false,
+    scopeIndex: function() {
+      return extref(window);
+    }
+  });
+  Object.registerProperty(HTMLDocument, "extref", {
+    required: true,
+    inheritable: false,
+    scopeIndex: function() {
+      return extref(this.window.extref.document);
+    }
+  });
+  Object.registerProperty(Screen, "extref", {
+    required: true,
+    inheritable: false,
+    scopeIndex: function() {
+      return extref(this.window.extref.screen);
+    }
+  });
+  Object.registerProperty(HTMLBodyElement, "extref", {
+    required: true,
+    inheritable: false,
+    scopeIndex: function() {
+      return extref(this.document.extref.body);
+    }
+  });
+  Object.registerProperty(HTMLBodyElement, "scene", {
+    required: true,
+    inheritable: false,
+    instanceof: HTMLCanvasElement
+  });
+  Object.registerProperty(HTMLCanvasElement, "extref", {
+    required: true,
+    inheritable: false,
+    scopeIndex: function() {
+      var node;
+      node = this.document.createElement("canvas");
+      this.parent.appendChild(this.resizeNode(node));
+      return extref(node);
+    }
+  });
+  Object.registerProperty(HTMLCanvasElement, "gl", {
+    required: true,
+    inheritable: false,
+    scopeIndex: function() {
+      return extref(this.getContext("webgl2"));
+    }
+  });
+  Object.registerProperty(HTMLDocument, "body", {
+    required: true,
+    inheritable: false,
+    instanceof: HTMLBodyElement
+  });
+  Object.allocateProperty(HTMLCanvasElement, "width", {
+    typedArray: Int16Array,
+    value: function() {
+      return this.window.extref.innerWidth;
+    }
+  });
+  Object.allocateProperty(HTMLCanvasElement, "height", {
+    typedArray: Int16Array,
+    value: function() {
+      return this.window.extref.innerHeight;
+    }
+  });
+  win = malloc(Window);
+  return (context = function() {
+    var body, scene;
+    body = win.document.body;
+    scene = body.scene;
+    return log(scene);
+  })();
 })();
