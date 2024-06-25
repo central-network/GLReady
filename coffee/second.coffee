@@ -2251,80 +2251,121 @@ do ->
     view = new DataView buffer = new ArrayBuffer 2048
     scope = [ null ]
 
+    Object.defineProperties Array::,
+
+        sum : value : ( key ) ->
+            unless key then @reduce (a,b) -> a + ( b or 0 )
+            else @reduce (a, b) -> a[key] + ( b[key] or 0 )
+
     Object.defineProperties Object,
 
         allocateProperty : value : ( target, prop, desc ) ->
 
-            define = ( key, def, byteOffset ) ->
+            desc.typedArray ||= Int32Array
 
+            define = ( key, def, byteOffset ) ->
                 get = 0
 
-                if  "function" is typeof def.value
-                    switch def.typedArray
+                if  def.isPointer
 
-                        when Uint8Array     then get = -> 
-                            if !val = view.getUint8 byteOffset + this
-                                return 0 unless val = def.value.call this 
-                                return @[ key ] = val
-                            val
+                    unless onempty = def.onempty
+                        get = ->
+                            if  ptri = view.getInt32 byteOffset + this, iLE
+                                return new LinkedPointer ptri
+                            null
+                    else
+                        get = ->
+                            unless ptri = view.getInt32 byteOffset + this, iLE
+                                unless ptri = onempty.call this
+                                    return null
+                                this[ key ] = ptri
+                            return new LinkedPointer ptri
+    
+                    set = ->
+                        view.setInt32 byteOffset + this, arguments[0], iLE
 
-                        when Int16Array    then get = ->
-                            if !val = view.getInt16 byteOffset + this, iLE
-                                return 0 unless val = def.value.call this 
-                                return @[ key ] = val
-                            val
+                else
 
-                        when Uint16Array    then get = ->
-                            if !val = view.getUint16 byteOffset + this, iLE
-                                return 0 unless val = def.value.call this 
-                                return @[ key ] = val
-                            val
+                    onup = def.onupdate
 
-                        when Int32Array     then get = ->
-                            if !val = view.getInt32 byteOffset + this, iLE
-                                return 0 unless val = def.value.call this 
-                                return @[ key ] = val
-                            val
+                    if  "function" is typeof def.value
+                        switch def.typedArray
 
-                        when Uint32Array    then get = ->
-                            if !val = view.getUint32 byteOffset + this, iLE
-                                return 0 unless val = def.value.call this 
-                                return @[ key ] = val
-                            val
+                            when Uint8Array     then get = -> 
+                                if !val = view.getUint8 byteOffset + this
+                                    return 0 unless val = def.value.call this 
+                                    return @[ key ] = val
+                                val
 
-                        when Float32Array   then get = ->
-                            if !val = view.getFloat32 byteOffset + this, iLE
-                                return 0 unless val = def.value.call this 
-                                return @[ key ] = val
-                            val
+                            when Int16Array    then get = ->
+                                if !val = view.getInt16 byteOffset + this, iLE
+                                    return 0 unless val = def.value.call this 
+                                    return @[ key ] = val
+                                val
 
-                        when BigUint64Array then get = ->
-                            if !val = view.getUint32 byteOffset + this, iLE
-                                if  val = def.value.call this
-                                    this[ key ] = BigInt val
-                            val
+                            when Uint16Array    then get = ->
+                                if !val = view.getUint16 byteOffset + this, iLE
+                                    return 0 unless val = def.value.call this 
+                                    return @[ key ] = val
+                                val
 
+                            when Int32Array     then get = ->
+                                if !val = view.getInt32 byteOffset + this, iLE
+                                    return 0 unless val = def.value.call this 
+                                    return @[ key ] = val
+                                val
+
+                            when Uint32Array    then get = ->
+                                if !val = view.getUint32 byteOffset + this, iLE
+                                    return 0 unless val = def.value.call this 
+                                    return @[ key ] = val
+                                val
+
+                            when Float32Array   then get = ->
+                                if !val = view.getFloat32 byteOffset + this, iLE
+                                    return 0 unless val = def.value.call this 
+                                    return @[ key ] = val
+                                val
+
+                            when BigUint64Array then get = ->
+                                if !val = view.getUint32 byteOffset + this, iLE
+                                    if  val = def.value.call this
+                                        this[ key ] = BigInt val
+                                val
+
+                            else throw /ERR_DEF/
+
+                    else switch def.typedArray
+                        when Uint8Array     then get = -> view.getUint8 byteOffset + this
+                        when Int16Array     then get = -> view.getInt16 byteOffset + this, iLE
+                        when Uint16Array    then get = -> view.getUint16 byteOffset + this, iLE
+                        when Int32Array     then get = -> view.getInt32 byteOffset + this, iLE
+                        when Uint32Array    then get = -> view.getUint32 byteOffset + this, iLE
+                        when Float32Array   then get = -> view.getFloat32 byteOffset + this, iLE
+                        when BigUint64Array then get = -> Number view.getBigUint64 byteOffset + this, iLE
                         else throw /ERR_DEF/
+                            
 
-                else switch def.typedArray
-                    when Uint8Array     then get = -> view.getUint8 byteOffset + this
-                    when Int16Array     then get = -> view.getInt16 byteOffset + this, iLE
-                    when Uint16Array    then get = -> view.getUint16 byteOffset + this, iLE
-                    when Int32Array     then get = -> view.getInt32 byteOffset + this, iLE
-                    when Uint32Array    then get = -> view.getUint32 byteOffset + this, iLE
-                    when Float32Array   then get = -> view.getFloat32 byteOffset + this, iLE
-                    when BigUint64Array then get = -> Number view.getBigUint64 byteOffset + this, iLE
-                    else throw /ERR_DEF/
-                        
-                switch def.typedArray
-                    when Uint8Array     then set = -> view.setUint8 byteOffset + this, arguments[0]
-                    when Int16Array     then set = -> view.setInt16 byteOffset + this, arguments[0], iLE
-                    when Uint16Array    then set = -> view.setUint16 byteOffset + this, arguments[0], iLE
-                    when Int32Array     then set = -> view.setInt32 byteOffset + this, arguments[0], iLE
-                    when Uint32Array    then set = -> view.setUint32 byteOffset + this, arguments[0], iLE
-                    when Float32Array   then set = -> view.setFloat32 byteOffset + this, arguments[0], iLE
-                    when BigUint64Array then set = -> view.setBigUint64 byteOffset + this, BigInt(arguments[0]), iLE
-                    else throw /ERR_DEF/
+                    if  "function" is typeof onup
+                        switch def.typedArray
+                            when Uint8Array     then set = (v) -> view.setUint8 byteOffset + this, v ; onup.call(@, v)
+                            when Int16Array     then set = (v) -> view.setInt16 byteOffset + this, v, iLE ; onup.call(@, v)
+                            when Uint16Array    then set = (v) -> view.setUint16 byteOffset + this, v, iLE ; onup.call(@, v)
+                            when Int32Array     then set = (v) -> view.setInt32 byteOffset + this, v, iLE ; onup.call(@, v)
+                            when Uint32Array    then set = (v) -> view.setUint32 byteOffset + this, v, iLE ; onup.call(@, v)
+                            when Float32Array   then set = (v) -> view.setFloat32 byteOffset + this, v, iLE ; onup.call(@, v)
+                            when BigUint64Array then set = (v) -> view.setBigUint64 byteOffset + this, BigInt(v), iLE ; onup.call(@, v)
+                            else throw /ERR_DEF/
+
+                    else switch def.typedArray
+                        when Uint8Array     then set = -> view.setUint8 byteOffset + this, arguments[0]
+                        when Int16Array     then set = -> view.setInt16 byteOffset + this, arguments[0], iLE
+                        when Uint16Array    then set = -> view.setUint16 byteOffset + this, arguments[0], iLE
+                        when Int32Array     then set = -> view.setInt32 byteOffset + this, arguments[0], iLE
+                        when Uint32Array    then set = -> view.setUint32 byteOffset + this, arguments[0], iLE
+                        when Float32Array   then set = -> view.setFloat32 byteOffset + this, arguments[0], iLE
+                        when BigUint64Array then set = -> view.setBigUint64 byteOffset + this, BigInt(arguments[0]), iLE
+                        else throw /ERR_DEF/
 
                 Object.defineProperty this, key, { get, set }
 
@@ -2525,6 +2566,12 @@ do ->
 
         findChildren getParent( ptri ) , clsi, on
 
+    filterChildren      = ( ptri, clsi ) ->
+        if  Pointer.isPrototypeOf clsi
+            clsi = scope .indexOf clsi
+
+        getChildren( ptri ).filter ( i ) ->
+            0 is clsi - getHeaderClassIndex i
 
     extref = ( object ) ->
         if -1 is i = scope.indexOf object
@@ -2556,17 +2603,42 @@ do ->
         setHeaderNextOffset byteOffset, nextOffset - HEADER_BYTELENGTH 
 
         ptri = new PtrClass byteOffset
-        ptri . oninit()
+        ptri . onalloc()
         ptri
 
 
     class Pointer               extends Number
+        constructor : -> super( arguments[0] ).oninit()
+
     class Window                extends Pointer
     class HTMLElement           extends Pointer
     class HTMLDocument          extends HTMLElement
     class HTMLBodyElement       extends HTMLElement
     class HTMLCanvasElement     extends HTMLElement
+    class HTMLScriptElement     extends HTMLElement
+    class RenderingContext      extends Pointer
     class Screen                extends Pointer
+    class GLBuffer              extends Pointer
+    class GLProgram             extends Pointer
+    class ContextUpload         extends Pointer
+    class ContextUploads        extends Pointer
+    class DrawCall              extends Pointer
+    class ShaderSource          extends Pointer
+    class GLShader              extends Pointer
+    class ShaderAttribute       extends Pointer
+    class LinkedPointer         extends Pointer
+
+    VERTEX_SHADER = new (class VERTEX_SHADER extends Number)(
+        WebGL2RenderingContext.VERTEX_SHADER
+    )
+
+    FRAGMENT_SHADER = new (class FRAGMENT_SHADER extends Number)(
+        WebGL2RenderingContext.FRAGMENT_SHADER
+    )
+
+    COMPUTE_SHADER = new (class COMPUTE_SHADER extends Number)(
+        WebGL2RenderingContext.FRAGMENT_SHADER+2
+    )
 
     Object.defineProperties Pointer,
 
@@ -2596,13 +2668,21 @@ do ->
             get         : getParent
             set         : -> setParent this, arguments[0]
 
-        oninit     : value : ->
-            this
+        oninit          : value : -> this
+
+        onalloc         : value : -> this
 
         appendChild     : value : ( node ) ->
             if  node instanceof Pointer
                 return setParent node, this
             return @extref.appendChild node
+
+    Object.defineProperties LinkedPointer::,
+
+        oninit          : value : ->
+            clsi = getHeaderClassIndex this
+            proto = scope[  clsi  ].prototype
+            Object.setPrototypeOf this, proto
 
     Object.defineProperties HTMLElement::,
 
@@ -2621,6 +2701,163 @@ do ->
         createElement       : value : ( tagName ) ->
             @extref.createElement tagName
 
+        querySelector       : value : ( query, all = off ) ->
+            if !all then return @extref.querySelector query
+            else return @extref.querySelectorAll query
+
+    Object.defineProperties GLProgram::,
+
+        attach              : value : ( ptri ) ->
+            @parent.attachShader( @glObject, s = ptri.glObject )
+            @parent.attachedShaders( @glObject ) . includes( s )
+
+        link                : value : ->
+            unless  state = @isLinked
+                if  @vertexShader and @fragmentShader
+                    @parent.linkProgram @glObject
+                    @parent.validateProgram @glObject
+                    state = @isLinked = @PARAMETERS.LINK_STATUS
+            state 
+
+        use                 : value : ( fast = on ) ->
+            unless state = @isActive
+                if @link() then @parent.useProgram( @glObject )
+                state = @isActive = fast or @PARAMETERS.IS_CURRENT
+            state
+
+        PARAMETERS          : get   : ->
+
+            IS_PROGRAM      : @parent.isProgram(
+                @glObject )
+
+            INFO_LOG        : @parent.programInfoLog(
+                @glObject )
+
+            VALIDATE_STATUS : @parent.programParameter( @glObject, 
+                WebGL2RenderingContext.VALIDATE_STATUS )
+
+            LINK_STATUS     : @parent.programParameter( @glObject, 
+                WebGL2RenderingContext.LINK_STATUS )
+
+            IS_CURRENT      : @glObject is @parent.getParameter(
+                WebGL2RenderingContext.CURRENT_PROGRAM )
+            
+            DELETE_STATUS   : @parent.programParameter( @glObject, 
+                WebGL2RenderingContext.DELETE_STATUS )
+
+        attachDefault       : value : ( type ) ->
+            
+            kind = type.constructor.name
+            ptri = @parent.shaderSources.find (ptr) ->
+                0 is type - ptr.type
+
+            return throw /ERR_NONSHADER/+kind unless ptri 
+            return throw /ERR_UNCOMPILEDVERT/ unless ptri.compile()
+            return throw @PARAMETERS.INFO_LOG unless @attach ptri 
+
+            ptrj = malloc GLShader
+            ptrj . shaderSource = ptri
+            ptrj
+
+    Object.defineProperties RenderingContext::,
+
+        shaderScripts   : value : ->
+            Array.from @parent.document.querySelector(
+                "[type^='x-shader']", on
+            )
+
+        shaderSources   : get   : ->
+            childs = filterChildren this, ShaderSource
+            
+            for ref in @shaderScripts()
+                if !childs.find (c) -> ref is c.target.extref
+                    shader = malloc HTMLScriptElement
+                    shader.extref = extref ref
+
+                    source = malloc ShaderSource
+                    source.target = shader
+                    childs.push @appendChild source
+                    
+            childs
+
+        linkedPrograms  : get   : ->
+            childs = filterChildren this, GLProgram
+
+            unless childs.length
+                @appendChild ptri = malloc GLProgram
+                if ptri.link() then childs.push ptri 
+
+            childs.filter (p) -> p.isLinked
+
+        PARAMETERS          : get   : ->
+            
+            gl = @glObject
+            fn = @getParameter.bind this
+            
+            CURRENT_PROGRAM : fn gl.CURRENT_PROGRAM
+
+        createBuffer        : value : ( type ) ->
+            @glObject.createBuffer()
+
+        shaderInfoLog       : value : ( glShader ) ->
+            @glObject.getShaderInfoLog glShader
+
+        attachedShaders     : value : ( glProgram ) ->
+            @glObject.getAttachedShaders glProgram
+
+        programInfoLog      : value : ( glProgram ) ->
+            @glObject.getProgramInfoLog glProgram
+
+        linkProgram         : value : ( glProgram ) ->
+            @glObject.linkProgram glProgram
+
+        isProgram           : value : ( glProgram ) ->
+            @glObject.isProgram glProgram
+
+        useProgram          : value : ( glProgram ) ->
+            @glObject.useProgram glProgram
+
+        validateProgram     : value : ( glProgram ) ->
+            @glObject.validateProgram glProgram
+
+        programParameter    : value : ( glProgram, param ) ->
+            @glObject.getProgramParameter glProgram, param
+
+        getParameter        : value : ( param ) ->
+            @glObject.getParameter param
+
+        createProgram       : value : ->
+            @glObject.createProgram()
+
+        createShader        : value : ( type ) ->
+            @glObject.createShader type
+
+        attachShader        : value : ( glProgram, glShader ) ->
+            @glObject.attachShader glProgram, glShader
+
+        compileShader       : value : ( glShader ) ->
+            @glObject.compileShader glShader
+
+        shaderSource       : value : ( glShader, source ) ->
+            @glObject.shaderSource glShader, source
+
+        bindBuffer          : value : ( ptri ) ->
+            @glObject.bindBuffer( 
+                ptri.bindingPoint,
+                ptri.glObject,
+                ptri.drawingMode
+            )
+
+            for buf in filterChildren this, GLBuffer
+                buf.isActive and= 0
+
+            ptri.isActive = 1
+
+        upload              : value : ( arrayLike ) ->
+            ptri = malloc ContextUpload
+            ptri.extref = extref arrayLike
+            @uploads.appendChild ptri     
+
     Object.defineProperties HTMLCanvasElement::,
 
         getContext          : value : ( type ) ->
@@ -2629,7 +2866,9 @@ do ->
         resizeToFullWindow  : value : ->
             @resizeNode( @extref ).reloadContext()
 
-        resizeNode          : value : ( node, width, height, dpr = 1 ) ->
+        resizeNode          : value : ( node, width, height, dpr ) ->
+            dpr ||= @window.extref.devicePixelRatio
+
             width               =  width || @window.extref.innerWidth
             node.width          =  width * dpr
             node.style.width    =  width + "px"
@@ -2640,34 +2879,138 @@ do ->
             node
 
         reloadContext       : value : ->
-            @gl = 0
-            @gl.viewport 0, 0, width * dpr, height * dpr
+            @renderingContext.glObject = 0
+            @renderingContext.glObject.viewport(
+                0, 0, width * dpr, height * dpr
+            )
 
-            0
 
-    Object.registerProperty Window, "document", {
+    Object.registerProperty Window              , "document", {
         required    : on
         inheritable : off
         instanceof  : HTMLDocument
     }
 
-    Object.allocateProperty Window, "devicePixelRatio", {
-        typedArray  : Uint8Array
-        value       : ->
-            @extref.devicePixelRatio
+    Object.registerProperty GLShader            , "shaderSource", {
+        required    : on
+        inheritable : off
+        instanceof  : ShaderSource
     }
 
-    Object.registerProperty Window, "screen", {
+    Object.registerProperty ShaderSource        , "target", {
+        required    : on
+        inheritable : off
+        instanceof  : LinkedPointer
+    }
+
+    Object.registerProperty ShaderSource        , "glObject", {
+        required    : on
+        inheritable : off
+        scopeIndex  : -> extref @parent.createShader @type           
+    }    
+    
+    Object.defineProperties ShaderSource::      , 
+
+        PARAMETERS          : get   : -> 
+
+            INFO_LOG : @parent.shaderInfoLog @glObject
+        
+        compile             : value : ->
+            unless @isCompiled
+                @parent.shaderSource @glObject, @text
+                @parent.compileShader @glObject
+                throw e if e = @PARAMETERS.INFO_LOG
+            @isCompiled = 1
+
+        text                : get   : -> 
+            "#{@target.text}".trim()
+
+        attachedPrograms    : get   : -> 
+            ptri = +this
+            programs = []
+            for prog in filterChildren @parent, GLProgram
+                if !prog.vertexShader - ptri
+                    programs.push prog
+                    continue
+
+                if !prog.fragmentShader - ptri
+                    programs.push prog
+                    continue
+            programs
+        
+        type                : get   : -> 
+            if  @text.match /gl_Position/
+                return VERTEX_SHADER
+
+            if  @text.match /gl_FragColor/
+                return FRAGMENT_SHADER
+
+            if  @text.match /gl_Compute/
+                return COMPUTE_SHADER
+                
+            throw /ERR_SHADER_TYPE/
+
+
+    Object.allocateProperty ShaderSource        , "isCompiled", {
+        typedArray  : Uint8Array
+    }
+
+    Object.registerProperty Window              , "screen", {
         required    : on
         inheritable : on
         instanceof  : Screen
     }
 
-    Object.registerProperty Window, "extref", {
+    Object.registerProperty HTMLCanvasElement   , "renderingContext", {
         required    : on
         inheritable : off
-        scopeIndex  : ->
-            extref window
+        instanceof  : RenderingContext
+    }
+
+    Object.registerProperty RenderingContext    , "uploads", {
+        required    : on
+        inheritable : off
+        instanceof  : ContextUploads
+    }
+
+    Object.registerProperty Window              , "extref", {
+        required    : on
+        inheritable : off
+        scopeIndex  : -> extref window
+    }
+
+    Object.registerProperty RenderingContext    , "glObject", {
+        required    : on
+        inheritable : off
+        scopeIndex  : -> extref @parent.getContext "webgl2"
+    }
+
+    Object.registerProperty GLBuffer            , "glObject", {
+        required    : on
+        scopeIndex  : -> extref @parent.createBuffer()
+    }
+
+    Object.registerProperty GLProgram           , "glObject", {
+        required    : on
+        scopeIndex  : -> extref @parent.createProgram()
+    }
+
+    Object.allocateProperty GLProgram           , "vertexShader", {
+        isPointer   : on
+        onempty     : -> @attachDefault VERTEX_SHADER
+    }
+
+    Object.allocateProperty GLProgram           , "fragmentShader", {
+        isPointer   : on
+        onempty     : -> @attachDefault FRAGMENT_SHADER
+    }
+
+    Object.allocateProperty GLProgram           , "isLinked", {
+        typedArray : Uint8Array
+    }
+
+    Object.allocateProperty GLProgram           , "isActive", {
+        typedArray : Uint8Array
     }
 
     Object.registerProperty HTMLDocument, "extref", {
@@ -2702,15 +3045,7 @@ do ->
         inheritable : off
         scopeIndex  : ->            
             node = @document.createElement "canvas"
-            @parent.appendChild @resizeNode node
-            extref node
-    }
-
-    Object.registerProperty HTMLCanvasElement, "gl", {
-        required    : on
-        inheritable : off
-        scopeIndex  : ->
-            extref @getContext "webgl2"
+            extref @parent.appendChild @resizeNode node
     }
 
     Object.registerProperty HTMLDocument, "body", {
@@ -2729,10 +3064,105 @@ do ->
         value       : -> @window.extref.innerHeight
     }
 
+    Object.allocateProperty ContextUpload, "byteLength", {
+        typedArray  : Uint32Array
+        value       : -> @dataLength * 4
+    }
+
+    Object.allocateProperty ContextUpload, "dataLength", {
+        typedArray  : Uint32Array
+        value       : -> @extref.length * 1
+    }
+
+    Object.allocateProperty ContextUpload, "pointCount", {
+        typedArray  : Uint32Array
+        value       : -> @dataLength / 3
+    }
+
+    Object.allocateProperty ContextUpload, "triangleCount", {
+        typedArray  : Uint32Array
+        value       : -> @dataLength / 9
+    }
+
+    Object.registerProperty ContextUpload, "extref", {
+        required    : on
+        inheritable : off
+        scopeIndex  : -> extref new Array()
+    }
+
+    Object.registerProperty HTMLScriptElement, "extref", {
+        required    : on
+        inheritable : off
+        scopeIndex  : -> 0
+    }
+
+    Object.defineProperties HTMLScriptElement::, 
+        text        : get : -> "#{@extref.text}"
+
+    Object.allocateProperty DrawCall, "dstByteOffset", {
+        typedArray  : Uint32Array
+    }
+
+    Object.allocateProperty DrawCall, "begin", {
+        typedArray  : Uint32Array
+    }
+
+    Object.defineProperties DrawCall::, 
+        length      : get : -> @parent.dataLength
+
+    Object.allocateProperty DrawCall, "start", {
+        typedArray  : Uint32Array
+    }
+
+    Object.allocateProperty DrawCall, "count", {
+        typedArray  : Uint32Array
+    }
+
+    Object.allocateProperty DrawCall, "mode", {
+        typedArray  : Uint16Array
+    }
+
+    Object.registerProperty DrawCall, "program", {
+        required    : on
+        inheritable : on
+        instanceof  : GLProgram
+    }
+
+    Object.registerProperty DrawCall, "buffer", {
+        required    : on
+        inheritable : on
+        instanceof  : GLProgram
+    }
+
+    Object.defineProperties ContextUpload::, 
+
+        draw        : value : ( ptri ) ->
+            call = malloc DrawCall
+            call.program = ptri
+            @appendChild call
+
+    Object.defineProperties ContextUploads::, 
+
+        byteLength          : get   : ->
+            filterChildren(this, ContextUpload).sum "byteLength"
+            
+        dataLength          : get   : ->
+            filterChildren(this, ContextUpload).sum "dataLength"
+
+        pointCount          : get   : ->
+            filterChildren(this, ContextUpload).sum "pointCount"
+            
+        triangleCount       : get   : ->
+            filterChildren(this, ContextUpload).sum "triangleCount"
+            
+
     win = malloc Window
 
     do  context = ->
         body = win.document.body
         scene = body.scene
-
-        log scene
+        context = scene.renderingContext
+        
+        log context.upload [1,1,1,1,1,1]
+        log up1 = context.upload [1,1,1,1,1,1,1,1]
+        log context

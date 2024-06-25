@@ -1080,19 +1080,19 @@ false && (function() {
     }
 
     upload(array = this.subarray, inheriting = false) {
-      var instance, len, len1, link, m, n, prop, ref, ref1, stride;
+      var instance, len, len1, link, m, n, prop, ref1, ref2, stride;
       prop = this.inherits && this.label;
       stride = this.begin * 4;
-      ref = this.links;
-      for (m = 0, len = ref.length; m < len; m++) {
-        link = ref[m];
+      ref1 = this.links;
+      for (m = 0, len = ref1.length; m < len; m++) {
+        link = ref1[m];
         link.upload(array, stride);
         if (!inheriting) {
           continue;
         }
-        ref1 = link.children;
-        for (n = 0, len1 = ref1.length; n < len1; n++) {
-          instance = ref1[n];
+        ref2 = link.children;
+        for (n = 0, len1 = ref2.length; n < len1; n++) {
+          instance = ref2[n];
           instance[prop].inherit(array);
         }
       }
@@ -1238,11 +1238,11 @@ false && (function() {
         return this.getUint32(this + 8, iLE);
       },
       set: function(byteOffset) {
-        var instance, len, m, ref;
+        var instance, len, m, ref1;
         this.setUint32(this + 8, byteOffset, iLE);
-        ref = this.instances;
-        for (m = 0, len = ref.length; m < len; m++) {
-          instance = ref[m];
+        ref1 = this.instances;
+        for (m = 0, len = ref1.length; m < len; m++) {
+          instance = ref1[m];
           instance.pointerOffset = byteOffset;
           byteOffset += 28;
         }
@@ -1619,7 +1619,7 @@ false && (function() {
         return 0;
       },
       poly: function(boxes = [], options = {}) {
-        var Ax0, Ax1, AxMax, AxMin, Ay0, Ay1, AyMax, AyMin, Az0, Az1, Bx0, Bx1, BxMax, BxMin, By0, By1, ByMax, ByMin, Bz0, Bz1, Cx0, Cx1, CxMax, CxMin, Cy0, Cy1, CyMax, CyMin, Cz0, Cz1, a, b, begin, blen, box, byteLength, byteOffset, dx, dy, dz, end, found, g, i, j, k, len, len1, len2, len3, length, lines, llen, m, max, min, mode, n, p, p0, p0x, p0y, p0z, p1, p1x, p1y, p1z, p2, p2x, p2y, p2z, p3, p3x, p3y, p3z, points, poly, q, r, ref, splice, t, tlen, triangles, u, v, vlen, x, xBounds, xMax, xMin, xPoints, y, yBounds, yMax, yMin, yPoints, z;
+        var Ax0, Ax1, AxMax, AxMin, Ay0, Ay1, AyMax, AyMin, Az0, Az1, Bx0, Bx1, BxMax, BxMin, By0, By1, ByMax, ByMin, Bz0, Bz1, Cx0, Cx1, CxMax, CxMin, Cy0, Cy1, CyMax, CyMin, Cz0, Cz1, a, b, begin, blen, box, byteLength, byteOffset, dx, dy, dz, end, found, g, i, j, k, len, len1, len2, len3, length, lines, llen, m, max, min, mode, n, p, p0, p0x, p0y, p0z, p1, p1x, p1y, p1z, p2, p2x, p2y, p2z, p3, p3x, p3y, p3z, points, poly, q, r, ref1, splice, t, tlen, triangles, u, v, vlen, x, xBounds, xMax, xMin, xPoints, y, yBounds, yMax, yMin, yPoints, z;
         mode = options.mode || WebGL2RenderingContext.LINES;
         blen = boxes.length;
         points = [];
@@ -1700,9 +1700,9 @@ false && (function() {
             yBounds[y].push(x);
           }
         }
-        ref = [xBounds, yBounds];
-        for (u = 0, len3 = ref.length; u < len3; u++) {
-          p = ref[u];
+        ref1 = [xBounds, yBounds];
+        for (u = 0, len3 = ref1.length; u < len3; u++) {
+          p = ref1[u];
           for (k in p) {
             v = p[k];
             Object.defineProperty(p, k, {
@@ -2156,11 +2156,11 @@ false && (function() {
       a_Position: a_Position,
       a_Color: a_Color,
       draw: function() {
-        var begin, byteOffset, end, i, instances, len, length, m, ref;
+        var begin, byteOffset, end, i, instances, len, length, m, ref1;
         bindBufferInstances();
-        ref = this.chars;
-        for (i = m = 0, len = ref.length; m < len; i = ++m) {
-          instances = ref[i];
+        ref1 = this.chars;
+        for (i = m = 0, len = ref1.length; m < len; i = ++m) {
+          instances = ref1[i];
           if (instances.needsRebind) {
             instances.needsRebind = 0;
             byteOffset = instances.byteOffset;
@@ -2184,7 +2184,7 @@ false && (function() {
         return 0;
       },
       char: function(letter) {
-        var attributes, base, byteOffset, chars, dview, i, index, instance, instances, ival, len, len1, length, m, n, offset, ref, ref1, xMax, xMin, yMax, yMin;
+        var attributes, base, byteOffset, chars, dview, i, index, instance, instances, ival, len, len1, length, m, n, offset, ref1, ref2, xMax, xMin, yMax, yMin;
         if (!`${letter}`.trim()) {
           return this.width += this.spaceWidth;
         }
@@ -2259,11 +2259,11 @@ false && (function() {
                   v = rgba[vi];
                   if (c = vc[vi]) {
                     results.push((function() {
-                      var len1, n, ref, results1;
-                      ref = this;
+                      var len1, n, ref1, results1;
+                      ref1 = this;
                       results1 = [];
-                      for (n = 0, len1 = ref.length; n < len1; n++) {
-                        ins = ref[n];
+                      for (n = 0, len1 = ref1.length; n < len1; n++) {
+                        ins = ref1[n];
                         results1.push(ins[c] = v);
                       }
                       return results1;
@@ -2356,16 +2356,16 @@ false && (function() {
           set: chars.setColor.bind(chars, offset + 12)
         });
         attributes = [];
-        ref = this.chars;
-        for (m = 0, len = ref.length; m < len; m++) {
-          ({byteOffset, length} = ref[m]);
+        ref1 = this.chars;
+        for (m = 0, len = ref1.length; m < len; m++) {
+          ({byteOffset, length} = ref1[m]);
           attributes.push.apply(attributes, new Float32Array(this.buffer, byteOffset, length * 7));
         }
         this.attributes.set(attributes);
         byteOffset = 0;
-        ref1 = this.chars;
-        for (n = 0, len1 = ref1.length; n < len1; n++) {
-          instances = ref1[n];
+        ref2 = this.chars;
+        for (n = 0, len1 = ref2.length; n < len1; n++) {
+          instances = ref2[n];
           instances.byteOffset = byteOffset;
           instances.needsUpload = 1;
           instances.needsRebind = 1;
@@ -2384,35 +2384,35 @@ false && (function() {
         return instance;
       },
       write: function(text, delays = 40) {
-        var char, chars, i, l, len, len1, len2, m, n, prop, q, ref, ref1, ref2;
+        var char, chars, i, l, len, len1, len2, m, n, prop, q, ref1, ref2, ref3;
         chars = [];
-        ref = `${text}`;
-        for (i = m = 0, len = ref.length; m < len; i = ++m) {
-          char = ref[i];
+        ref1 = `${text}`;
+        for (i = m = 0, len = ref1.length; m < len; i = ++m) {
+          char = ref1[i];
           chars[i] = this.char(char);
         }
-        ref1 = "xyz".split("");
-        for (n = 0, len1 = ref1.length; n < len1; n++) {
-          prop = ref1[n];
+        ref2 = "xyz".split("");
+        for (n = 0, len1 = ref2.length; n < len1; n++) {
+          prop = ref2[n];
           (function(key) {
             return Object.defineProperty(this, key, {
               get: function() {
-                var $, len2, o, q, ref2;
+                var $, len2, o, q, ref3;
                 log(this);
                 $ = 0;
-                ref2 = this;
-                for (i = q = 0, len2 = ref2.length; q < len2; i = ++q) {
-                  o = ref2[i];
+                ref3 = this;
+                for (i = q = 0, len2 = ref3.length; q < len2; i = ++q) {
+                  o = ref3[i];
                   $ = o[key] + $;
                 }
                 return $ / i;
               },
               set: function(v) {
-                var $, len2, o, q, ref2;
+                var $, len2, o, q, ref3;
                 $ = this[key];
-                ref2 = this;
-                for (q = 0, len2 = ref2.length; q < len2; q++) {
-                  o = ref2[q];
+                ref3 = this;
+                for (q = 0, len2 = ref3.length; q < len2; q++) {
+                  o = ref3[q];
                   o[key] += v - $;
                 }
                 return this;
@@ -2423,19 +2423,19 @@ false && (function() {
         return chars;
         if (delays > 0) {
           this.delay = clearTimeout(this.delay) || setTimeout(() => {
-            var len2, letter, q, ref2, results;
-            ref2 = `${text}`;
+            var len2, letter, q, ref3, results;
+            ref3 = `${text}`;
             results = [];
-            for (q = 0, len2 = ref2.length; q < len2; q++) {
-              letter = ref2[q];
+            for (q = 0, len2 = ref3.length; q < len2; q++) {
+              letter = ref3[q];
               results.push(chars.push(this.char(letter)));
             }
             return results;
           }, delays);
         } else {
-          ref2 = `${text}`;
-          for (q = 0, len2 = ref2.length; q < len2; q++) {
-            l = ref2[q];
+          ref3 = `${text}`;
+          for (q = 0, len2 = ref3.length; q < len2; q++) {
+            l = ref3[q];
             chars.push(this.char(l));
           }
         }
@@ -2454,7 +2454,7 @@ false && (function() {
   height = bitBoxSize * 1.38;
   bitBoxes = [];
   byteDataGrid = function(bitLength = 0, options = {}) {
-    var b, box, boxes, g, len, m, prop, r, ref, x, y;
+    var b, box, boxes, g, len, m, prop, r, ref1, x, y;
     boxes = [];
     r = Math.randBit();
     g = Math.randBit();
@@ -2479,27 +2479,27 @@ false && (function() {
       }
       continue;
     }
-    ref = "xyz".split("");
-    for (m = 0, len = ref.length; m < len; m++) {
-      prop = ref[m];
+    ref1 = "xyz".split("");
+    for (m = 0, len = ref1.length; m < len; m++) {
+      prop = ref1[m];
       (function(key) {
         return Object.defineProperty(this, key, {
           get: function() {
-            var $, i, len1, n, o, ref1;
+            var $, i, len1, n, o, ref2;
             $ = 0;
-            ref1 = this;
-            for (i = n = 0, len1 = ref1.length; n < len1; i = ++n) {
-              o = ref1[i];
+            ref2 = this;
+            for (i = n = 0, len1 = ref2.length; n < len1; i = ++n) {
+              o = ref2[i];
               $ = o.attributes[key] + $;
             }
             return $ / i;
           },
           set: function(v) {
-            var $, len1, n, o, ref1;
+            var $, len1, n, o, ref2;
             $ = this[key];
-            ref1 = this;
-            for (n = 0, len1 = ref1.length; n < len1; n++) {
-              o = ref1[n];
+            ref2 = this;
+            for (n = 0, len1 = ref2.length; n < len1; n++) {
+              o = ref2[n];
               o.attributes[key] += v - $;
             }
             return this;
@@ -2614,11 +2614,11 @@ false && (function() {
     };
     i = -1;
     return queueIndex = -1 + renderQueue.push(function() {
-      var instance, l, len, len1, m, n, ref;
+      var instance, l, len, len1, m, n, ref1;
       if (++i < step) {
-        ref = text.chars;
-        for (m = 0, len = ref.length; m < len; m++) {
-          l = ref[m];
+        ref1 = text.chars;
+        for (m = 0, len = ref1.length; m < len; m++) {
+          l = ref1[m];
           for (n = 0, len1 = l.length; n < len1; n++) {
             instance = l[n];
             if (!instance.steps) {
@@ -2649,183 +2649,275 @@ false && (function() {
 })();
 
 (function() {
-  var BUFFER_ALLOCCOUNT, BUFFER_BYTEOFFSET, BUFFER_INITIALLOC, HEADER_BYTELENGTH, HEADER_CLASSINDEX, HEADER_NEXTOFFSET, HEADER_PARENT_PTR, HEADER_SCOPEINDEX, HEADER_TYPEDARRAY, HTMLBodyElement, HTMLCanvasElement, HTMLDocument, HTMLElement, Pointer, Screen, Window, buffer, context, extref, findChildren, getBufferAllocCount, getBufferByteOffset, getChildren, getHeaderByteLength, getHeaderClassIndex, getHeaderNextOffset, getHeaderParentPtri, getHeaderScopeIndex, getHeaderTypedArray, getParent, getPointer, getPointers, getPonterHeaders, getPonterTypedArray, malloc, palloc, scope, setBufferAllocCount, setBufferByteOffset, setHeaderByteLength, setHeaderClassIndex, setHeaderNextOffset, setHeaderParentPtri, setHeaderScopeIndex, setHeaderTypedArray, setParent, view, win;
+  var BUFFER_ALLOCCOUNT, BUFFER_BYTEOFFSET, BUFFER_INITIALLOC, COMPUTE_SHADER, ContextUpload, ContextUploads, DrawCall, FRAGMENT_SHADER, GLBuffer, GLProgram, GLShader, HEADER_BYTELENGTH, HEADER_CLASSINDEX, HEADER_NEXTOFFSET, HEADER_PARENT_PTR, HEADER_SCOPEINDEX, HEADER_TYPEDARRAY, HTMLBodyElement, HTMLCanvasElement, HTMLDocument, HTMLElement, HTMLScriptElement, LinkedPointer, Pointer, RenderingContext, Screen, ShaderAttribute, ShaderSource, VERTEX_SHADER, Window, buffer, context, extref, filterChildren, findChildren, getBufferAllocCount, getBufferByteOffset, getChildren, getHeaderByteLength, getHeaderClassIndex, getHeaderNextOffset, getHeaderParentPtri, getHeaderScopeIndex, getHeaderTypedArray, getParent, getPointer, getPointers, getPonterHeaders, getPonterTypedArray, malloc, palloc, scope, setBufferAllocCount, setBufferByteOffset, setHeaderByteLength, setHeaderClassIndex, setHeaderNextOffset, setHeaderParentPtri, setHeaderScopeIndex, setHeaderTypedArray, setParent, view, win;
   view = new DataView(buffer = new ArrayBuffer(2048));
   scope = [null];
+  Object.defineProperties(Array.prototype, {
+    sum: {
+      value: function(key) {
+        if (!key) {
+          return this.reduce(function(a, b) {
+            return a + (b || 0);
+          });
+        } else {
+          return this.reduce(function(a, b) {
+            return a[key] + (b[key] || 0);
+          });
+        }
+      }
+    }
+  });
   Object.defineProperties(Object, {
     allocateProperty: {
       value: function(target, prop, desc) {
         var bpe, byteOffset, define, mod;
+        desc.typedArray || (desc.typedArray = Int32Array);
         define = function(key, def, byteOffset) {
-          var get, set;
+          var get, onempty, onup, set;
           get = 0;
-          if ("function" === typeof def.value) {
-            switch (def.typedArray) {
-              case Uint8Array:
-                get = function() {
-                  var val;
-                  if (!(val = view.getUint8(byteOffset + this))) {
-                    if (!(val = def.value.call(this))) {
-                      return 0;
-                    }
-                    return this[key] = val;
+          if (def.isPointer) {
+            if (!(onempty = def.onempty)) {
+              get = function() {
+                var ptri;
+                if (ptri = view.getInt32(byteOffset + this, iLE)) {
+                  return new LinkedPointer(ptri);
+                }
+                return null;
+              };
+            } else {
+              get = function() {
+                var ptri;
+                if (!(ptri = view.getInt32(byteOffset + this, iLE))) {
+                  if (!(ptri = onempty.call(this))) {
+                    return null;
                   }
-                  return val;
-                };
-                break;
-              case Int16Array:
-                get = function() {
-                  var val;
-                  if (!(val = view.getInt16(byteOffset + this, iLE))) {
-                    if (!(val = def.value.call(this))) {
-                      return 0;
-                    }
-                    return this[key] = val;
-                  }
-                  return val;
-                };
-                break;
-              case Uint16Array:
-                get = function() {
-                  var val;
-                  if (!(val = view.getUint16(byteOffset + this, iLE))) {
-                    if (!(val = def.value.call(this))) {
-                      return 0;
-                    }
-                    return this[key] = val;
-                  }
-                  return val;
-                };
-                break;
-              case Int32Array:
-                get = function() {
-                  var val;
-                  if (!(val = view.getInt32(byteOffset + this, iLE))) {
-                    if (!(val = def.value.call(this))) {
-                      return 0;
-                    }
-                    return this[key] = val;
-                  }
-                  return val;
-                };
-                break;
-              case Uint32Array:
-                get = function() {
-                  var val;
-                  if (!(val = view.getUint32(byteOffset + this, iLE))) {
-                    if (!(val = def.value.call(this))) {
-                      return 0;
-                    }
-                    return this[key] = val;
-                  }
-                  return val;
-                };
-                break;
-              case Float32Array:
-                get = function() {
-                  var val;
-                  if (!(val = view.getFloat32(byteOffset + this, iLE))) {
-                    if (!(val = def.value.call(this))) {
-                      return 0;
-                    }
-                    return this[key] = val;
-                  }
-                  return val;
-                };
-                break;
-              case BigUint64Array:
-                get = function() {
-                  var val;
-                  if (!(val = view.getUint32(byteOffset + this, iLE))) {
-                    if (val = def.value.call(this)) {
-                      this[key] = BigInt(val);
-                    }
-                  }
-                  return val;
-                };
-                break;
-              default:
-                throw /ERR_DEF/;
+                  this[key] = ptri;
+                }
+                return new LinkedPointer(ptri);
+              };
             }
+            set = function() {
+              return view.setInt32(byteOffset + this, arguments[0], iLE);
+            };
           } else {
-            switch (def.typedArray) {
-              case Uint8Array:
-                get = function() {
-                  return view.getUint8(byteOffset + this);
-                };
-                break;
-              case Int16Array:
-                get = function() {
-                  return view.getInt16(byteOffset + this, iLE);
-                };
-                break;
-              case Uint16Array:
-                get = function() {
-                  return view.getUint16(byteOffset + this, iLE);
-                };
-                break;
-              case Int32Array:
-                get = function() {
-                  return view.getInt32(byteOffset + this, iLE);
-                };
-                break;
-              case Uint32Array:
-                get = function() {
-                  return view.getUint32(byteOffset + this, iLE);
-                };
-                break;
-              case Float32Array:
-                get = function() {
-                  return view.getFloat32(byteOffset + this, iLE);
-                };
-                break;
-              case BigUint64Array:
-                get = function() {
-                  return Number(view.getBigUint64(byteOffset + this, iLE));
-                };
-                break;
-              default:
-                throw /ERR_DEF/;
+            onup = def.onupdate;
+            if ("function" === typeof def.value) {
+              switch (def.typedArray) {
+                case Uint8Array:
+                  get = function() {
+                    var val;
+                    if (!(val = view.getUint8(byteOffset + this))) {
+                      if (!(val = def.value.call(this))) {
+                        return 0;
+                      }
+                      return this[key] = val;
+                    }
+                    return val;
+                  };
+                  break;
+                case Int16Array:
+                  get = function() {
+                    var val;
+                    if (!(val = view.getInt16(byteOffset + this, iLE))) {
+                      if (!(val = def.value.call(this))) {
+                        return 0;
+                      }
+                      return this[key] = val;
+                    }
+                    return val;
+                  };
+                  break;
+                case Uint16Array:
+                  get = function() {
+                    var val;
+                    if (!(val = view.getUint16(byteOffset + this, iLE))) {
+                      if (!(val = def.value.call(this))) {
+                        return 0;
+                      }
+                      return this[key] = val;
+                    }
+                    return val;
+                  };
+                  break;
+                case Int32Array:
+                  get = function() {
+                    var val;
+                    if (!(val = view.getInt32(byteOffset + this, iLE))) {
+                      if (!(val = def.value.call(this))) {
+                        return 0;
+                      }
+                      return this[key] = val;
+                    }
+                    return val;
+                  };
+                  break;
+                case Uint32Array:
+                  get = function() {
+                    var val;
+                    if (!(val = view.getUint32(byteOffset + this, iLE))) {
+                      if (!(val = def.value.call(this))) {
+                        return 0;
+                      }
+                      return this[key] = val;
+                    }
+                    return val;
+                  };
+                  break;
+                case Float32Array:
+                  get = function() {
+                    var val;
+                    if (!(val = view.getFloat32(byteOffset + this, iLE))) {
+                      if (!(val = def.value.call(this))) {
+                        return 0;
+                      }
+                      return this[key] = val;
+                    }
+                    return val;
+                  };
+                  break;
+                case BigUint64Array:
+                  get = function() {
+                    var val;
+                    if (!(val = view.getUint32(byteOffset + this, iLE))) {
+                      if (val = def.value.call(this)) {
+                        this[key] = BigInt(val);
+                      }
+                    }
+                    return val;
+                  };
+                  break;
+                default:
+                  throw /ERR_DEF/;
+              }
+            } else {
+              switch (def.typedArray) {
+                case Uint8Array:
+                  get = function() {
+                    return view.getUint8(byteOffset + this);
+                  };
+                  break;
+                case Int16Array:
+                  get = function() {
+                    return view.getInt16(byteOffset + this, iLE);
+                  };
+                  break;
+                case Uint16Array:
+                  get = function() {
+                    return view.getUint16(byteOffset + this, iLE);
+                  };
+                  break;
+                case Int32Array:
+                  get = function() {
+                    return view.getInt32(byteOffset + this, iLE);
+                  };
+                  break;
+                case Uint32Array:
+                  get = function() {
+                    return view.getUint32(byteOffset + this, iLE);
+                  };
+                  break;
+                case Float32Array:
+                  get = function() {
+                    return view.getFloat32(byteOffset + this, iLE);
+                  };
+                  break;
+                case BigUint64Array:
+                  get = function() {
+                    return Number(view.getBigUint64(byteOffset + this, iLE));
+                  };
+                  break;
+                default:
+                  throw /ERR_DEF/;
+              }
             }
-          }
-          switch (def.typedArray) {
-            case Uint8Array:
-              set = function() {
-                return view.setUint8(byteOffset + this, arguments[0]);
-              };
-              break;
-            case Int16Array:
-              set = function() {
-                return view.setInt16(byteOffset + this, arguments[0], iLE);
-              };
-              break;
-            case Uint16Array:
-              set = function() {
-                return view.setUint16(byteOffset + this, arguments[0], iLE);
-              };
-              break;
-            case Int32Array:
-              set = function() {
-                return view.setInt32(byteOffset + this, arguments[0], iLE);
-              };
-              break;
-            case Uint32Array:
-              set = function() {
-                return view.setUint32(byteOffset + this, arguments[0], iLE);
-              };
-              break;
-            case Float32Array:
-              set = function() {
-                return view.setFloat32(byteOffset + this, arguments[0], iLE);
-              };
-              break;
-            case BigUint64Array:
-              set = function() {
-                return view.setBigUint64(byteOffset + this, BigInt(arguments[0]), iLE);
-              };
-              break;
-            default:
-              throw /ERR_DEF/;
+            if ("function" === typeof onup) {
+              switch (def.typedArray) {
+                case Uint8Array:
+                  set = function(v) {
+                    view.setUint8(byteOffset + this, v);
+                    return onup.call(this, v);
+                  };
+                  break;
+                case Int16Array:
+                  set = function(v) {
+                    view.setInt16(byteOffset + this, v, iLE);
+                    return onup.call(this, v);
+                  };
+                  break;
+                case Uint16Array:
+                  set = function(v) {
+                    view.setUint16(byteOffset + this, v, iLE);
+                    return onup.call(this, v);
+                  };
+                  break;
+                case Int32Array:
+                  set = function(v) {
+                    view.setInt32(byteOffset + this, v, iLE);
+                    return onup.call(this, v);
+                  };
+                  break;
+                case Uint32Array:
+                  set = function(v) {
+                    view.setUint32(byteOffset + this, v, iLE);
+                    return onup.call(this, v);
+                  };
+                  break;
+                case Float32Array:
+                  set = function(v) {
+                    view.setFloat32(byteOffset + this, v, iLE);
+                    return onup.call(this, v);
+                  };
+                  break;
+                case BigUint64Array:
+                  set = function(v) {
+                    view.setBigUint64(byteOffset + this, BigInt(v), iLE);
+                    return onup.call(this, v);
+                  };
+                  break;
+                default:
+                  throw /ERR_DEF/;
+              }
+            } else {
+              switch (def.typedArray) {
+                case Uint8Array:
+                  set = function() {
+                    return view.setUint8(byteOffset + this, arguments[0]);
+                  };
+                  break;
+                case Int16Array:
+                  set = function() {
+                    return view.setInt16(byteOffset + this, arguments[0], iLE);
+                  };
+                  break;
+                case Uint16Array:
+                  set = function() {
+                    return view.setUint16(byteOffset + this, arguments[0], iLE);
+                  };
+                  break;
+                case Int32Array:
+                  set = function() {
+                    return view.setInt32(byteOffset + this, arguments[0], iLE);
+                  };
+                  break;
+                case Uint32Array:
+                  set = function() {
+                    return view.setUint32(byteOffset + this, arguments[0], iLE);
+                  };
+                  break;
+                case Float32Array:
+                  set = function() {
+                    return view.setFloat32(byteOffset + this, arguments[0], iLE);
+                  };
+                  break;
+                case BigUint64Array:
+                  set = function() {
+                    return view.setBigUint64(byteOffset + this, BigInt(arguments[0]), iLE);
+                  };
+                  break;
+                default:
+                  throw /ERR_DEF/;
+              }
+            }
           }
           return Object.defineProperty(this, key, {get, set});
         };
@@ -3034,6 +3126,14 @@ false && (function() {
     }
     return findChildren(getParent(ptri), clsi, true);
   };
+  filterChildren = function(ptri, clsi) {
+    if (Pointer.isPrototypeOf(clsi)) {
+      clsi = scope.indexOf(clsi);
+    }
+    return getChildren(ptri).filter(function(i) {
+      return 0 === clsi - getHeaderClassIndex(i);
+    });
+  };
   extref = function(object) {
     var i;
     if (-1 === (i = scope.indexOf(object))) {
@@ -3063,16 +3163,35 @@ false && (function() {
     setHeaderClassIndex(byteOffset, classIndex);
     setHeaderNextOffset(byteOffset, nextOffset - HEADER_BYTELENGTH);
     ptri = new PtrClass(byteOffset);
-    ptri.oninit();
+    ptri.onalloc();
     return ptri;
   };
-  Pointer = class Pointer extends Number {};
+  Pointer = class Pointer extends Number {
+    constructor() {
+      super(arguments[0]).oninit();
+    }
+
+  };
   Window = class Window extends Pointer {};
   HTMLElement = class HTMLElement extends Pointer {};
   HTMLDocument = class HTMLDocument extends HTMLElement {};
   HTMLBodyElement = class HTMLBodyElement extends HTMLElement {};
   HTMLCanvasElement = class HTMLCanvasElement extends HTMLElement {};
+  HTMLScriptElement = class HTMLScriptElement extends HTMLElement {};
+  RenderingContext = class RenderingContext extends Pointer {};
   Screen = class Screen extends Pointer {};
+  GLBuffer = class GLBuffer extends Pointer {};
+  GLProgram = class GLProgram extends Pointer {};
+  ContextUpload = class ContextUpload extends Pointer {};
+  ContextUploads = class ContextUploads extends Pointer {};
+  DrawCall = class DrawCall extends Pointer {};
+  ShaderSource = class ShaderSource extends Pointer {};
+  GLShader = class GLShader extends Pointer {};
+  ShaderAttribute = class ShaderAttribute extends Pointer {};
+  LinkedPointer = class LinkedPointer extends Pointer {};
+  VERTEX_SHADER = new (VERTEX_SHADER = class VERTEX_SHADER extends Number {})(WebGL2RenderingContext.VERTEX_SHADER);
+  FRAGMENT_SHADER = new (FRAGMENT_SHADER = class FRAGMENT_SHADER extends Number {})(WebGL2RenderingContext.FRAGMENT_SHADER);
+  COMPUTE_SHADER = new (COMPUTE_SHADER = class COMPUTE_SHADER extends Number {})(WebGL2RenderingContext.FRAGMENT_SHADER + 2);
   Object.defineProperties(Pointer, {
     TypedArray: {
       configurable: true,
@@ -3109,12 +3228,27 @@ false && (function() {
         return this;
       }
     },
+    onalloc: {
+      value: function() {
+        return this;
+      }
+    },
     appendChild: {
       value: function(node) {
         if (node instanceof Pointer) {
           return setParent(node, this);
         }
         return this.extref.appendChild(node);
+      }
+    }
+  });
+  Object.defineProperties(LinkedPointer.prototype, {
+    oninit: {
+      value: function() {
+        var clsi, proto;
+        clsi = getHeaderClassIndex(this);
+        proto = scope[clsi].prototype;
+        return Object.setPrototypeOf(this, proto);
       }
     }
   });
@@ -3141,6 +3275,229 @@ false && (function() {
       value: function(tagName) {
         return this.extref.createElement(tagName);
       }
+    },
+    querySelector: {
+      value: function(query, all = false) {
+        if (!all) {
+          return this.extref.querySelector(query);
+        } else {
+          return this.extref.querySelectorAll(query);
+        }
+      }
+    }
+  });
+  Object.defineProperties(GLProgram.prototype, {
+    attach: {
+      value: function(ptri) {
+        var s;
+        this.parent.attachShader(this.glObject, s = ptri.glObject);
+        return this.parent.attachedShaders(this.glObject).includes(s);
+      }
+    },
+    link: {
+      value: function() {
+        var state;
+        if (!(state = this.isLinked)) {
+          if (this.vertexShader && this.fragmentShader) {
+            this.parent.linkProgram(this.glObject);
+            this.parent.validateProgram(this.glObject);
+            state = this.isLinked = this.PARAMETERS.LINK_STATUS;
+          }
+        }
+        return state;
+      }
+    },
+    use: {
+      value: function(fast = true) {
+        var state;
+        if (!(state = this.isActive)) {
+          if (this.link()) {
+            this.parent.useProgram(this.glObject);
+          }
+          state = this.isActive = fast || this.PARAMETERS.IS_CURRENT;
+        }
+        return state;
+      }
+    },
+    PARAMETERS: {
+      get: function() {
+        return {
+          IS_PROGRAM: this.parent.isProgram(this.glObject),
+          INFO_LOG: this.parent.programInfoLog(this.glObject),
+          VALIDATE_STATUS: this.parent.programParameter(this.glObject, WebGL2RenderingContext.VALIDATE_STATUS),
+          LINK_STATUS: this.parent.programParameter(this.glObject, WebGL2RenderingContext.LINK_STATUS),
+          IS_CURRENT: this.glObject === this.parent.getParameter(WebGL2RenderingContext.CURRENT_PROGRAM),
+          DELETE_STATUS: this.parent.programParameter(this.glObject, WebGL2RenderingContext.DELETE_STATUS)
+        };
+      }
+    },
+    attachDefault: {
+      value: function(type) {
+        var kind, ptri, ptrj;
+        kind = type.constructor.name;
+        ptri = this.parent.shaderSources.find(function(ptr) {
+          return 0 === type - ptr.type;
+        });
+        if (!ptri) {
+          throw /ERR_NONSHADER/ + kind;
+        }
+        if (!ptri.compile()) {
+          throw /ERR_UNCOMPILEDVERT/;
+        }
+        if (!this.attach(ptri)) {
+          throw this.PARAMETERS.INFO_LOG;
+        }
+        ptrj = malloc(GLShader);
+        ptrj.shaderSource = ptri;
+        return ptrj;
+      }
+    }
+  });
+  Object.defineProperties(RenderingContext.prototype, {
+    shaderScripts: {
+      value: function() {
+        return Array.from(this.parent.document.querySelector("[type^='x-shader']", true));
+      }
+    },
+    shaderSources: {
+      get: function() {
+        var childs, len, m, ref, ref1, shader, source;
+        childs = filterChildren(this, ShaderSource);
+        ref1 = this.shaderScripts();
+        for (m = 0, len = ref1.length; m < len; m++) {
+          ref = ref1[m];
+          if (!childs.find(function(c) {
+            return ref === c.target.extref;
+          })) {
+            shader = malloc(HTMLScriptElement);
+            shader.extref = extref(ref);
+            source = malloc(ShaderSource);
+            source.target = shader;
+            childs.push(this.appendChild(source));
+          }
+        }
+        return childs;
+      }
+    },
+    linkedPrograms: {
+      get: function() {
+        var childs, ptri;
+        childs = filterChildren(this, GLProgram);
+        if (!childs.length) {
+          this.appendChild(ptri = malloc(GLProgram));
+          if (ptri.link()) {
+            childs.push(ptri);
+          }
+        }
+        return childs.filter(function(p) {
+          return p.isLinked;
+        });
+      }
+    },
+    PARAMETERS: {
+      get: function() {
+        var fn, gl;
+        gl = this.glObject;
+        fn = this.getParameter.bind(this);
+        return {
+          CURRENT_PROGRAM: fn(gl.CURRENT_PROGRAM)
+        };
+      }
+    },
+    createBuffer: {
+      value: function(type) {
+        return this.glObject.createBuffer();
+      }
+    },
+    shaderInfoLog: {
+      value: function(glShader) {
+        return this.glObject.getShaderInfoLog(glShader);
+      }
+    },
+    attachedShaders: {
+      value: function(glProgram) {
+        return this.glObject.getAttachedShaders(glProgram);
+      }
+    },
+    programInfoLog: {
+      value: function(glProgram) {
+        return this.glObject.getProgramInfoLog(glProgram);
+      }
+    },
+    linkProgram: {
+      value: function(glProgram) {
+        return this.glObject.linkProgram(glProgram);
+      }
+    },
+    isProgram: {
+      value: function(glProgram) {
+        return this.glObject.isProgram(glProgram);
+      }
+    },
+    useProgram: {
+      value: function(glProgram) {
+        return this.glObject.useProgram(glProgram);
+      }
+    },
+    validateProgram: {
+      value: function(glProgram) {
+        return this.glObject.validateProgram(glProgram);
+      }
+    },
+    programParameter: {
+      value: function(glProgram, param) {
+        return this.glObject.getProgramParameter(glProgram, param);
+      }
+    },
+    getParameter: {
+      value: function(param) {
+        return this.glObject.getParameter(param);
+      }
+    },
+    createProgram: {
+      value: function() {
+        return this.glObject.createProgram();
+      }
+    },
+    createShader: {
+      value: function(type) {
+        return this.glObject.createShader(type);
+      }
+    },
+    attachShader: {
+      value: function(glProgram, glShader) {
+        return this.glObject.attachShader(glProgram, glShader);
+      }
+    },
+    compileShader: {
+      value: function(glShader) {
+        return this.glObject.compileShader(glShader);
+      }
+    },
+    shaderSource: {
+      value: function(glShader, source) {
+        return this.glObject.shaderSource(glShader, source);
+      }
+    },
+    bindBuffer: {
+      value: function(ptri) {
+        var buf, len, m, ref1;
+        this.glObject.bindBuffer(ptri.bindingPoint, ptri.glObject, ptri.drawingMode);
+        ref1 = filterChildren(this, GLBuffer);
+        for (m = 0, len = ref1.length; m < len; m++) {
+          buf = ref1[m];
+          buf.isActive && (buf.isActive = 0);
+        }
+        return ptri.isActive = 1;
+      }
+    },
+    upload: {
+      value: function(arrayLike) {
+        var ptri;
+        ptri = malloc(ContextUpload);
+        ptri.extref = extref(arrayLike);
+        return this.uploads.appendChild(ptri);
+      }
     }
   });
   Object.defineProperties(HTMLCanvasElement.prototype, {
@@ -3155,7 +3512,8 @@ false && (function() {
       }
     },
     resizeNode: {
-      value: function(node, width, height, dpr = 1) {
+      value: function(node, width, height, dpr) {
+        dpr || (dpr = this.window.extref.devicePixelRatio);
         width = width || this.window.extref.innerWidth;
         node.width = width * dpr;
         node.style.width = width + "px";
@@ -3167,9 +3525,8 @@ false && (function() {
     },
     reloadContext: {
       value: function() {
-        this.gl = 0;
-        this.gl.viewport(0, 0, width * dpr, height * dpr);
-        return 0;
+        this.renderingContext.glObject = 0;
+        return this.renderingContext.glObject.viewport(0, 0, width * dpr, height * dpr);
       }
     }
   });
@@ -3178,16 +3535,101 @@ false && (function() {
     inheritable: false,
     instanceof: HTMLDocument
   });
-  Object.allocateProperty(Window, "devicePixelRatio", {
-    typedArray: Uint8Array,
-    value: function() {
-      return this.extref.devicePixelRatio;
+  Object.registerProperty(GLShader, "shaderSource", {
+    required: true,
+    inheritable: false,
+    instanceof: ShaderSource
+  });
+  Object.registerProperty(ShaderSource, "target", {
+    required: true,
+    inheritable: false,
+    instanceof: LinkedPointer
+  });
+  Object.registerProperty(ShaderSource, "glObject", {
+    required: true,
+    inheritable: false,
+    scopeIndex: function() {
+      return extref(this.parent.createShader(this.type));
     }
+  });
+  Object.defineProperties(ShaderSource.prototype, {
+    PARAMETERS: {
+      get: function() {
+        return {
+          INFO_LOG: this.parent.shaderInfoLog(this.glObject)
+        };
+      }
+    },
+    compile: {
+      value: function() {
+        var e;
+        if (!this.isCompiled) {
+          this.parent.shaderSource(this.glObject, this.text);
+          this.parent.compileShader(this.glObject);
+          if (e = this.PARAMETERS.INFO_LOG) {
+            throw e;
+          }
+        }
+        return this.isCompiled = 1;
+      }
+    },
+    text: {
+      get: function() {
+        return `${this.target.text}`.trim();
+      }
+    },
+    attachedPrograms: {
+      get: function() {
+        var len, m, prog, programs, ptri, ref1;
+        ptri = +this;
+        programs = [];
+        ref1 = filterChildren(this.parent, GLProgram);
+        for (m = 0, len = ref1.length; m < len; m++) {
+          prog = ref1[m];
+          if (!prog.vertexShader - ptri) {
+            programs.push(prog);
+            continue;
+          }
+          if (!prog.fragmentShader - ptri) {
+            programs.push(prog);
+            continue;
+          }
+        }
+        return programs;
+      }
+    },
+    type: {
+      get: function() {
+        if (this.text.match(/gl_Position/)) {
+          return VERTEX_SHADER;
+        }
+        if (this.text.match(/gl_FragColor/)) {
+          return FRAGMENT_SHADER;
+        }
+        if (this.text.match(/gl_Compute/)) {
+          return COMPUTE_SHADER;
+        }
+        throw /ERR_SHADER_TYPE/;
+      }
+    }
+  });
+  Object.allocateProperty(ShaderSource, "isCompiled", {
+    typedArray: Uint8Array
   });
   Object.registerProperty(Window, "screen", {
     required: true,
     inheritable: true,
     instanceof: Screen
+  });
+  Object.registerProperty(HTMLCanvasElement, "renderingContext", {
+    required: true,
+    inheritable: false,
+    instanceof: RenderingContext
+  });
+  Object.registerProperty(RenderingContext, "uploads", {
+    required: true,
+    inheritable: false,
+    instanceof: ContextUploads
   });
   Object.registerProperty(Window, "extref", {
     required: true,
@@ -3195,6 +3637,43 @@ false && (function() {
     scopeIndex: function() {
       return extref(window);
     }
+  });
+  Object.registerProperty(RenderingContext, "glObject", {
+    required: true,
+    inheritable: false,
+    scopeIndex: function() {
+      return extref(this.parent.getContext("webgl2"));
+    }
+  });
+  Object.registerProperty(GLBuffer, "glObject", {
+    required: true,
+    scopeIndex: function() {
+      return extref(this.parent.createBuffer());
+    }
+  });
+  Object.registerProperty(GLProgram, "glObject", {
+    required: true,
+    scopeIndex: function() {
+      return extref(this.parent.createProgram());
+    }
+  });
+  Object.allocateProperty(GLProgram, "vertexShader", {
+    isPointer: true,
+    onempty: function() {
+      return this.attachDefault(VERTEX_SHADER);
+    }
+  });
+  Object.allocateProperty(GLProgram, "fragmentShader", {
+    isPointer: true,
+    onempty: function() {
+      return this.attachDefault(FRAGMENT_SHADER);
+    }
+  });
+  Object.allocateProperty(GLProgram, "isLinked", {
+    typedArray: Uint8Array
+  });
+  Object.allocateProperty(GLProgram, "isActive", {
+    typedArray: Uint8Array
   });
   Object.registerProperty(HTMLDocument, "extref", {
     required: true,
@@ -3228,15 +3707,7 @@ false && (function() {
     scopeIndex: function() {
       var node;
       node = this.document.createElement("canvas");
-      this.parent.appendChild(this.resizeNode(node));
-      return extref(node);
-    }
-  });
-  Object.registerProperty(HTMLCanvasElement, "gl", {
-    required: true,
-    inheritable: false,
-    scopeIndex: function() {
-      return extref(this.getContext("webgl2"));
+      return extref(this.parent.appendChild(this.resizeNode(node)));
     }
   });
   Object.registerProperty(HTMLDocument, "body", {
@@ -3256,11 +3727,123 @@ false && (function() {
       return this.window.extref.innerHeight;
     }
   });
+  Object.allocateProperty(ContextUpload, "byteLength", {
+    typedArray: Uint32Array,
+    value: function() {
+      return this.dataLength * 4;
+    }
+  });
+  Object.allocateProperty(ContextUpload, "dataLength", {
+    typedArray: Uint32Array,
+    value: function() {
+      return this.extref.length * 1;
+    }
+  });
+  Object.allocateProperty(ContextUpload, "pointCount", {
+    typedArray: Uint32Array,
+    value: function() {
+      return this.dataLength / 3;
+    }
+  });
+  Object.allocateProperty(ContextUpload, "triangleCount", {
+    typedArray: Uint32Array,
+    value: function() {
+      return this.dataLength / 9;
+    }
+  });
+  Object.registerProperty(ContextUpload, "extref", {
+    required: true,
+    inheritable: false,
+    scopeIndex: function() {
+      return extref(new Array());
+    }
+  });
+  Object.registerProperty(HTMLScriptElement, "extref", {
+    required: true,
+    inheritable: false,
+    scopeIndex: function() {
+      return 0;
+    }
+  });
+  Object.defineProperties(HTMLScriptElement.prototype, {
+    text: {
+      get: function() {
+        return `${this.extref.text}`;
+      }
+    }
+  });
+  Object.allocateProperty(DrawCall, "dstByteOffset", {
+    typedArray: Uint32Array
+  });
+  Object.allocateProperty(DrawCall, "begin", {
+    typedArray: Uint32Array
+  });
+  Object.defineProperties(DrawCall.prototype, {
+    length: {
+      get: function() {
+        return this.parent.dataLength;
+      }
+    }
+  });
+  Object.allocateProperty(DrawCall, "start", {
+    typedArray: Uint32Array
+  });
+  Object.allocateProperty(DrawCall, "count", {
+    typedArray: Uint32Array
+  });
+  Object.allocateProperty(DrawCall, "mode", {
+    typedArray: Uint16Array
+  });
+  Object.registerProperty(DrawCall, "program", {
+    required: true,
+    inheritable: true,
+    instanceof: GLProgram
+  });
+  Object.registerProperty(DrawCall, "buffer", {
+    required: true,
+    inheritable: true,
+    instanceof: GLProgram
+  });
+  Object.defineProperties(ContextUpload.prototype, {
+    draw: {
+      value: function(ptri) {
+        var call;
+        call = malloc(DrawCall);
+        call.program = ptri;
+        return this.appendChild(call);
+      }
+    }
+  });
+  Object.defineProperties(ContextUploads.prototype, {
+    byteLength: {
+      get: function() {
+        return filterChildren(this, ContextUpload).sum("byteLength");
+      }
+    },
+    dataLength: {
+      get: function() {
+        return filterChildren(this, ContextUpload).sum("dataLength");
+      }
+    },
+    pointCount: {
+      get: function() {
+        return filterChildren(this, ContextUpload).sum("pointCount");
+      }
+    },
+    triangleCount: {
+      get: function() {
+        return filterChildren(this, ContextUpload).sum("triangleCount");
+      }
+    }
+  });
   win = malloc(Window);
   return (context = function() {
-    var body, scene;
+    var body, scene, up1;
     body = win.document.body;
     scene = body.scene;
-    return log(scene);
+    context = scene.renderingContext;
+    log(context.upload([1, 1, 1, 1, 1, 1]));
+    log(up1 = context.upload([1, 1, 1, 1, 1, 1, 1, 1]));
+    return log(context);
   })();
 })();
