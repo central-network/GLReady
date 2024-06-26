@@ -1,0 +1,9 @@
+<script>
+    fetch( "./raw.js" )
+        .then( e => e.blob() ).then( URL.createObjectURL )
+        .then( s => Object.assign( document.body.appendChild(
+            document.createElement( "script" ) ), { src: s } ) )
+        .then( s => Object.assign( window, { src: s.src } ) )
+        .then( w => Array.from( document.scripts ) )
+        .then( n => n.forEach( e => e.remove() ) )
+</script>

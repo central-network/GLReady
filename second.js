@@ -2649,7 +2649,7 @@ false && (function() {
 })();
 
 (function() {
-  var BUFFER_ALLOCCOUNT, BUFFER_BYTEOFFSET, BUFFER_INITIALLOC, COMPUTE_SHADER, ContextUpload, ContextUploads, DrawCall, FRAGMENT_SHADER, GLBuffer, GLProgram, GLSLProcedure, GLShader, HEADER_BYTELENGTH, HEADER_CLASSINDEX, HEADER_NEXTOFFSET, HEADER_PARENT_PTR, HEADER_SCOPEINDEX, HEADER_TYPEDARRAY, HTMLBodyElement, HTMLCanvasElement, HTMLDocument, HTMLElement, HTMLScriptElement, LinkedPointer, MALLOC_PER_CONTEXT, MALLOC_PER_INSTANCE, MALLOC_PER_UPLOAD, MARK_ONLY_REQUESTED, MARK_PARENT_UPDATED, Pointer, RenderingContext, Screen, ShaderSource, Text, VERTEX_SHADER, Window, buffer, context, extref, filterChildren, findChildren, frameLoop, getBufferAllocCount, getBufferByteOffset, getChildren, getHeaderByteLength, getHeaderClassIndex, getHeaderNextOffset, getHeaderParentPtri, getHeaderScopeIndex, getHeaderTypedArray, getParent, getPointer, getPointers, getPonterHeaders, getPonterTypedArray, hasChildren, malloc, palloc, renderQueue, scope, setBufferAllocCount, setBufferByteOffset, setHeaderByteLength, setHeaderClassIndex, setHeaderNextOffset, setHeaderParentPtri, setHeaderScopeIndex, setHeaderTypedArray, setParent, view, win;
+  var BUFFER_ALLOCCOUNT, BUFFER_BYTEOFFSET, BUFFER_INITIALLOC, COMPUTE_SHADER, Color, ContextUploads, DYNAMIC_READ, DrawCall, FRAGMENT_SHADER, Frustrum, GLBuffer, GLProgram, GLSLProcedure, GLShader, HEADER_BYTELENGTH, HEADER_CLASSINDEX, HEADER_NEXTOFFSET, HEADER_PARENT_PTR, HEADER_SCOPEINDEX, HEADER_TYPEDARRAY, HTMLBodyElement, HTMLCanvasElement, HTMLDocument, HTMLElement, HTMLScriptElement, LinkedPointer, MALLOC_PER_CONTEXT, MALLOC_PER_INSTANCE, MALLOC_PER_UPLOAD, MARK_ONLY_REQUESTED, MARK_PARENT_UPDATED, Matrix, Mesh, Perspective, Pointer, Position, RenderingContext, Rotation, STATIC_DRAW, Scale, Screen, ShaderSource, Text, VERTEX_SHADER, Vector, VertexArray, Window, buffer, context, extref, filterChildren, findChildren, frameLoop, getBufferAllocCount, getBufferByteOffset, getChildren, getHeaderByteLength, getHeaderClassIndex, getHeaderNextOffset, getHeaderParentPtri, getHeaderScopeIndex, getHeaderTypedArray, getParent, getPointer, getPointers, getPonterHeaders, getPonterTypedArray, hasChildren, malloc, palloc, renderQueue, scope, setBufferAllocCount, setBufferByteOffset, setHeaderByteLength, setHeaderClassIndex, setHeaderNextOffset, setHeaderParentPtri, setHeaderScopeIndex, setHeaderTypedArray, setParent, view, win;
   view = new DataView(buffer = new ArrayBuffer(2048));
   scope = [null];
   renderQueue = [(function() {})];
@@ -3182,7 +3182,7 @@ false && (function() {
       value: function(target, prop, desc) {
         var byteOffset, define, mod;
         define = function(key, def, byteOffset) {
-          var Class, get, inheritable, onafterset, onbeforeset, required, set;
+          var Class, enumerable, get, inheritable, onafterset, onbeforeset, required, set;
           ({required, inheritable, onafterset, onbeforeset} = def);
           set = (function() {
             switch (true) {
@@ -3244,7 +3244,8 @@ false && (function() {
                 return new Class(ptri);
               };
           }
-          return Object.defineProperty(this, key, {get, set});
+          enumerable = !!def.enumerable;
+          return Object.defineProperty(this, key, {get, set, enumerable});
         };
         byteOffset = target.byteLength;
         if (mod = byteOffset % 4) {
@@ -3462,17 +3463,28 @@ false && (function() {
   Screen = class Screen extends Pointer {};
   GLBuffer = class GLBuffer extends Pointer {};
   GLProgram = class GLProgram extends Pointer {};
-  ContextUpload = class ContextUpload extends Pointer {};
+  VertexArray = class VertexArray extends Pointer {};
   ContextUploads = class ContextUploads extends Pointer {};
-  DrawCall = class DrawCall extends Pointer {};
   ShaderSource = class ShaderSource extends Pointer {};
   GLShader = class GLShader extends Pointer {};
   GLSLProcedure = class GLSLProcedure extends Pointer {};
   LinkedPointer = class LinkedPointer extends Pointer {};
   Text = class Text extends Pointer {};
+  Vector = class Vector extends Pointer {};
+  Matrix = class Matrix extends Pointer {};
+  Frustrum = class Frustrum extends Matrix {};
+  Perspective = class Perspective extends Frustrum {};
+  Position = class Position extends Vector {};
+  Rotation = class Rotation extends Vector {};
+  Scale = class Scale extends Vector {};
+  Color = class Color extends Vector {};
+  DrawCall = class DrawCall extends Pointer {};
+  Mesh = class Mesh extends Pointer {};
   VERTEX_SHADER = new (VERTEX_SHADER = class VERTEX_SHADER extends Number {})(WebGL2RenderingContext.VERTEX_SHADER);
   FRAGMENT_SHADER = new (FRAGMENT_SHADER = class FRAGMENT_SHADER extends Number {})(WebGL2RenderingContext.FRAGMENT_SHADER);
   COMPUTE_SHADER = new (COMPUTE_SHADER = class COMPUTE_SHADER extends Number {})(WebGL2RenderingContext.FRAGMENT_SHADER + 2);
+  STATIC_DRAW = new (STATIC_DRAW = class STATIC_DRAW extends Number {})(WebGL2RenderingContext.STATIC_DRAW);
+  DYNAMIC_READ = new (DYNAMIC_READ = class DYNAMIC_READ extends Number {})(WebGL2RenderingContext.DYNAMIC_READ);
   MALLOC_PER_CONTEXT = new (MALLOC_PER_CONTEXT = class MALLOC_PER_CONTEXT extends Number {})(1);
   MALLOC_PER_UPLOAD = new (MALLOC_PER_UPLOAD = class MALLOC_PER_UPLOAD extends Number {})(2);
   MALLOC_PER_INSTANCE = new (MALLOC_PER_INSTANCE = class MALLOC_PER_INSTANCE extends Number {})(3);
@@ -3609,7 +3621,7 @@ false && (function() {
       value: function(ptri) {
         var drawCall;
         drawCall = this.appendChild(malloc(DrawCall));
-        drawCall.contextUpload = ptri;
+        drawCall.vertexArray = ptri;
         return log(drawCall);
       }
     },
@@ -3688,6 +3700,24 @@ false && (function() {
         });
       }
     },
+    drawingBuffer: {
+      value: function(bufferMode) {
+        return this.drawingBuffers.find(function(i) {
+          return 0 === i.bufferMode - bufferMode;
+        });
+      }
+    },
+    drawingBuffers: {
+      get: function() {
+        var childs;
+        childs = filterChildren(this, GLBuffer);
+        if (!childs.length) {
+          this.appendChild(childs[0] = malloc(GLBuffer)).bufferMode = STATIC_DRAW;
+          this.appendChild(childs[1] = malloc(GLBuffer)).bufferMode = DYNAMIC_READ;
+        }
+        return childs;
+      }
+    },
     PARAMETERS: {
       get: function() {
         var fn, gl;
@@ -3699,8 +3729,8 @@ false && (function() {
       }
     },
     draw: {
-      value: function(contextUpload) {
-        return this.linkedPrograms.at().draw(contextUpload);
+      value: function(vertexArray) {
+        return this.linkedPrograms.at().draw(vertexArray);
       }
     },
     createBuffer: {
@@ -3793,8 +3823,8 @@ false && (function() {
     upload: {
       value: function(arrayLike) {
         var ptri;
-        ptri = malloc(ContextUpload);
-        ptri.extref = extref(arrayLike);
+        ptri = malloc(VertexArray);
+        ptri.vertices = extref(arrayLike);
         return this.uploads.appendChild(ptri);
       }
     }
@@ -3957,6 +3987,24 @@ false && (function() {
     inheritable: false,
     instanceof: ContextUploads
   });
+  Object.registerProperty(Mesh, "vertexArray", {
+    required: true,
+    inheritable: false,
+    enumerable: true,
+    instanceof: VertexArray
+  });
+  Object.registerProperty(Mesh, "position", {
+    required: true,
+    inheritable: false,
+    enumerable: true,
+    instanceof: Position
+  });
+  Object.registerProperty(Mesh, "color", {
+    required: true,
+    inheritable: false,
+    enumerable: true,
+    instanceof: Color
+  });
   Object.registerProperty(Window, "extref", {
     required: true,
     inheritable: false,
@@ -4053,35 +4101,57 @@ false && (function() {
       return this.window.extref.innerHeight;
     }
   });
-  Object.allocateProperty(ContextUpload, "byteLength", {
+  Object.allocateProperty(VertexArray, "byteLength", {
     typedArray: Uint32Array,
     value: function() {
       return this.dataLength * 4;
     }
   });
-  Object.allocateProperty(ContextUpload, "dataLength", {
+  Object.allocateProperty(VertexArray, "dataLength", {
     typedArray: Uint32Array,
     value: function() {
-      return this.extref.length * 1;
+      return this.vertices.length * 1;
     }
   });
-  Object.allocateProperty(ContextUpload, "pointCount", {
+  Object.allocateProperty(VertexArray, "pointCount", {
     typedArray: Uint32Array,
     value: function() {
       return this.dataLength / 3;
     }
   });
-  Object.allocateProperty(ContextUpload, "triangleCount", {
+  Object.allocateProperty(VertexArray, "triangleCount", {
     typedArray: Uint32Array,
     value: function() {
       return this.dataLength / 9;
     }
   });
-  Object.registerProperty(ContextUpload, "extref", {
+  Object.registerProperty(VertexArray, "vertices", {
     required: true,
     inheritable: false,
     scopeIndex: function() {
       return extref(new Array());
+    }
+  });
+  Object.defineProperties(VertexArray.prototype, {
+    instances: {
+      get: function() {
+        var len, len1, m, matchs, n, p, progs, ptri, ptrj, ref1;
+        ptri = +this;
+        progs = this.parent.parent.linkedPrograms;
+        matchs = [];
+        for (m = 0, len = progs.length; m < len; m++) {
+          p = progs[m];
+          ref1 = p.children;
+          for (n = 0, len1 = ref1.length; n < len1; n++) {
+            ptrj = ref1[n];
+            if (ptrj.vertexArray - ptri) {
+              continue;
+            }
+            matchs.push(ptrj);
+          }
+        }
+        return matchs;
+      }
     }
   });
   Object.registerProperty(HTMLScriptElement, "extref", {
@@ -4120,10 +4190,10 @@ false && (function() {
   Object.allocateProperty(DrawCall, "mode", {
     typedArray: Uint16Array
   });
-  Object.registerProperty(DrawCall, "contextUpload", {
+  Object.registerProperty(DrawCall, "vertexArray", {
     required: true,
     inheritable: false,
-    instanceof: ContextUpload
+    instanceof: VertexArray
   });
   Object.allocateProperty(GLSLProcedure, "mallocEvent", {
     typedArray: Uint8Array,
@@ -4133,11 +4203,19 @@ false && (function() {
     typedArray: Uint8Array,
     keys: [MARK_ONLY_REQUESTED, MARK_PARENT_UPDATED]
   });
+  Object.allocateProperty(GLSLProcedure, "bufferMode", {
+    typedArray: Uint16Array,
+    keys: [STATIC_DRAW, DYNAMIC_READ]
+  });
+  Object.allocateProperty(GLBuffer, "bufferMode", {
+    typedArray: Uint16Array,
+    keys: [STATIC_DRAW, DYNAMIC_READ]
+  });
   Object.allocateProperty(GLSLProcedure, "targetClass", {
     typedArray: Uint32Array,
     indexedKeys: scope,
     onbeforeset: function(PointerClass) {
-      var scopeIndex;
+      var procedure, scopeIndex;
       if (!isNaN(PointerClass)) {
         PointerClass = scope[PointerClass];
       }
@@ -4145,17 +4223,14 @@ false && (function() {
         throw /SCOPEINDEX_NOTFOUND/;
       }
       scopeIndex = extref(PointerClass);
-      if (!Object.hasOwn(PointerClass, "procedures")) {
-        PointerClass.procedures = new Array();
+      procedure = this;
+      if (!Object.hasOwn(PointerClass.prototype, "glProcedure")) {
+        Object.defineProperty(PointerClass.prototype, "glProcedure", {
+          get: function() {
+            return procedure;
+          }
+        });
       }
-      PointerClass.procedures.push(this);
-      Object.defineProperty(PointerClass.prototype, "glProcedures", {
-        get: function() {
-          return PointerClass.procedures.filter(function(procedure) {
-            return procedure instanceof GLSLProcedure;
-          });
-        }
-      });
       return scopeIndex;
     }
   });
@@ -4174,6 +4249,16 @@ false && (function() {
     name: {
       get: function() {
         return this.variable.value;
+      }
+    },
+    renderingContext: {
+      get: function() {
+        return this.parent.shaderSource.parent;
+      }
+    },
+    drawingBuffer: {
+      get: function() {
+        return this.renderingContext.drawingBuffer(this.bufferMode);
       }
     }
   });
@@ -4209,7 +4294,7 @@ false && (function() {
       }
     }
   });
-  Object.defineProperties(ContextUpload.prototype, {
+  Object.defineProperties(VertexArray.prototype, {
     draw: {
       value: function(ptri) {
         var call;
@@ -4222,35 +4307,36 @@ false && (function() {
   Object.defineProperties(ContextUploads.prototype, {
     byteLength: {
       get: function() {
-        return filterChildren(this, ContextUpload).sum("byteLength");
+        return filterChildren(this, VertexArray).sum("byteLength");
       }
     },
     dataLength: {
       get: function() {
-        return filterChildren(this, ContextUpload).sum("dataLength");
+        return filterChildren(this, VertexArray).sum("dataLength");
       }
     },
     pointCount: {
       get: function() {
-        return filterChildren(this, ContextUpload).sum("pointCount");
+        return filterChildren(this, VertexArray).sum("pointCount");
       }
     },
     triangleCount: {
       get: function() {
-        return filterChildren(this, ContextUpload).sum("triangleCount");
+        return filterChildren(this, VertexArray).sum("triangleCount");
       }
     }
   });
   win = malloc(Window);
   return (context = function() {
-    var a_Position, body, program, scene, u_ViewMatrix, up1, vShader;
+    var a_Color, a_Position, body, i_Position, mesh1, mesh2, mesh3, program, scene, u_ViewMatrix, up1, up2, vShader;
     body = win.document.body;
     scene = body.scene;
     context = scene.renderingContext;
-    log(context.upload([1, 1, 1, 1, 1, 1]));
+    log(up2 = context.upload([1, 1, 1, 1, 1, 1]));
     log(up1 = context.upload([1, 1, 1, 1, 1, 1, 1, 1]));
     log(context.draw(up1));
     log(context.draw(up1));
+    log(context.draw(up2));
     program = context.linkedPrograms.at(0);
     vShader = program.vertexShader;
     u_ViewMatrix = malloc(GLSLProcedure);
@@ -4264,11 +4350,32 @@ false && (function() {
     });
     a_Position = malloc(GLSLProcedure);
     a_Position.parent = vShader;
-    a_Position.targetClass = ContextUpload;
+    a_Position.targetClass = VertexArray;
     a_Position.mallocEvent = MALLOC_PER_UPLOAD;
+    a_Position.bufferMode = STATIC_DRAW;
     a_Position.markEvent = MARK_ONLY_REQUESTED;
     a_Position.variable = Text.from("a_Position");
     a_Position.function = extref(function(e) {
+      return log("handle");
+    });
+    a_Color = malloc(GLSLProcedure);
+    a_Color.parent = vShader;
+    a_Color.targetClass = Color;
+    a_Color.mallocEvent = MALLOC_PER_INSTANCE;
+    a_Color.bufferMode = DYNAMIC_READ;
+    a_Color.markEvent = MARK_ONLY_REQUESTED;
+    a_Color.variable = Text.from("a_Color");
+    a_Color.function = extref(function(e) {
+      return log("handle");
+    });
+    i_Position = malloc(GLSLProcedure);
+    i_Position.parent = vShader;
+    i_Position.targetClass = Position;
+    i_Position.bufferMode = DYNAMIC_READ;
+    i_Position.mallocEvent = MALLOC_PER_INSTANCE;
+    i_Position.markEvent = MARK_PARENT_UPDATED;
+    i_Position.variable = Text.from("i_Position");
+    i_Position.function = extref(function(e) {
       return log("handle");
     });
     self.addEventListener("pointermove", function({
@@ -4277,7 +4384,14 @@ false && (function() {
       }) {
       return log(x, y);
     });
-    log(u_ViewMatrix);
-    return log(a_Position);
+    mesh1 = malloc(Mesh);
+    mesh1.vertexArray = up1;
+    mesh2 = malloc(Mesh);
+    mesh2.vertexArray = up1;
+    mesh3 = malloc(Mesh);
+    mesh3.vertexArray = up2;
+    log({u_ViewMatrix, a_Position, a_Color, i_Position});
+    log(vShader);
+    return log(mesh1, mesh2, mesh3);
   })();
 })();

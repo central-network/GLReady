@@ -2509,7 +2509,8 @@ do ->
 
                             new Class ptri
 
-                Object.defineProperty this, key, { get, set }
+                enumerable = !!def.enumerable
+                Object.defineProperty this, key, { get, set, enumerable }
 
             byteOffset = target.byteLength
 
@@ -2722,14 +2723,23 @@ do ->
     class Screen                extends Pointer
     class GLBuffer              extends Pointer
     class GLProgram             extends Pointer
-    class ContextUpload         extends Pointer
+    class VertexArray         extends Pointer
     class ContextUploads        extends Pointer
-    class DrawCall              extends Pointer
     class ShaderSource          extends Pointer
     class GLShader              extends Pointer
     class GLSLProcedure         extends Pointer
     class LinkedPointer         extends Pointer
     class Text                  extends Pointer
+    class Vector                extends Pointer
+    class Matrix                extends Pointer
+    class Frustrum              extends Matrix
+    class Perspective           extends Frustrum
+    class Position              extends Vector
+    class Rotation              extends Vector
+    class Scale                 extends Vector
+    class Color                 extends Vector
+    class DrawCall              extends Pointer
+    class Mesh                  extends Pointer
 
     VERTEX_SHADER = new (class VERTEX_SHADER extends Number)(
         WebGL2RenderingContext.VERTEX_SHADER
@@ -2741,6 +2751,14 @@ do ->
 
     COMPUTE_SHADER = new (class COMPUTE_SHADER extends Number)(
         WebGL2RenderingContext.FRAGMENT_SHADER+2
+    )
+
+    STATIC_DRAW = new (class STATIC_DRAW extends Number)(
+        WebGL2RenderingContext.STATIC_DRAW
+    )
+
+    DYNAMIC_READ = new (class DYNAMIC_READ extends Number)(
+        WebGL2RenderingContext.DYNAMIC_READ
     )
 
     MALLOC_PER_CONTEXT  = new (class MALLOC_PER_CONTEXT extends Number)(1)
@@ -2837,7 +2855,7 @@ do ->
 
         draw                : value : ( ptri ) ->
             drawCall = @appendChild malloc DrawCall
-            drawCall . contextUpload = ptri
+            drawCall . vertexArray = ptri
 
             log drawCall
 
@@ -2905,6 +2923,25 @@ do ->
 
             childs.filter (p) -> p.isLinked
 
+        drawingBuffer   : value : ( bufferMode ) ->
+            @drawingBuffers.find (i) ->
+                0 is i.bufferMode - bufferMode
+
+        drawingBuffers  : get   : ->
+            childs = filterChildren this, GLBuffer
+
+            if !childs.length
+
+                @appendChild( 
+                    childs[0] = malloc GLBuffer 
+                ).bufferMode = STATIC_DRAW
+                
+                @appendChild( 
+                    childs[1] = malloc GLBuffer 
+                ).bufferMode = DYNAMIC_READ
+
+            childs
+
         PARAMETERS          : get   : ->
             
             gl = @glObject
@@ -2912,8 +2949,8 @@ do ->
             
             CURRENT_PROGRAM : fn gl.CURRENT_PROGRAM
 
-        draw                : value : ( contextUpload ) ->
-            @linkedPrograms.at().draw( contextUpload )
+        draw                : value : ( vertexArray ) ->
+            @linkedPrograms.at().draw( vertexArray )
 
         createBuffer        : value : ( type ) ->
             @glObject.createBuffer()
@@ -2973,8 +3010,8 @@ do ->
             ptri.isActive = 1
 
         upload              : value : ( arrayLike ) ->
-            ptri = malloc ContextUpload
-            ptri.extref = extref arrayLike
+            ptri = malloc VertexArray
+            ptri.vertices = extref arrayLike
             @uploads.appendChild ptri     
 
     Object.defineProperties HTMLCanvasElement::,
@@ -3118,6 +3155,27 @@ do ->
         instanceof  : ContextUploads
     }
 
+    Object.registerProperty Mesh                , "vertexArray", {
+        required    : on
+        inheritable : off
+        enumerable  : on
+        instanceof  : VertexArray
+    }
+
+    Object.registerProperty Mesh                , "position", {
+        required    : on
+        inheritable : off
+        enumerable  : on
+        instanceof  : Position
+    }
+
+    Object.registerProperty Mesh                , "color", {
+        required    : on
+        inheritable : off
+        enumerable  : on
+        instanceof  : Color
+    }
+
     Object.registerProperty Window              , "extref", {
         required    : on
         inheritable : off
@@ -3209,31 +3267,42 @@ do ->
         value       : -> @window.extref.innerHeight
     }
 
-    Object.allocateProperty ContextUpload       , "byteLength", {
+    Object.allocateProperty VertexArray         , "byteLength", {
         typedArray  : Uint32Array
         value       : -> @dataLength * 4
     }
 
-    Object.allocateProperty ContextUpload       , "dataLength", {
+    Object.allocateProperty VertexArray         , "dataLength", {
         typedArray  : Uint32Array
-        value       : -> @extref.length * 1
+        value       : -> @vertices.length * 1
     }
 
-    Object.allocateProperty ContextUpload       , "pointCount", {
+    Object.allocateProperty VertexArray         , "pointCount", {
         typedArray  : Uint32Array
         value       : -> @dataLength / 3
     }
 
-    Object.allocateProperty ContextUpload       , "triangleCount", {
+    Object.allocateProperty VertexArray         , "triangleCount", {
         typedArray  : Uint32Array
         value       : -> @dataLength / 9
     }
 
-    Object.registerProperty ContextUpload       , "extref", {
+    Object.registerProperty VertexArray         , "vertices", {
         required    : on
         inheritable : off
         scopeIndex  : -> extref new Array()
     }
+
+    Object.defineProperties VertexArray::       , instances : get : ->
+        ptri = +this
+        progs = @parent.parent.linkedPrograms
+        matchs = []
+
+        for p in progs then for ptrj in p.children 
+            continue if ptrj.vertexArray - ptri
+            matchs.push ptrj
+
+        matchs
 
     Object.registerProperty HTMLScriptElement   , "extref", {
         required    : on
@@ -3269,25 +3338,30 @@ do ->
         typedArray  : Uint16Array
     }
 
-    Object.registerProperty DrawCall            , "contextUpload", {
+    Object.registerProperty DrawCall            , "vertexArray", {
         required    : on
         inheritable : off
-        instanceof  : ContextUpload
+        instanceof  : VertexArray
     }
 
     Object.allocateProperty GLSLProcedure       , "mallocEvent", {
         typedArray  : Uint8Array
-        keys        : [
-            MALLOC_PER_UPLOAD, 
-            MALLOC_PER_CONTEXT,
-            MALLOC_PER_INSTANCE ]
+        keys        : [ MALLOC_PER_UPLOAD, MALLOC_PER_CONTEXT, MALLOC_PER_INSTANCE ]
     }
 
     Object.allocateProperty GLSLProcedure       , "markEvent", {
         typedArray  : Uint8Array
-        keys        : [
-            MARK_ONLY_REQUESTED, 
-            MARK_PARENT_UPDATED ]
+        keys        : [ MARK_ONLY_REQUESTED, MARK_PARENT_UPDATED ]
+    }
+
+    Object.allocateProperty GLSLProcedure       , "bufferMode", {
+        typedArray  : Uint16Array
+        keys        : [ STATIC_DRAW, DYNAMIC_READ ]
+    }
+
+    Object.allocateProperty GLBuffer            , "bufferMode", {
+        typedArray  : Uint16Array
+        keys        : [ STATIC_DRAW, DYNAMIC_READ ]
     }
 
     Object.allocateProperty GLSLProcedure       , "targetClass", {
@@ -3301,15 +3375,11 @@ do ->
                 throw /SCOPEINDEX_NOTFOUND/
 
             scopeIndex = extref PointerClass
+            procedure = this
 
-            if !Object.hasOwn PointerClass, "procedures"
-                PointerClass.procedures = new Array()
-            PointerClass.procedures.push this
-
-            Object.defineProperty PointerClass::, "glProcedures", get : ->
-                PointerClass.procedures.filter ( procedure ) ->
-                    procedure instanceof GLSLProcedure
-
+            if !Object.hasOwn PointerClass::, "glProcedure"
+                Object.defineProperty PointerClass::, "glProcedure", get : ->
+                    procedure
 
             return scopeIndex
     }
@@ -3328,6 +3398,14 @@ do ->
     Object.defineProperties GLSLProcedure::,
 
         name        : get   : -> @variable.value
+
+        renderingContext    : get : ->
+            @parent.shaderSource.parent
+
+        drawingBuffer       : get   : ->
+            @renderingContext.drawingBuffer(
+                @bufferMode
+            )
 
     Object.defineProperties Text,
     
@@ -3355,7 +3433,7 @@ do ->
         value       : get   : -> @decode @subarray.slice 0
 
 
-    Object.defineProperties ContextUpload::, 
+    Object.defineProperties VertexArray::, 
 
         draw        : value : ( ptri ) ->
             call = malloc DrawCall
@@ -3366,16 +3444,16 @@ do ->
     Object.defineProperties ContextUploads::, 
 
         byteLength          : get   : ->
-            filterChildren(this, ContextUpload).sum "byteLength"
+            filterChildren(this, VertexArray).sum "byteLength"
             
         dataLength          : get   : ->
-            filterChildren(this, ContextUpload).sum "dataLength"
+            filterChildren(this, VertexArray).sum "dataLength"
 
         pointCount          : get   : ->
-            filterChildren(this, ContextUpload).sum "pointCount"
+            filterChildren(this, VertexArray).sum "pointCount"
             
         triangleCount       : get   : ->
-            filterChildren(this, ContextUpload).sum "triangleCount"
+            filterChildren(this, VertexArray).sum "triangleCount"
             
 
     win = malloc Window
@@ -3385,10 +3463,11 @@ do ->
         scene = body.scene
         context = scene.renderingContext
         
-        log context.upload [1,1,1,1,1,1]
+        log up2 = context.upload [1,1,1,1,1,1]
         log up1 = context.upload [1,1,1,1,1,1,1,1]
         log context.draw up1
         log context.draw up1
+        log context.draw up2
         
         program = context.linkedPrograms.at(0)
         vShader = program.vertexShader
@@ -3406,16 +3485,50 @@ do ->
 
         a_Position                  = malloc GLSLProcedure
         a_Position.parent           = vShader
-        a_Position.targetClass      = ContextUpload
+        a_Position.targetClass      = VertexArray
         a_Position.mallocEvent      = MALLOC_PER_UPLOAD
+        a_Position.bufferMode       = STATIC_DRAW
         a_Position.markEvent        = MARK_ONLY_REQUESTED
         a_Position.variable         = Text.from "a_Position"
         a_Position.function         = extref( (e) ->
             log "handle"
         )
 
+        a_Color                     = malloc GLSLProcedure
+        a_Color.parent              = vShader
+        a_Color.targetClass         = Color
+        a_Color.mallocEvent         = MALLOC_PER_INSTANCE
+        a_Color.bufferMode          = DYNAMIC_READ
+        a_Color.markEvent           = MARK_ONLY_REQUESTED
+        a_Color.variable            = Text.from "a_Color"
+        a_Color.function            = extref( (e) ->
+            log "handle"
+        )
+
+        i_Position                  = malloc GLSLProcedure
+        i_Position.parent           = vShader
+        i_Position.targetClass      = Position
+        i_Position.bufferMode       = DYNAMIC_READ
+        i_Position.mallocEvent      = MALLOC_PER_INSTANCE
+        i_Position.markEvent        = MARK_PARENT_UPDATED
+        i_Position.variable         = Text.from "i_Position"
+        i_Position.function         = extref( (e) ->
+            log "handle"
+        )
+
         self.addEventListener "pointermove", ({clientX:x, clientY: y}) ->
             log x,y
 
-        log u_ViewMatrix
-        log a_Position
+
+        mesh1 = malloc Mesh
+        mesh1.vertexArray = up1
+
+        mesh2 = malloc Mesh
+        mesh2.vertexArray = up1
+
+        mesh3 = malloc Mesh
+        mesh3.vertexArray = up2
+
+        log { u_ViewMatrix, a_Position, a_Color, i_Position }
+        log vShader
+        log mesh1, mesh2, mesh3
