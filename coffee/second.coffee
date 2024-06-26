@@ -2250,6 +2250,11 @@ do ->
 
     view = new DataView buffer = new ArrayBuffer 2048
     scope = [ null ]
+    renderQueue = [(->)]
+
+    frameLoop = (t) =>
+        f() for f in renderQueue
+        requestAnimationFrame frameLoop
 
     Object.defineProperties Array::,
 
@@ -2286,9 +2291,10 @@ do ->
 
                 else
 
-                    onup = def.onupdate
+                    { onbeforeset, onafterset, onemptyget } = def
 
                     if  "function" is typeof def.value
+                        
                         switch def.typedArray
 
                             when Uint8Array     then get = -> 
@@ -2345,27 +2351,92 @@ do ->
                         when BigUint64Array then get = -> Number view.getBigUint64 byteOffset + this, iLE
                         else throw /ERR_DEF/
                             
-
-                    if  "function" is typeof onup
+                    if  Boolean  onemptyget
                         switch def.typedArray
-                            when Uint8Array     then set = (v) -> view.setUint8 byteOffset + this, v ; onup.call(@, v)
-                            when Int16Array     then set = (v) -> view.setInt16 byteOffset + this, v, iLE ; onup.call(@, v)
-                            when Uint16Array    then set = (v) -> view.setUint16 byteOffset + this, v, iLE ; onup.call(@, v)
-                            when Int32Array     then set = (v) -> view.setInt32 byteOffset + this, v, iLE ; onup.call(@, v)
-                            when Uint32Array    then set = (v) -> view.setUint32 byteOffset + this, v, iLE ; onup.call(@, v)
-                            when Float32Array   then set = (v) -> view.setFloat32 byteOffset + this, v, iLE ; onup.call(@, v)
-                            when BigUint64Array then set = (v) -> view.setBigUint64 byteOffset + this, BigInt(v), iLE ; onup.call(@, v)
+                            when Uint8Array     then get = -> view.getUint8( byteOffset + this ) or onemptyget.call(@)
+                            when Int16Array     then get = -> view.getInt16( byteOffset + this, iLE ) or onemptyget.call(@)
+                            when Uint16Array    then get = -> view.getUint16( byteOffset + this, iLE ) or onemptyget.call(@)
+                            when Int32Array     then get = -> view.getInt32( byteOffset + this, iLE ) or onemptyget.call(@)
+                            when Uint32Array    then get = -> view.getUint32( byteOffset + this, iLE ) or onemptyget.call(@)
+                            when Float32Array   then get = -> view.getFloat32( byteOffset + this, iLE ) or onemptyget.call(@)
+                            when BigUint64Array then get = -> view.getBigUint64( byteOffset + this, iLE ) or onemptyget.call(@)
                             else throw /ERR_DEF/
 
-                    else switch def.typedArray
-                        when Uint8Array     then set = -> view.setUint8 byteOffset + this, arguments[0]
-                        when Int16Array     then set = -> view.setInt16 byteOffset + this, arguments[0], iLE
-                        when Uint16Array    then set = -> view.setUint16 byteOffset + this, arguments[0], iLE
-                        when Int32Array     then set = -> view.setInt32 byteOffset + this, arguments[0], iLE
-                        when Uint32Array    then set = -> view.setUint32 byteOffset + this, arguments[0], iLE
-                        when Float32Array   then set = -> view.setFloat32 byteOffset + this, arguments[0], iLE
-                        when BigUint64Array then set = -> view.setBigUint64 byteOffset + this, BigInt(arguments[0]), iLE
-                        else throw /ERR_DEF/
+
+                    if  Boolean keys = def.keys or def.indexedKeys
+                        
+                        if !def.indexedKeys and (keyvalue = {})
+                            switch keys.constructor
+                                when Array  then for k in keys then keyvalue[ k*1 ] = k
+                                when Object then for k, v of keys then keyvalue[ k*1 ] = v
+                                else throw /KEYS_MUSTBE_ARRAY_OR_OBJECT/
+                        else keyvalue = keys
+
+                        if  Boolean  onemptyget
+                            switch def.typedArray
+                                when Uint8Array     then get = -> keyvalue[ view.getUint8( byteOffset + this ) or onemptyget.call(@) ]
+                                when Int16Array     then get = -> keyvalue[ view.getInt16( byteOffset + this, iLE ) or onemptyget.call(@) ]
+                                when Uint16Array    then get = -> keyvalue[ view.getUint16( byteOffset + this, iLE ) or onemptyget.call(@) ]
+                                when Int32Array     then get = -> keyvalue[ view.getInt32( byteOffset + this, iLE ) or onemptyget.call(@) ]
+                                when Uint32Array    then get = -> keyvalue[ view.getUint32( byteOffset + this, iLE ) or onemptyget.call(@) ]
+                                when Float32Array   then get = -> keyvalue[ view.getFloat32( byteOffset + this, iLE ) or onemptyget.call(@) ]
+                                when BigUint64Array then get = -> keyvalue[ view.getBigUint64( byteOffset + this, iLE ) or onemptyget.call(@) ]
+                                else throw /ERR_DEF/
+
+                        else
+                            switch def.typedArray
+                                when Uint8Array     then get = -> keyvalue[ view.getUint8( byteOffset + this ) ]
+                                when Int16Array     then get = -> keyvalue[ view.getInt16( byteOffset + this, iLE ) ]
+                                when Uint16Array    then get = -> keyvalue[ view.getUint16( byteOffset + this, iLE ) ]
+                                when Int32Array     then get = -> keyvalue[ view.getInt32( byteOffset + this, iLE ) ]
+                                when Uint32Array    then get = -> keyvalue[ view.getUint32( byteOffset + this, iLE ) ]
+                                when Float32Array   then get = -> keyvalue[ view.getFloat32( byteOffset + this, iLE ) ]
+                                when BigUint64Array then get = -> keyvalue[ view.getBigUint64( byteOffset + this, iLE ) ]
+                                else throw /ERR_DEF/
+
+                    if  Boolean !onafterset and !onbeforeset
+                        switch def.typedArray
+                            when Uint8Array     then set = (v) -> view.setUint8 byteOffset + this, v
+                            when Int16Array     then set = (v) -> view.setInt16 byteOffset + this, v, iLE
+                            when Uint16Array    then set = (v) -> view.setUint16 byteOffset + this, v, iLE
+                            when Int32Array     then set = (v) -> view.setInt32 byteOffset + this, v, iLE
+                            when Uint32Array    then set = (v) -> view.setUint32 byteOffset + this, v, iLE
+                            when Float32Array   then set = (v) -> view.setFloat32 byteOffset + this, v, iLE
+                            when BigUint64Array then set = (v) -> view.setBigUint64 byteOffset + this, BigInt(v), iLE
+                            else throw /ERR_DEF/
+
+                    else if !onbeforeset and onafterset
+                        switch def.typedArray
+                            when Uint8Array     then set = (v) -> view.setUint8 byteOffset + this, v ; onafterset.call(@, v)
+                            when Int16Array     then set = (v) -> view.setInt16 byteOffset + this, v, iLE ; onafterset.call(@, v)
+                            when Uint16Array    then set = (v) -> view.setUint16 byteOffset + this, v, iLE ; onafterset.call(@, v)
+                            when Int32Array     then set = (v) -> view.setInt32 byteOffset + this, v, iLE ; onafterset.call(@, v)
+                            when Uint32Array    then set = (v) -> view.setUint32 byteOffset + this, v, iLE ; onafterset.call(@, v)
+                            when Float32Array   then set = (v) -> view.setFloat32 byteOffset + this, v, iLE ; onafterset.call(@, v)
+                            when BigUint64Array then set = (v) -> view.setBigUint64 byteOffset + this, BigInt(v), iLE ; onafterset.call(@, v)
+                            else throw /ERR_DEF/
+
+                    else if onbeforeset and !onafterset
+                        switch def.typedArray
+                            when Uint8Array     then set = (v) -> view.setUint8 byteOffset + this, onbeforeset.call(@, v); v
+                            when Int16Array     then set = (v) -> view.setInt16 byteOffset + this, onbeforeset.call(@, v), iLE; v
+                            when Uint16Array    then set = (v) -> view.setUint16 byteOffset + this, onbeforeset.call(@, v), iLE; v
+                            when Int32Array     then set = (v) -> view.setInt32 byteOffset + this, onbeforeset.call(@, v), iLE; v
+                            when Uint32Array    then set = (v) -> view.setUint32 byteOffset + this, onbeforeset.call(@, v), iLE; v
+                            when Float32Array   then set = (v) -> view.setFloat32 byteOffset + this, onbeforeset.call(@, v), iLE; v
+                            when BigUint64Array then set = (v) -> view.setBigUint64 byteOffset + this, BigInt(onbeforeset.call(@, v)), iLE; v
+                            else throw /ERR_DEF/
+
+                    else if onbeforeset and onafterset
+                        switch def.typedArray
+                            when Uint8Array     then set = (v) -> view.setUint8 byteOffset + this, onbeforeset.call(@, v); onafterset.call(@, v)
+                            when Int16Array     then set = (v) -> view.setInt16 byteOffset + this, onbeforeset.call(@, v), iLE ; onafterset.call(@, v)
+                            when Uint16Array    then set = (v) -> view.setUint16 byteOffset + this, onbeforeset.call(@, v), iLE ; onafterset.call(@, v)
+                            when Int32Array     then set = (v) -> view.setInt32 byteOffset + this, onbeforeset.call(@, v), iLE ; onafterset.call(@, v)
+                            when Uint32Array    then set = (v) -> view.setUint32 byteOffset + this, onbeforeset.call(@, v), iLE ; onafterset.call(@, v)
+                            when Float32Array   then set = (v) -> view.setFloat32 byteOffset + this, onbeforeset.call(@, v), iLE ; onafterset.call(@, v)
+                            when BigUint64Array then set = (v) -> view.setBigUint64 byteOffset + this, BigInt(onbeforeset.call(@, v)), iLE ; onafterset.call(@, v)
+                            else throw /ERR_DEF/
 
                 Object.defineProperty this, key, { get, set }
 
@@ -2387,10 +2458,29 @@ do ->
 
             define = ( key, def, byteOffset ) ->
 
-                { required , inheritable } = def
+                { required , inheritable, onafterset, onbeforeset } = def
+
+                set = switch true
+
+                    when Boolean(!onafterset and !onbeforeset) then (v) ->
+                        view.setInt32 byteOffset + this, v, iLE
+
+                    when Boolean( onafterset and !onbeforeset) then (v) ->
+                        view.setInt32 byteOffset + this, v, iLE
+                        onafterset.call(this, v)
+
+                    when Boolean(!onafterset and  onbeforeset) then (v) ->
+                        v = onbeforeset.call(this, v)
+                        view.setInt32 byteOffset + this, v, iLE
+
+                    when Boolean( onafterset and  onbeforeset) then (v) ->
+                        v = onbeforeset.call(this, v)
+                        view.setInt32 byteOffset + this, v, iLE
+                        onafterset.call(this, v)                
+
                 switch true
-                    when "function" is typeof def.scopeIndex
-                        set = -> view.setInt32 byteOffset + this, arguments[0], iLE
+
+                    when Boolean def.scopeIndex
                         get = ->
                             if !scpi = view.getInt32 byteOffset + this, iLE
                                 return undefined unless required
@@ -2399,7 +2489,6 @@ do ->
                             scope[ scpi ]
 
                     when Boolean Class = def.instanceof
-                        set = -> view.setInt32 byteOffset + this, arguments[0], iLE
                         get = ->
                             if !ptri = view.getInt32 byteOffset + this, iLE
 
@@ -2415,8 +2504,8 @@ do ->
                                     ptri = malloc Class
                                     @appendChild ptri
                             
-                            if  ptri
-                                @[ key ] = ptri
+                                if  ptri
+                                    @[ key ] = ptri
 
                             new Class ptri
 
@@ -2431,7 +2520,9 @@ do ->
                 prop, desc, byteOffset
             )
 
-            target.byteLength = byteOffset + 4
+            target.byteLength =
+                4 + byteOffset
+
             target
 
     BUFFER_BYTEOFFSET =   0
@@ -2554,6 +2645,18 @@ do ->
             
         childs
 
+    hasChildren         = ( ptri = this, ptrj ) ->
+        childs = []
+        offset = 48
+        length = getBufferByteOffset()
+
+        while length >= offset
+            unless ptri - getHeaderParentPtri offset
+                return 1 unless ptri - ptrj
+            offset = getHeaderNextOffset offset
+            
+        0
+
     findChildren        = ( ptri, clsi, inheritable = on ) ->
         if  Pointer.isPrototypeOf clsi
             clsi = scope .indexOf clsi
@@ -2582,8 +2685,8 @@ do ->
         clsi = extref PtrSuper
         clsj = extref PtrChild
 
-    malloc = ( PtrClass = Pointer ) ->
-        byteLength = PtrClass.byteLength
+    malloc = ( PtrClass = Pointer, byteLength = 0 ) ->
+        byteLength = PtrClass.byteLength + byteLength
         classIndex = extref PtrClass
 
         allocCount = getBufferAllocCount()
@@ -2609,7 +2712,6 @@ do ->
 
     class Pointer               extends Number
         constructor : -> super( arguments[0] ).oninit()
-
     class Window                extends Pointer
     class HTMLElement           extends Pointer
     class HTMLDocument          extends HTMLElement
@@ -2625,8 +2727,9 @@ do ->
     class DrawCall              extends Pointer
     class ShaderSource          extends Pointer
     class GLShader              extends Pointer
-    class ShaderAttribute       extends Pointer
+    class GLSLProcedure         extends Pointer
     class LinkedPointer         extends Pointer
+    class Text                  extends Pointer
 
     VERTEX_SHADER = new (class VERTEX_SHADER extends Number)(
         WebGL2RenderingContext.VERTEX_SHADER
@@ -2639,6 +2742,13 @@ do ->
     COMPUTE_SHADER = new (class COMPUTE_SHADER extends Number)(
         WebGL2RenderingContext.FRAGMENT_SHADER+2
     )
+
+    MALLOC_PER_CONTEXT  = new (class MALLOC_PER_CONTEXT extends Number)(1)
+    MALLOC_PER_UPLOAD   = new (class MALLOC_PER_UPLOAD extends Number)(2)
+    MALLOC_PER_INSTANCE = new (class MALLOC_PER_INSTANCE extends Number)(3)
+
+    MARK_ONLY_REQUESTED = new (class MARK_ONLY_REQUESTED extends Number)(1)
+    MARK_PARENT_UPDATED = new (class MARK_PARENT_UPDATED extends Number)(2)
 
     Object.defineProperties Pointer,
 
@@ -2725,6 +2835,12 @@ do ->
                 state = @isActive = fast or @PARAMETERS.IS_CURRENT
             state
 
+        draw                : value : ( ptri ) ->
+            drawCall = @appendChild malloc DrawCall
+            drawCall . contextUpload = ptri
+
+            log drawCall
+
         PARAMETERS          : get   : ->
 
             IS_PROGRAM      : @parent.isProgram(
@@ -2746,7 +2862,7 @@ do ->
                 WebGL2RenderingContext.DELETE_STATUS )
 
         attachDefault       : value : ( type ) ->
-            
+
             kind = type.constructor.name
             ptri = @parent.shaderSources.find (ptr) ->
                 0 is type - ptr.type
@@ -2796,6 +2912,9 @@ do ->
             
             CURRENT_PROGRAM : fn gl.CURRENT_PROGRAM
 
+        draw                : value : ( contextUpload ) ->
+            @linkedPrograms.at().draw( contextUpload )
+
         createBuffer        : value : ( type ) ->
             @glObject.createBuffer()
 
@@ -2838,7 +2957,7 @@ do ->
         compileShader       : value : ( glShader ) ->
             @glObject.compileShader glShader
 
-        shaderSource       : value : ( glShader, source ) ->
+        shaderSource        : value : ( glShader, source ) ->
             @glObject.shaderSource glShader, source
 
         bindBuffer          : value : ( ptri ) ->
@@ -2900,6 +3019,7 @@ do ->
     Object.registerProperty ShaderSource        , "target", {
         required    : on
         inheritable : off
+        onafterset  : -> @resolveSource()
         instanceof  : LinkedPointer
     }
 
@@ -2914,6 +3034,30 @@ do ->
         PARAMETERS          : get   : -> 
 
             INFO_LOG : @parent.shaderInfoLog @glObject
+
+        resolveSource       : value : ->
+
+            isVariable      = ( l ) ->
+                /attr|unif/.test l.trim().substring( 0, 4 )
+
+            parseLine       = ( a, i, o ) ->
+
+                [ kind, type, name ] =
+                    a.split(/\s+/).filter Boolean
+
+                [ rows, cols ] = type.substring(3)
+                    .split("x").map Number
+
+                size = switch type.substring 0, 3
+                    when "mat" then rows * ( cols or rows ) 
+                    else rows
+
+                return { kind, type, name, size }
+
+            definitions = @text.split( /\n|\;/ )
+                .filter( isVariable ).map( parseLine )
+
+            log definitions
         
         compile             : value : ->
             unless @isCompiled
@@ -2939,6 +3083,7 @@ do ->
             programs
         
         type                : get   : -> 
+
             if  @text.match /gl_Position/
                 return VERTEX_SHADER
 
@@ -3013,34 +3158,34 @@ do ->
         typedArray : Uint8Array
     }
 
-    Object.registerProperty HTMLDocument, "extref", {
+    Object.registerProperty HTMLDocument        , "extref", {
         required    : on
         inheritable : off
         scopeIndex  : ->
             extref @window.extref.document
     }
 
-    Object.registerProperty Screen, "extref", {
+    Object.registerProperty Screen              , "extref", {
         required    : on
         inheritable : off
         scopeIndex  : ->
             extref @window.extref.screen
     }
 
-    Object.registerProperty HTMLBodyElement, "extref", {
+    Object.registerProperty HTMLBodyElement     , "extref", {
         required    : on
         inheritable : off
         scopeIndex  : ->
             extref @document.extref.body
     }
 
-    Object.registerProperty HTMLBodyElement, "scene", {
+    Object.registerProperty HTMLBodyElement     , "scene", {
         required    : on
         inheritable : off
         instanceof  : HTMLCanvasElement
     }
 
-    Object.registerProperty HTMLCanvasElement, "extref", {
+    Object.registerProperty HTMLCanvasElement   , "extref", {
         required    : on
         inheritable : off
         scopeIndex  : ->            
@@ -3048,91 +3193,167 @@ do ->
             extref @parent.appendChild @resizeNode node
     }
 
-    Object.registerProperty HTMLDocument, "body", {
+    Object.registerProperty HTMLDocument        , "body", {
         required    : on
         inheritable : off
         instanceof  : HTMLBodyElement
     }
 
-    Object.allocateProperty HTMLCanvasElement, "width", {
+    Object.allocateProperty HTMLCanvasElement   , "width", {
         typedArray  : Int16Array
         value       : -> @window.extref.innerWidth
     }
 
-    Object.allocateProperty HTMLCanvasElement, "height", {
+    Object.allocateProperty HTMLCanvasElement   , "height", {
         typedArray  : Int16Array
         value       : -> @window.extref.innerHeight
     }
 
-    Object.allocateProperty ContextUpload, "byteLength", {
+    Object.allocateProperty ContextUpload       , "byteLength", {
         typedArray  : Uint32Array
         value       : -> @dataLength * 4
     }
 
-    Object.allocateProperty ContextUpload, "dataLength", {
+    Object.allocateProperty ContextUpload       , "dataLength", {
         typedArray  : Uint32Array
         value       : -> @extref.length * 1
     }
 
-    Object.allocateProperty ContextUpload, "pointCount", {
+    Object.allocateProperty ContextUpload       , "pointCount", {
         typedArray  : Uint32Array
         value       : -> @dataLength / 3
     }
 
-    Object.allocateProperty ContextUpload, "triangleCount", {
+    Object.allocateProperty ContextUpload       , "triangleCount", {
         typedArray  : Uint32Array
         value       : -> @dataLength / 9
     }
 
-    Object.registerProperty ContextUpload, "extref", {
+    Object.registerProperty ContextUpload       , "extref", {
         required    : on
         inheritable : off
         scopeIndex  : -> extref new Array()
     }
 
-    Object.registerProperty HTMLScriptElement, "extref", {
+    Object.registerProperty HTMLScriptElement   , "extref", {
         required    : on
         inheritable : off
         scopeIndex  : -> 0
     }
 
-    Object.defineProperties HTMLScriptElement::, 
+    Object.defineProperties HTMLScriptElement:: , 
         text        : get : -> "#{@extref.text}"
 
-    Object.allocateProperty DrawCall, "dstByteOffset", {
+
+    Object.allocateProperty DrawCall            , "dstByteOffset", {
+        typedArray  : Uint32Array
+    }
+    
+    Object.allocateProperty DrawCall            , "begin", {
         typedArray  : Uint32Array
     }
 
-    Object.allocateProperty DrawCall, "begin", {
-        typedArray  : Uint32Array
-    }
-
-    Object.defineProperties DrawCall::, 
+    Object.defineProperties DrawCall::          , 
         length      : get : -> @parent.dataLength
 
-    Object.allocateProperty DrawCall, "start", {
+
+    Object.allocateProperty DrawCall            , "start", {
         typedArray  : Uint32Array
     }
 
-    Object.allocateProperty DrawCall, "count", {
+    Object.allocateProperty DrawCall            , "count", {
         typedArray  : Uint32Array
     }
 
-    Object.allocateProperty DrawCall, "mode", {
+    Object.allocateProperty DrawCall            , "mode", {
         typedArray  : Uint16Array
     }
 
-    Object.registerProperty DrawCall, "program", {
+    Object.registerProperty DrawCall            , "contextUpload", {
         required    : on
-        inheritable : on
-        instanceof  : GLProgram
+        inheritable : off
+        instanceof  : ContextUpload
     }
 
-    Object.registerProperty DrawCall, "buffer", {
-        required    : on
-        inheritable : on
-        instanceof  : GLProgram
+    Object.allocateProperty GLSLProcedure       , "mallocEvent", {
+        typedArray  : Uint8Array
+        keys        : [
+            MALLOC_PER_UPLOAD, 
+            MALLOC_PER_CONTEXT,
+            MALLOC_PER_INSTANCE ]
     }
+
+    Object.allocateProperty GLSLProcedure       , "markEvent", {
+        typedArray  : Uint8Array
+        keys        : [
+            MARK_ONLY_REQUESTED, 
+            MARK_PARENT_UPDATED ]
+    }
+
+    Object.allocateProperty GLSLProcedure       , "targetClass", {
+        typedArray  : Uint32Array
+        indexedKeys : scope
+        onbeforeset : ( PointerClass ) ->
+            if !isNaN PointerClass
+                PointerClass = scope[ PointerClass ]
+
+            if !Pointer.isPrototypeOf PointerClass
+                throw /SCOPEINDEX_NOTFOUND/
+
+            scopeIndex = extref PointerClass
+
+            if !Object.hasOwn PointerClass, "procedures"
+                PointerClass.procedures = new Array()
+            PointerClass.procedures.push this
+
+            Object.defineProperty PointerClass::, "glProcedures", get : ->
+                PointerClass.procedures.filter ( procedure ) ->
+                    procedure instanceof GLSLProcedure
+
+
+            return scopeIndex
+    }
+
+    Object.allocateProperty GLSLProcedure       , "variable", {
+        isPointer   : on
+        onemptyget  : -> throw /UNDEFINED_VARIABLE/
+    }
+
+    Object.registerProperty GLSLProcedure       , "function", {
+        required    : on
+        inheritable : off
+        scopeIndex  : yes
+    }
+
+    Object.defineProperties GLSLProcedure::,
+
+        name        : get   : -> @variable.value
+
+    Object.defineProperties Text,
+    
+        from        : value : ( text ) -> 
+
+            if  typeof text is "string"
+                return @from this::encode text
+
+            if  Array.isArray text
+                return @from Uint8Array.from text
+
+            if  text instanceof Uint8Array 
+                ptri = malloc Text, text.byteLength
+                ptri . subarray.set text
+                return ptri
+
+            throw /ERR_TEXTFROM/
+        
+    Object.defineProperties Text::,
+
+        encode      : value : TextEncoder::encode.bind new TextEncoder 
+            
+        decode      : value : TextDecoder::decode.bind new TextDecoder 
+
+        value       : get   : -> @decode @subarray.slice 0
+
 
     Object.defineProperties ContextUpload::, 
 
@@ -3140,6 +3361,7 @@ do ->
             call = malloc DrawCall
             call.program = ptri
             @appendChild call
+
 
     Object.defineProperties ContextUploads::, 
 
@@ -3165,4 +3387,35 @@ do ->
         
         log context.upload [1,1,1,1,1,1]
         log up1 = context.upload [1,1,1,1,1,1,1,1]
-        log context
+        log context.draw up1
+        log context.draw up1
+        
+        program = context.linkedPrograms.at(0)
+        vShader = program.vertexShader
+
+
+        u_ViewMatrix                = malloc GLSLProcedure 
+        u_ViewMatrix.parent         = vShader
+        u_ViewMatrix.targetClass    = RenderingContext
+        u_ViewMatrix.mallocEvent    = MALLOC_PER_CONTEXT
+        u_ViewMatrix.markEvent      = MARK_ONLY_REQUESTED
+        u_ViewMatrix.variable       = Text.from "u_ViewMatrix"
+        u_ViewMatrix.function       = extref( ( e ) ->
+            log e
+        )
+
+        a_Position                  = malloc GLSLProcedure
+        a_Position.parent           = vShader
+        a_Position.targetClass      = ContextUpload
+        a_Position.mallocEvent      = MALLOC_PER_UPLOAD
+        a_Position.markEvent        = MARK_ONLY_REQUESTED
+        a_Position.variable         = Text.from "a_Position"
+        a_Position.function         = extref( (e) ->
+            log "handle"
+        )
+
+        self.addEventListener "pointermove", ({clientX:x, clientY: y}) ->
+            log x,y
+
+        log u_ViewMatrix
+        log a_Position

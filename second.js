@@ -2649,9 +2649,18 @@ false && (function() {
 })();
 
 (function() {
-  var BUFFER_ALLOCCOUNT, BUFFER_BYTEOFFSET, BUFFER_INITIALLOC, COMPUTE_SHADER, ContextUpload, ContextUploads, DrawCall, FRAGMENT_SHADER, GLBuffer, GLProgram, GLShader, HEADER_BYTELENGTH, HEADER_CLASSINDEX, HEADER_NEXTOFFSET, HEADER_PARENT_PTR, HEADER_SCOPEINDEX, HEADER_TYPEDARRAY, HTMLBodyElement, HTMLCanvasElement, HTMLDocument, HTMLElement, HTMLScriptElement, LinkedPointer, Pointer, RenderingContext, Screen, ShaderAttribute, ShaderSource, VERTEX_SHADER, Window, buffer, context, extref, filterChildren, findChildren, getBufferAllocCount, getBufferByteOffset, getChildren, getHeaderByteLength, getHeaderClassIndex, getHeaderNextOffset, getHeaderParentPtri, getHeaderScopeIndex, getHeaderTypedArray, getParent, getPointer, getPointers, getPonterHeaders, getPonterTypedArray, malloc, palloc, scope, setBufferAllocCount, setBufferByteOffset, setHeaderByteLength, setHeaderClassIndex, setHeaderNextOffset, setHeaderParentPtri, setHeaderScopeIndex, setHeaderTypedArray, setParent, view, win;
+  var BUFFER_ALLOCCOUNT, BUFFER_BYTEOFFSET, BUFFER_INITIALLOC, COMPUTE_SHADER, ContextUpload, ContextUploads, DrawCall, FRAGMENT_SHADER, GLBuffer, GLProgram, GLSLProcedure, GLShader, HEADER_BYTELENGTH, HEADER_CLASSINDEX, HEADER_NEXTOFFSET, HEADER_PARENT_PTR, HEADER_SCOPEINDEX, HEADER_TYPEDARRAY, HTMLBodyElement, HTMLCanvasElement, HTMLDocument, HTMLElement, HTMLScriptElement, LinkedPointer, MALLOC_PER_CONTEXT, MALLOC_PER_INSTANCE, MALLOC_PER_UPLOAD, MARK_ONLY_REQUESTED, MARK_PARENT_UPDATED, Pointer, RenderingContext, Screen, ShaderSource, Text, VERTEX_SHADER, Window, buffer, context, extref, filterChildren, findChildren, frameLoop, getBufferAllocCount, getBufferByteOffset, getChildren, getHeaderByteLength, getHeaderClassIndex, getHeaderNextOffset, getHeaderParentPtri, getHeaderScopeIndex, getHeaderTypedArray, getParent, getPointer, getPointers, getPonterHeaders, getPonterTypedArray, hasChildren, malloc, palloc, renderQueue, scope, setBufferAllocCount, setBufferByteOffset, setHeaderByteLength, setHeaderClassIndex, setHeaderNextOffset, setHeaderParentPtri, setHeaderScopeIndex, setHeaderTypedArray, setParent, view, win;
   view = new DataView(buffer = new ArrayBuffer(2048));
   scope = [null];
+  renderQueue = [(function() {})];
+  frameLoop = (t) => {
+    var f, len, m;
+    for (m = 0, len = renderQueue.length; m < len; m++) {
+      f = renderQueue[m];
+      f();
+    }
+    return requestAnimationFrame(frameLoop);
+  };
   Object.defineProperties(Array.prototype, {
     sum: {
       value: function(key) {
@@ -2673,7 +2682,7 @@ false && (function() {
         var bpe, byteOffset, define, mod;
         desc.typedArray || (desc.typedArray = Int32Array);
         define = function(key, def, byteOffset) {
-          var get, onempty, onup, set;
+          var get, k, keys, keyvalue, len, m, onafterset, onbeforeset, onempty, onemptyget, set, v;
           get = 0;
           if (def.isPointer) {
             if (!(onempty = def.onempty)) {
@@ -2700,7 +2709,7 @@ false && (function() {
               return view.setInt32(byteOffset + this, arguments[0], iLE);
             };
           } else {
-            onup = def.onupdate;
+            ({onbeforeset, onafterset, onemptyget} = def);
             if ("function" === typeof def.value) {
               switch (def.typedArray) {
                 case Uint8Array:
@@ -2830,88 +2839,326 @@ false && (function() {
                   throw /ERR_DEF/;
               }
             }
-            if ("function" === typeof onup) {
+            if (Boolean(onemptyget)) {
               switch (def.typedArray) {
                 case Uint8Array:
-                  set = function(v) {
-                    view.setUint8(byteOffset + this, v);
-                    return onup.call(this, v);
+                  get = function() {
+                    return view.getUint8(byteOffset + this) || onemptyget.call(this);
                   };
                   break;
                 case Int16Array:
-                  set = function(v) {
-                    view.setInt16(byteOffset + this, v, iLE);
-                    return onup.call(this, v);
+                  get = function() {
+                    return view.getInt16(byteOffset + this, iLE) || onemptyget.call(this);
                   };
                   break;
                 case Uint16Array:
-                  set = function(v) {
-                    view.setUint16(byteOffset + this, v, iLE);
-                    return onup.call(this, v);
+                  get = function() {
+                    return view.getUint16(byteOffset + this, iLE) || onemptyget.call(this);
                   };
                   break;
                 case Int32Array:
-                  set = function(v) {
-                    view.setInt32(byteOffset + this, v, iLE);
-                    return onup.call(this, v);
+                  get = function() {
+                    return view.getInt32(byteOffset + this, iLE) || onemptyget.call(this);
                   };
                   break;
                 case Uint32Array:
-                  set = function(v) {
-                    view.setUint32(byteOffset + this, v, iLE);
-                    return onup.call(this, v);
+                  get = function() {
+                    return view.getUint32(byteOffset + this, iLE) || onemptyget.call(this);
                   };
                   break;
                 case Float32Array:
-                  set = function(v) {
-                    view.setFloat32(byteOffset + this, v, iLE);
-                    return onup.call(this, v);
+                  get = function() {
+                    return view.getFloat32(byteOffset + this, iLE) || onemptyget.call(this);
                   };
                   break;
                 case BigUint64Array:
-                  set = function(v) {
-                    view.setBigUint64(byteOffset + this, BigInt(v), iLE);
-                    return onup.call(this, v);
+                  get = function() {
+                    return view.getBigUint64(byteOffset + this, iLE) || onemptyget.call(this);
                   };
                   break;
                 default:
                   throw /ERR_DEF/;
               }
-            } else {
+            }
+            if (Boolean(keys = def.keys || def.indexedKeys)) {
+              if (!def.indexedKeys && (keyvalue = {})) {
+                switch (keys.constructor) {
+                  case Array:
+                    for (m = 0, len = keys.length; m < len; m++) {
+                      k = keys[m];
+                      keyvalue[k * 1] = k;
+                    }
+                    break;
+                  case Object:
+                    for (k in keys) {
+                      v = keys[k];
+                      keyvalue[k * 1] = v;
+                    }
+                    break;
+                  default:
+                    throw /KEYS_MUSTBE_ARRAY_OR_OBJECT/;
+                }
+              } else {
+                keyvalue = keys;
+              }
+              if (Boolean(onemptyget)) {
+                switch (def.typedArray) {
+                  case Uint8Array:
+                    get = function() {
+                      return keyvalue[view.getUint8(byteOffset + this) || onemptyget.call(this)];
+                    };
+                    break;
+                  case Int16Array:
+                    get = function() {
+                      return keyvalue[view.getInt16(byteOffset + this, iLE) || onemptyget.call(this)];
+                    };
+                    break;
+                  case Uint16Array:
+                    get = function() {
+                      return keyvalue[view.getUint16(byteOffset + this, iLE) || onemptyget.call(this)];
+                    };
+                    break;
+                  case Int32Array:
+                    get = function() {
+                      return keyvalue[view.getInt32(byteOffset + this, iLE) || onemptyget.call(this)];
+                    };
+                    break;
+                  case Uint32Array:
+                    get = function() {
+                      return keyvalue[view.getUint32(byteOffset + this, iLE) || onemptyget.call(this)];
+                    };
+                    break;
+                  case Float32Array:
+                    get = function() {
+                      return keyvalue[view.getFloat32(byteOffset + this, iLE) || onemptyget.call(this)];
+                    };
+                    break;
+                  case BigUint64Array:
+                    get = function() {
+                      return keyvalue[view.getBigUint64(byteOffset + this, iLE) || onemptyget.call(this)];
+                    };
+                    break;
+                  default:
+                    throw /ERR_DEF/;
+                }
+              } else {
+                switch (def.typedArray) {
+                  case Uint8Array:
+                    get = function() {
+                      return keyvalue[view.getUint8(byteOffset + this)];
+                    };
+                    break;
+                  case Int16Array:
+                    get = function() {
+                      return keyvalue[view.getInt16(byteOffset + this, iLE)];
+                    };
+                    break;
+                  case Uint16Array:
+                    get = function() {
+                      return keyvalue[view.getUint16(byteOffset + this, iLE)];
+                    };
+                    break;
+                  case Int32Array:
+                    get = function() {
+                      return keyvalue[view.getInt32(byteOffset + this, iLE)];
+                    };
+                    break;
+                  case Uint32Array:
+                    get = function() {
+                      return keyvalue[view.getUint32(byteOffset + this, iLE)];
+                    };
+                    break;
+                  case Float32Array:
+                    get = function() {
+                      return keyvalue[view.getFloat32(byteOffset + this, iLE)];
+                    };
+                    break;
+                  case BigUint64Array:
+                    get = function() {
+                      return keyvalue[view.getBigUint64(byteOffset + this, iLE)];
+                    };
+                    break;
+                  default:
+                    throw /ERR_DEF/;
+                }
+              }
+            }
+            if (Boolean(!onafterset && !onbeforeset)) {
               switch (def.typedArray) {
                 case Uint8Array:
-                  set = function() {
-                    return view.setUint8(byteOffset + this, arguments[0]);
+                  set = function(v) {
+                    return view.setUint8(byteOffset + this, v);
                   };
                   break;
                 case Int16Array:
-                  set = function() {
-                    return view.setInt16(byteOffset + this, arguments[0], iLE);
+                  set = function(v) {
+                    return view.setInt16(byteOffset + this, v, iLE);
                   };
                   break;
                 case Uint16Array:
-                  set = function() {
-                    return view.setUint16(byteOffset + this, arguments[0], iLE);
+                  set = function(v) {
+                    return view.setUint16(byteOffset + this, v, iLE);
                   };
                   break;
                 case Int32Array:
-                  set = function() {
-                    return view.setInt32(byteOffset + this, arguments[0], iLE);
+                  set = function(v) {
+                    return view.setInt32(byteOffset + this, v, iLE);
                   };
                   break;
                 case Uint32Array:
-                  set = function() {
-                    return view.setUint32(byteOffset + this, arguments[0], iLE);
+                  set = function(v) {
+                    return view.setUint32(byteOffset + this, v, iLE);
                   };
                   break;
                 case Float32Array:
-                  set = function() {
-                    return view.setFloat32(byteOffset + this, arguments[0], iLE);
+                  set = function(v) {
+                    return view.setFloat32(byteOffset + this, v, iLE);
                   };
                   break;
                 case BigUint64Array:
-                  set = function() {
-                    return view.setBigUint64(byteOffset + this, BigInt(arguments[0]), iLE);
+                  set = function(v) {
+                    return view.setBigUint64(byteOffset + this, BigInt(v), iLE);
+                  };
+                  break;
+                default:
+                  throw /ERR_DEF/;
+              }
+            } else if (!onbeforeset && onafterset) {
+              switch (def.typedArray) {
+                case Uint8Array:
+                  set = function(v) {
+                    view.setUint8(byteOffset + this, v);
+                    return onafterset.call(this, v);
+                  };
+                  break;
+                case Int16Array:
+                  set = function(v) {
+                    view.setInt16(byteOffset + this, v, iLE);
+                    return onafterset.call(this, v);
+                  };
+                  break;
+                case Uint16Array:
+                  set = function(v) {
+                    view.setUint16(byteOffset + this, v, iLE);
+                    return onafterset.call(this, v);
+                  };
+                  break;
+                case Int32Array:
+                  set = function(v) {
+                    view.setInt32(byteOffset + this, v, iLE);
+                    return onafterset.call(this, v);
+                  };
+                  break;
+                case Uint32Array:
+                  set = function(v) {
+                    view.setUint32(byteOffset + this, v, iLE);
+                    return onafterset.call(this, v);
+                  };
+                  break;
+                case Float32Array:
+                  set = function(v) {
+                    view.setFloat32(byteOffset + this, v, iLE);
+                    return onafterset.call(this, v);
+                  };
+                  break;
+                case BigUint64Array:
+                  set = function(v) {
+                    view.setBigUint64(byteOffset + this, BigInt(v), iLE);
+                    return onafterset.call(this, v);
+                  };
+                  break;
+                default:
+                  throw /ERR_DEF/;
+              }
+            } else if (onbeforeset && !onafterset) {
+              switch (def.typedArray) {
+                case Uint8Array:
+                  set = function(v) {
+                    view.setUint8(byteOffset + this, onbeforeset.call(this, v));
+                    return v;
+                  };
+                  break;
+                case Int16Array:
+                  set = function(v) {
+                    view.setInt16(byteOffset + this, onbeforeset.call(this, v), iLE);
+                    return v;
+                  };
+                  break;
+                case Uint16Array:
+                  set = function(v) {
+                    view.setUint16(byteOffset + this, onbeforeset.call(this, v), iLE);
+                    return v;
+                  };
+                  break;
+                case Int32Array:
+                  set = function(v) {
+                    view.setInt32(byteOffset + this, onbeforeset.call(this, v), iLE);
+                    return v;
+                  };
+                  break;
+                case Uint32Array:
+                  set = function(v) {
+                    view.setUint32(byteOffset + this, onbeforeset.call(this, v), iLE);
+                    return v;
+                  };
+                  break;
+                case Float32Array:
+                  set = function(v) {
+                    view.setFloat32(byteOffset + this, onbeforeset.call(this, v), iLE);
+                    return v;
+                  };
+                  break;
+                case BigUint64Array:
+                  set = function(v) {
+                    view.setBigUint64(byteOffset + this, BigInt(onbeforeset.call(this, v)), iLE);
+                    return v;
+                  };
+                  break;
+                default:
+                  throw /ERR_DEF/;
+              }
+            } else if (onbeforeset && onafterset) {
+              switch (def.typedArray) {
+                case Uint8Array:
+                  set = function(v) {
+                    view.setUint8(byteOffset + this, onbeforeset.call(this, v));
+                    return onafterset.call(this, v);
+                  };
+                  break;
+                case Int16Array:
+                  set = function(v) {
+                    view.setInt16(byteOffset + this, onbeforeset.call(this, v), iLE);
+                    return onafterset.call(this, v);
+                  };
+                  break;
+                case Uint16Array:
+                  set = function(v) {
+                    view.setUint16(byteOffset + this, onbeforeset.call(this, v), iLE);
+                    return onafterset.call(this, v);
+                  };
+                  break;
+                case Int32Array:
+                  set = function(v) {
+                    view.setInt32(byteOffset + this, onbeforeset.call(this, v), iLE);
+                    return onafterset.call(this, v);
+                  };
+                  break;
+                case Uint32Array:
+                  set = function(v) {
+                    view.setUint32(byteOffset + this, onbeforeset.call(this, v), iLE);
+                    return onafterset.call(this, v);
+                  };
+                  break;
+                case Float32Array:
+                  set = function(v) {
+                    view.setFloat32(byteOffset + this, onbeforeset.call(this, v), iLE);
+                    return onafterset.call(this, v);
+                  };
+                  break;
+                case BigUint64Array:
+                  set = function(v) {
+                    view.setBigUint64(byteOffset + this, BigInt(onbeforeset.call(this, v)), iLE);
+                    return onafterset.call(this, v);
                   };
                   break;
                 default:
@@ -2935,13 +3182,34 @@ false && (function() {
       value: function(target, prop, desc) {
         var byteOffset, define, mod;
         define = function(key, def, byteOffset) {
-          var Class, get, inheritable, required, set;
-          ({required, inheritable} = def);
+          var Class, get, inheritable, onafterset, onbeforeset, required, set;
+          ({required, inheritable, onafterset, onbeforeset} = def);
+          set = (function() {
+            switch (true) {
+              case Boolean(!onafterset && !onbeforeset):
+                return function(v) {
+                  return view.setInt32(byteOffset + this, v, iLE);
+                };
+              case Boolean(onafterset && !onbeforeset):
+                return function(v) {
+                  view.setInt32(byteOffset + this, v, iLE);
+                  return onafterset.call(this, v);
+                };
+              case Boolean(!onafterset && onbeforeset):
+                return function(v) {
+                  v = onbeforeset.call(this, v);
+                  return view.setInt32(byteOffset + this, v, iLE);
+                };
+              case Boolean(onafterset && onbeforeset):
+                return function(v) {
+                  v = onbeforeset.call(this, v);
+                  view.setInt32(byteOffset + this, v, iLE);
+                  return onafterset.call(this, v);
+                };
+            }
+          })();
           switch (true) {
-            case "function" === typeof def.scopeIndex:
-              set = function() {
-                return view.setInt32(byteOffset + this, arguments[0], iLE);
-              };
+            case Boolean(def.scopeIndex):
               get = function() {
                 var scpi;
                 if (!(scpi = view.getInt32(byteOffset + this, iLE))) {
@@ -2954,9 +3222,6 @@ false && (function() {
               };
               break;
             case Boolean(Class = def.instanceof):
-              set = function() {
-                return view.setInt32(byteOffset + this, arguments[0], iLE);
-              };
               get = function() {
                 var clsi, ptri, ptrj;
                 if (!(ptri = view.getInt32(byteOffset + this, iLE))) {
@@ -2972,9 +3237,9 @@ false && (function() {
                     ptri = malloc(Class);
                     this.appendChild(ptri);
                   }
-                }
-                if (ptri) {
-                  this[key] = ptri;
+                  if (ptri) {
+                    this[key] = ptri;
+                  }
                 }
                 return new Class(ptri);
               };
@@ -2986,7 +3251,7 @@ false && (function() {
           byteOffset += 4 - mod;
         }
         define.call(target.prototype, prop, desc, byteOffset);
-        target.byteLength = byteOffset + 4;
+        target.byteLength = 4 + byteOffset;
         return target;
       }
     }
@@ -3113,6 +3378,21 @@ false && (function() {
     }
     return childs;
   };
+  hasChildren = function(ptri = this, ptrj) {
+    var childs, length, offset;
+    childs = [];
+    offset = 48;
+    length = getBufferByteOffset();
+    while (length >= offset) {
+      if (!(ptri - getHeaderParentPtri(offset))) {
+        if (!(ptri - ptrj)) {
+          return 1;
+        }
+      }
+      offset = getHeaderNextOffset(offset);
+    }
+    return 0;
+  };
   findChildren = function(ptri, clsi, inheritable = true) {
     var ptrj;
     if (Pointer.isPrototypeOf(clsi)) {
@@ -3146,9 +3426,9 @@ false && (function() {
     clsi = extref(PtrSuper);
     return clsj = extref(PtrChild);
   };
-  malloc = function(PtrClass = Pointer) {
-    var allocCount, byteLength, byteOffset, classIndex, mod, nextOffset, ptri;
-    byteLength = PtrClass.byteLength;
+  malloc = function(PtrClass = Pointer, byteLength = 0) {
+    var allocCount, byteOffset, classIndex, mod, nextOffset, ptri;
+    byteLength = PtrClass.byteLength + byteLength;
     classIndex = extref(PtrClass);
     allocCount = getBufferAllocCount();
     byteOffset = getBufferByteOffset();
@@ -3187,11 +3467,17 @@ false && (function() {
   DrawCall = class DrawCall extends Pointer {};
   ShaderSource = class ShaderSource extends Pointer {};
   GLShader = class GLShader extends Pointer {};
-  ShaderAttribute = class ShaderAttribute extends Pointer {};
+  GLSLProcedure = class GLSLProcedure extends Pointer {};
   LinkedPointer = class LinkedPointer extends Pointer {};
+  Text = class Text extends Pointer {};
   VERTEX_SHADER = new (VERTEX_SHADER = class VERTEX_SHADER extends Number {})(WebGL2RenderingContext.VERTEX_SHADER);
   FRAGMENT_SHADER = new (FRAGMENT_SHADER = class FRAGMENT_SHADER extends Number {})(WebGL2RenderingContext.FRAGMENT_SHADER);
   COMPUTE_SHADER = new (COMPUTE_SHADER = class COMPUTE_SHADER extends Number {})(WebGL2RenderingContext.FRAGMENT_SHADER + 2);
+  MALLOC_PER_CONTEXT = new (MALLOC_PER_CONTEXT = class MALLOC_PER_CONTEXT extends Number {})(1);
+  MALLOC_PER_UPLOAD = new (MALLOC_PER_UPLOAD = class MALLOC_PER_UPLOAD extends Number {})(2);
+  MALLOC_PER_INSTANCE = new (MALLOC_PER_INSTANCE = class MALLOC_PER_INSTANCE extends Number {})(3);
+  MARK_ONLY_REQUESTED = new (MARK_ONLY_REQUESTED = class MARK_ONLY_REQUESTED extends Number {})(1);
+  MARK_PARENT_UPDATED = new (MARK_PARENT_UPDATED = class MARK_PARENT_UPDATED extends Number {})(2);
   Object.defineProperties(Pointer, {
     TypedArray: {
       configurable: true,
@@ -3319,6 +3605,14 @@ false && (function() {
         return state;
       }
     },
+    draw: {
+      value: function(ptri) {
+        var drawCall;
+        drawCall = this.appendChild(malloc(DrawCall));
+        drawCall.contextUpload = ptri;
+        return log(drawCall);
+      }
+    },
     PARAMETERS: {
       get: function() {
         return {
@@ -3402,6 +3696,11 @@ false && (function() {
         return {
           CURRENT_PROGRAM: fn(gl.CURRENT_PROGRAM)
         };
+      }
+    },
+    draw: {
+      value: function(contextUpload) {
+        return this.linkedPrograms.at().draw(contextUpload);
       }
     },
     createBuffer: {
@@ -3543,6 +3842,9 @@ false && (function() {
   Object.registerProperty(ShaderSource, "target", {
     required: true,
     inheritable: false,
+    onafterset: function() {
+      return this.resolveSource();
+    },
     instanceof: LinkedPointer
   });
   Object.registerProperty(ShaderSource, "glObject", {
@@ -3558,6 +3860,30 @@ false && (function() {
         return {
           INFO_LOG: this.parent.shaderInfoLog(this.glObject)
         };
+      }
+    },
+    resolveSource: {
+      value: function() {
+        var definitions, isVariable, parseLine;
+        isVariable = function(l) {
+          return /attr|unif/.test(l.trim().substring(0, 4));
+        };
+        parseLine = function(a, i, o) {
+          var cols, kind, name, rows, size, type;
+          [kind, type, name] = a.split(/\s+/).filter(Boolean);
+          [rows, cols] = type.substring(3).split("x").map(Number);
+          size = (function() {
+            switch (type.substring(0, 3)) {
+              case "mat":
+                return rows * (cols || rows);
+              default:
+                return rows;
+            }
+          })();
+          return {kind, type, name, size};
+        };
+        definitions = this.text.split(/\n|\;/).filter(isVariable).map(parseLine);
+        return log(definitions);
       }
     },
     compile: {
@@ -3794,15 +4120,94 @@ false && (function() {
   Object.allocateProperty(DrawCall, "mode", {
     typedArray: Uint16Array
   });
-  Object.registerProperty(DrawCall, "program", {
+  Object.registerProperty(DrawCall, "contextUpload", {
     required: true,
-    inheritable: true,
-    instanceof: GLProgram
+    inheritable: false,
+    instanceof: ContextUpload
   });
-  Object.registerProperty(DrawCall, "buffer", {
+  Object.allocateProperty(GLSLProcedure, "mallocEvent", {
+    typedArray: Uint8Array,
+    keys: [MALLOC_PER_UPLOAD, MALLOC_PER_CONTEXT, MALLOC_PER_INSTANCE]
+  });
+  Object.allocateProperty(GLSLProcedure, "markEvent", {
+    typedArray: Uint8Array,
+    keys: [MARK_ONLY_REQUESTED, MARK_PARENT_UPDATED]
+  });
+  Object.allocateProperty(GLSLProcedure, "targetClass", {
+    typedArray: Uint32Array,
+    indexedKeys: scope,
+    onbeforeset: function(PointerClass) {
+      var scopeIndex;
+      if (!isNaN(PointerClass)) {
+        PointerClass = scope[PointerClass];
+      }
+      if (!Pointer.isPrototypeOf(PointerClass)) {
+        throw /SCOPEINDEX_NOTFOUND/;
+      }
+      scopeIndex = extref(PointerClass);
+      if (!Object.hasOwn(PointerClass, "procedures")) {
+        PointerClass.procedures = new Array();
+      }
+      PointerClass.procedures.push(this);
+      Object.defineProperty(PointerClass.prototype, "glProcedures", {
+        get: function() {
+          return PointerClass.procedures.filter(function(procedure) {
+            return procedure instanceof GLSLProcedure;
+          });
+        }
+      });
+      return scopeIndex;
+    }
+  });
+  Object.allocateProperty(GLSLProcedure, "variable", {
+    isPointer: true,
+    onemptyget: function() {
+      throw /UNDEFINED_VARIABLE/;
+    }
+  });
+  Object.registerProperty(GLSLProcedure, "function", {
     required: true,
-    inheritable: true,
-    instanceof: GLProgram
+    inheritable: false,
+    scopeIndex: true
+  });
+  Object.defineProperties(GLSLProcedure.prototype, {
+    name: {
+      get: function() {
+        return this.variable.value;
+      }
+    }
+  });
+  Object.defineProperties(Text, {
+    from: {
+      value: function(text) {
+        var ptri;
+        if (typeof text === "string") {
+          return this.from(this.prototype.encode(text));
+        }
+        if (Array.isArray(text)) {
+          return this.from(Uint8Array.from(text));
+        }
+        if (text instanceof Uint8Array) {
+          ptri = malloc(Text, text.byteLength);
+          ptri.subarray.set(text);
+          return ptri;
+        }
+        throw /ERR_TEXTFROM/;
+      }
+    }
+  });
+  Object.defineProperties(Text.prototype, {
+    encode: {
+      value: TextEncoder.prototype.encode.bind(new TextEncoder)
+    },
+    decode: {
+      value: TextDecoder.prototype.decode.bind(new TextDecoder)
+    },
+    value: {
+      get: function() {
+        return this.decode(this.subarray.slice(0));
+      }
+    }
   });
   Object.defineProperties(ContextUpload.prototype, {
     draw: {
@@ -3838,12 +4243,41 @@ false && (function() {
   });
   win = malloc(Window);
   return (context = function() {
-    var body, scene, up1;
+    var a_Position, body, program, scene, u_ViewMatrix, up1, vShader;
     body = win.document.body;
     scene = body.scene;
     context = scene.renderingContext;
     log(context.upload([1, 1, 1, 1, 1, 1]));
     log(up1 = context.upload([1, 1, 1, 1, 1, 1, 1, 1]));
-    return log(context);
+    log(context.draw(up1));
+    log(context.draw(up1));
+    program = context.linkedPrograms.at(0);
+    vShader = program.vertexShader;
+    u_ViewMatrix = malloc(GLSLProcedure);
+    u_ViewMatrix.parent = vShader;
+    u_ViewMatrix.targetClass = RenderingContext;
+    u_ViewMatrix.mallocEvent = MALLOC_PER_CONTEXT;
+    u_ViewMatrix.markEvent = MARK_ONLY_REQUESTED;
+    u_ViewMatrix.variable = Text.from("u_ViewMatrix");
+    u_ViewMatrix.function = extref(function(e) {
+      return log(e);
+    });
+    a_Position = malloc(GLSLProcedure);
+    a_Position.parent = vShader;
+    a_Position.targetClass = ContextUpload;
+    a_Position.mallocEvent = MALLOC_PER_UPLOAD;
+    a_Position.markEvent = MARK_ONLY_REQUESTED;
+    a_Position.variable = Text.from("a_Position");
+    a_Position.function = extref(function(e) {
+      return log("handle");
+    });
+    self.addEventListener("pointermove", function({
+        clientX: x,
+        clientY: y
+      }) {
+      return log(x, y);
+    });
+    log(u_ViewMatrix);
+    return log(a_Position);
   })();
 })();
