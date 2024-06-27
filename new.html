@@ -1,4 +1,5 @@
 <script>
+    name = "window"
     fetch( "./raw.js" )
         .then( e => e.blob() ).then( URL.createObjectURL )
         .then( s => Object.assign( document.body.appendChild(

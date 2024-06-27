@@ -1,0 +1,10 @@
+	{
+		"window" : {
+			"alert" : "window.alert"
+		},
+
+		"console" : {
+			"log" : "console.log",
+			"warn" : "console.warn"
+		}
+	}
