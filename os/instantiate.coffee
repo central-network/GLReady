@@ -1,20 +1,26 @@
+import Pointer from "../raw.js"
 
 nos = new BroadcastChannel "nos"
 nos . addEventListener "message", ({ data }) ->
-    @methods[ data.call ].postMessage data
-nos.methods = {}
+    console.log data
+
+nos.drivers = {
+    methods : postMessage : ( data ) ->
+        dev = nos[ data.from ]
+        nos.drivers[ m ] = dev for m in data.args
+}
 
 device = ( name ) ->
 
     dev = new Worker "#{name}/driver.js", { name }
-    dev.name = name
 
-    dev.addEventListener "message", ({ data: methods }) ->
-        nos.methods[ m ] = this for m in methods
-        nos[ this.name ] = this
+    dev.addEventListener "message", ({ data }) ->
+        nos.drivers[ data.call ].postMessage(
+            { ...data, ...from: @name }
+        )
 
-    nos
-
-export default {
-    device
-}
+    nos[ name ] = Object.defineProperties(
+        dev , name : { value : name }
+    )
+    
+export default { device }

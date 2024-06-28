@@ -1,22 +1,29 @@
-var dev, f, imports, l, methods, r;
+var f, imports, l, methods, r, wasm;
 
 console.log("network device driver thread");
 
-dev = null;
+wasm = null;
 
 addEventListener("message", function({data}) {
-  return console.warn("device driver got msg", data, dev);
+  return console.warn("device driver got msg", data, wasm);
 });
 
 methods = [];
 
-imports = {
-  socket: {
-    tcp: function() {
-      return 1;
-    }
+imports = {};
+
+imports.socket = {
+  tcp: function() {
+    return 1;
   }
 };
+
+setTimeout(() => {
+  return postMessage({
+    call: "memory.malloc",
+    args: [1240]
+  });
+}, 1000);
 
 for (r in imports) {
   l = imports[r];
@@ -29,7 +36,11 @@ fetch("./device.wasm").then(function(data) {
   return data.arrayBuffer();
 }).then(function(buff) {
   return WebAssembly.instantiate(buff, imports);
-}).then(function(wasm) {
-  dev = wasm;
-  return postMessage(methods);
+}).then(function(init) {
+  return wasm = init;
+}).then(function() {
+  return postMessage({
+    call: "methods",
+    args: methods
+  });
 });

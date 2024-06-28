@@ -1,5 +1,0 @@
-	{
-		"socket" : {
-			"tcp" : "window.postMessage"
-		}
-	}
