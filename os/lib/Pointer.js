@@ -1,10 +1,14 @@
-var ClassPointer, Pointer, dvw, error, f32, findAllChilds, findInstances, getByteLength, getClassIndex, getParentPtri, getScopeIndex, i16, i32, iLE, lock, log, malloc, plen, setClassIndex, setParentPtri, setScopeIndex, thread, u16, u32, ui8, wait, warn;
+var ClassPointer, ClassProperty, Pointer, PointerClass, dvw, error, f32, findAllChilds, findInstances, getByteLength, getClassIndex, getFree4Bytes, getNextOffset, getParentPtri, getScopeIndex, i16, i32, iLE, lock, log, malloc, plen, setByteLength, setClassIndex, setFree4Bytes, setNextOffset, setParentPtri, setScopeIndex, thread, u16, u32, ui8, wait, warn;
 
 Pointer = class Pointer extends Number {};
 
 ClassPointer = class ClassPointer extends Number {};
 
-export default Pointer;
+ClassProperty = class ClassProperty extends Pointer {};
+
+export var encode = TextEncoder.prototype.encode.bind(new TextEncoder);
+
+export var decode = TextDecoder.prototype.decode.bind(new TextDecoder);
 
 ({log, warn, error} = console);
 
@@ -24,16 +28,41 @@ Object.defineProperties(scope, {
   }
 });
 
-getByteLength = function(ptri = this) {
+Object.defineProperties(Object.getPrototypeOf(Uint8ClampedArray), {
+  DataViewGetter: {
+    get: function() {
+      return `get${this.name.replace('Array', '')}`;
+    }
+  },
+  DataViewSetter: {
+    get: function() {
+      return `set${this.name.replace('Array', '')}`;
+    }
+  }
+});
+
+getNextOffset = function(ptri = this) {
   return dvw.getInt32(ptri - 24, iLE);
 };
 
-getScopeIndex = function(ptri = this) {
+setNextOffset = function(ptri, next) {
+  return dvw.setInt32(ptri - 24, next, iLE);
+};
+
+getByteLength = function(ptri = this) {
   return dvw.getInt32(ptri - 20, iLE);
 };
 
+setByteLength = function(ptri, byte) {
+  return dvw.setInt32(ptri - 20, byte, iLE);
+};
+
+getScopeIndex = function(ptri = this) {
+  return dvw.getInt32(ptri - 16, iLE);
+};
+
 setScopeIndex = function(ptri, scpi) {
-  return dvw.setInt32(ptri - 20, scpi, iLE);
+  return dvw.setInt32(ptri - 16, scpi, iLE);
 };
 
 getClassIndex = function(ptri = this) {
@@ -44,93 +73,123 @@ setClassIndex = function(ptri, clsi) {
   return dvw.setInt32(ptri - 12, clsi, iLE);
 };
 
+getParentPtri = function(ptri = this) {
+  return dvw.getInt32(ptri - 8, iLE);
+};
+
+setParentPtri = function(ptri, ptrj) {
+  return dvw.setInt32(ptri - 8, ptrj, iLE);
+};
+
+getFree4Bytes = function(ptri = this) {
+  return dvw.getInt32(ptri - 4, iLE);
+};
+
+setFree4Bytes = function(ptri, byte) {
+  return dvw.setInt32(ptri - 4, byte, iLE);
+};
+
+export var HEADERS = {
+  nextOffset: {
+    get: getNextOffset,
+    set: setNextOffset
+  },
+  byteLength: {
+    get: getByteLength,
+    set: setByteLength
+  },
+  scopeIndex: {
+    get: getScopeIndex,
+    set: setScopeIndex
+  },
+  classIndex: {
+    get: getClassIndex,
+    set: setClassIndex
+  },
+  parentPtri: {
+    get: getParentPtri,
+    set: setParentPtri
+  },
+  free4Bytes: {
+    get: getFree4Bytes,
+    set: setFree4Bytes
+  }
+};
+
 findInstances = function(clsi) {
-  var Clss, create, last, matchs, ptri, ptrj;
+  var matchs, next, ptri, ptrj;
   matchs = [];
-  create = Pointer.of;
-  ptrj = 2 * plen;
-  last = 1 + Atomics.load(i32);
-  Clss = scope.at(clsi);
-  while (ptrj < last) {
-    if (0 === clsi - getClassIndex(ptrj)) {
-      ptri = create(ptrj);
-      log(ptri);
-      if (ptri instanceof Clss) {
-        matchs[matchs.length] = ptri;
-      }
+  ptri = ptri + 0;
+  next = plen * 2;
+  while (ptrj = getNextOffset(next)) {
+    if (!(clsi - getClassIndex(ptrj))) {
+      matchs[matchs.length] = Pointer.of(ptrj);
     }
-    ptrj += plen + getByteLength(ptrj);
+    next = ptrj;
   }
   return matchs;
 };
 
 findAllChilds = function(ptri = this) {
-  var create, last, matchs, ptrj;
+  var matchs, next, ptrj;
   matchs = [];
-  create = ptri.of || ptri.constructor.of;
-  last = 1 + Atomics.load(i32);
-  ptri = 0 + ptri;
-  ptrj = 2 * plen;
-  while (ptrj < last) {
-    if (0 === ptri - getParentPtri(ptrj)) {
-      matchs[matchs.length] = create(ptrj);
+  ptri = ptri + 0;
+  next = plen * 2;
+  while (ptrj = getNextOffset(next)) {
+    if (!(ptri - getParentPtri(ptrj))) {
+      matchs[matchs.length] = new scope[getClassIndex(ptrj)](ptrj);
     }
-    ptrj += plen + getByteLength(ptrj);
+    next = ptrj;
   }
   return matchs;
 };
 
-getParentPtri = function(ptri = this) {
-  return dvw.getInt32(ptri - 16, iLE);
-};
-
-setParentPtri = function(ptri, ptrj) {
-  return dvw.setInt32(ptri - 16, ptrj, iLE);
-};
-
 malloc = function(Class, byteLength = 0) {
-  var ptri;
-  byteLength += Class.byteLength || 0;
-  ptri = plen + Atomics.add(i32, 0, byteLength + plen);
-  dvw.setInt32(ptri - 24, byteLength, iLE);
-  dvw.setInt32(ptri - 12, scope.i(Class), iLE);
+  var allocLength, mod, nextOffset, ptri, ptriOffset;
+  allocLength = byteLength + plen;
+  if (mod = allocLength % 8) {
+    allocLength += 8 - mod;
+  }
+  ptriOffset = Atomics.add(i32, 0, allocLength);
+  nextOffset = ptriOffset + allocLength + plen;
+  ptri = ptriOffset + plen;
+  setNextOffset(ptri, nextOffset);
+  setByteLength(ptri, byteLength);
+  setClassIndex(ptri, scope.i(Class));
   return new Class(ptri);
 };
 
 Object.defineProperties(Pointer, {
+  TypedArray: {
+    value: Uint8Array
+  },
   byteLength: {
     value: 0,
     writable: 1
   },
+  encode: {
+    value: function() {
+      return +arguments[0];
+    }
+  },
+  decode: {
+    value: function() {
+      return Pointer.of(arguments[0]);
+    }
+  },
+  setHeader: {
+    value: function(offset, value) {
+      return dvw.setInt32(this + offset, value, iLE);
+    }
+  },
+  getHeader: {
+    value: function(offset) {
+      return dvw.getInt32(this + offset, iLE);
+    }
+  },
   of: {
     value: function(ptri) {
       return ptri && new scope[getClassIndex(ptri)](ptri);
-    }
-  },
-  malloc: {
-    value: function() {
-      return malloc(this);
-    }
-  },
-  defineProperty: {
-    value: function(name, byteLength) {}
-  },
-  extend: {
-    value: function(ClassName) {
-      var Class, ptrc, scopei;
-      scopei = scope.i(this);
-      document.body.appendChild(Object.assign(document.createElement("script"), {
-        text: `scope.i(class ${ClassName} extends scope[${scopei}]{})`
-      })).remove();
-      if (!(Class = scope.find(function(i) {
-        return i.name === ClassName;
-      }))) {
-        throw /EXTEND/;
-      }
-      ptrc = malloc(ClassPointer);
-      ptrc.class = Class;
-      ptrc.parent = this.prototype.pointerof;
-      return Class;
     }
   },
   setBuffer: {
@@ -149,11 +208,28 @@ Object.defineProperties(Pointer, {
 });
 
 Object.defineProperties(Pointer.prototype, {
-  byteLength: {
-    get: getByteLength
+  ["{{Pointer}}"]: {
+    get: function() {
+      return {
+        NextOffset: getNextOffset(this),
+        ByteLength: getByteLength(this),
+        ScopeIndex: getScopeIndex(this),
+        ClassIndex: getClassIndex(this),
+        ParentPtri: getParentPtri(this),
+        subarrays: {
+          Uint8Array: this.subarray(Uint8Array),
+          Uint16Array: this.subarray(Uint16Array),
+          Uint32Array: this.subarray(Uint32Array),
+          Int32Array: this.subarray(Int32Array),
+          Float32Array: this.subarray(Float32Array)
+        }
+      };
+    }
   },
   children: {
-    get: findAllChilds
+    get: findAllChilds,
+    configurable: true,
+    enumerable: true
   },
   parent: {
     get: function() {
@@ -161,11 +237,36 @@ Object.defineProperties(Pointer.prototype, {
     },
     set: function() {
       return setParentPtri(this, arguments[0]);
-    }
+    },
+    enumerable: true
   },
   subarray: {
-    get: function(TypedArray = Uint32Array) {
-      return new TypedArray(dvw.buffer, this, this.byteLength / TypedArray.BYTES_PER_ELEMENT);
+    value: function() {
+      var TypedArray, byteLength, byteOffset, length, offset;
+      if (isNaN(arguments[0])) {
+        TypedArray = arguments[0] || this.constructor.TypedArray;
+        byteOffset = arguments[1] || 0;
+        byteLength = arguments[2] || getByteLength(this);
+      } else {
+        TypedArray = this.constructor.TypedArray;
+        byteOffset = arguments[0] || 0;
+        byteLength = arguments[1] || getByteLength(this);
+      }
+      offset = byteOffset + this;
+      length = (byteLength - byteOffset) / TypedArray.BYTES_PER_ELEMENT;
+      return new TypedArray(dvw.buffer, offset, length);
+    }
+  },
+  setUint8Array: {
+    value: function(data, index = 0) {
+      this.subarray(Uint8Array).set(data, index);
+      return this;
+    }
+  },
+  appendChild: {
+    value: function(ptri) {
+      setParentPtri(ptri, this);
+      return ptri;
     }
   }
 });
@@ -178,18 +279,50 @@ Object.defineProperties(ClassPointer, {
   }
 });
 
+Object.defineProperties(ClassProperty.prototype, {
+  name: {
+    enumerable: true,
+    get: function() {
+      return decode(this.nameArray());
+    }
+  },
+  pointerOffset: {
+    enumerable: true,
+    get: function() {
+      return dvw.getUint8(this);
+    },
+    set: function() {
+      return dvw.setUint8(this, arguments[0]);
+    }
+  },
+  byteLength: {
+    enumerable: true,
+    get: function() {
+      return dvw.getUint8(this + 1);
+    },
+    set: function() {
+      return dvw.setUint8(this + 1, arguments[0]);
+    }
+  },
+  children: {
+    value: []
+  },
+  nameArray: {
+    value: function() {
+      return this.subarray(12);
+    }
+  }
+});
+
 Object.defineProperties(ClassPointer.prototype, {
   class: {
     get: function() {
       return scope.at(getScopeIndex(this));
     },
-    set: function(Class) {
-      setScopeIndex(this, scope.i(Class));
-      return Object.defineProperty(Class.prototype, "pointerof", {
-        value: this,
-        writable: true
-      });
-    }
+    set: function() {
+      return setScopeIndex(this, scope.i(arguments[0]));
+    },
+    enumerable: true
   },
   parent: {
     get: function() {
@@ -197,23 +330,169 @@ Object.defineProperties(ClassPointer.prototype, {
     },
     set: function() {
       return setParentPtri(this, arguments[0]);
-    }
+    },
+    enumerable: true
   },
   extends: {
-    get: findAllChilds
+    enumerable: true,
+    get: function() {
+      return findAllChilds(this).filter(function(i) {
+        return i instanceof ClassPointer;
+      });
+    }
+  },
+  extend: {
+    value: function(ClassName) {
+      var Class, ptrc, scopei;
+      scopei = getScopeIndex(this);
+      document.body.appendChild(Object.assign(document.createElement("script"), {
+        text: `scope.i(class ${ClassName} extends scope[${scopei}]{})`
+      })).remove();
+      if (!(Class = scope.find(function(i) {
+        return i.name === ClassName;
+      }))) {
+        throw /EXTEND/;
+      }
+      ptrc = malloc(ClassPointer);
+      setScopeIndex(ptrc, scope.i(Class));
+      setParentPtri(ptrc, this);
+      Object.defineProperties(Class.prototype, {
+        classPointer: {
+          value: ptrc
+        }
+      });
+      return ptrc;
+    }
   },
   name: {
+    enumerable: true,
     get: function() {
       return this.class.name;
     }
   },
+  children: {
+    enumerable: true,
+    get: function() {
+      return findAllChilds(this).filter(function(i) {
+        return i instanceof ClassProperty;
+      });
+    }
+  },
+  byteLength: {
+    enumerable: true,
+    get: getByteLength
+  },
   instances: {
+    enumerable: true,
     get: function() {
       return findInstances(scope.i(this.class));
+    }
+  },
+  malloc: {
+    value: function(byteLength = 0, Class = this.class) {
+      return malloc(Class, byteLength);
+    }
+  },
+  staticProperty: {
+    value: function(prop, desc) {
+      return Object.defineProperty(this.class, prop, desc);
+    }
+  },
+  objectProperty: {
+    value: function(prop, desc) {
+      return Object.defineProperty(this.class.prototype, prop, desc);
+    }
+  },
+  mallocProperty: {
+    value: function(prop, desc) {
+      var byteLength, byteOffset, constructor, encodedName, getter, ifnull, k, options, propByteLength, ptri, setter, v;
+      byteOffset = getByteLength(this);
+      if (desc.instanceof instanceof ClassPointer) {
+        encodedName = encode(prop);
+        propByteLength = encodedName.byteLength + 12;
+        ptri = malloc(ClassProperty, propByteLength);
+        setParentPtri(ptri, this);
+        setScopeIndex(ptri, scope.i(desc.instanceof));
+        ptri.nameArray().set(encodedName);
+        ptri.pointerOffset = byteOffset;
+        ptri.byteLength = byteLength = 4;
+      }
+      
+      //getter = "getInt32"
+      //setter = "setInt32"
+      //decode = Pointer.of
+      //encode = (v) -> +v
+      setByteLength(this, byteOffset + byteLength);
+      return warn(this, byteOffset, getByteLength(this));
+      if (Pointer.isPrototypeOf(desc.instanceof)) {
+        byteLength = 4;
+        getter = "getInt32";
+        setter = "setInt32";
+        decode = Pointer.of;
+        encode = function(v) {
+          return +v;
+        };
+      } else {
+        byteLength = desc.byteLength || (desc.instanceof.BYTES_PER_ELEMENT * (desc.length || 1));
+        getter = desc.getter || desc.instanceof.DataViewGetter;
+        setter = desc.setter || desc.instanceof.DataViewSetter;
+        encode = desc.encode || desc.instanceof.encode || (function(v) {
+          return v;
+        });
+        decode = desc.decode || desc.instanceof.decode || (function(v) {
+          return v;
+        });
+      }
+      ifnull = desc.ifnull || (function() {
+        return 0;
+      });
+      //defines on Class (static)
+      if (Pointer.isPrototypeOf(target)) {
+        constructor = target;
+      }
+      
+      //defines on Class.prototype
+      if (target instanceof Pointer) {
+        constructor = target.constructor;
+        byteOffset = constructor.byteLength;
+        options = {
+          writable: desc.writable,
+          enumerable: desc.enumerable,
+          configurable: desc.configurable
+        };
+        for (k in options) {
+          v = options[k];
+          if (!v) {
+            delete options[k];
+          }
+        }
+        Object.defineProperty(target, prop, {
+          get: function() {
+            var val;
+            if (val = decode.call(this, dvw[getter](this + byteOffset, iLE))) {
+              return val;
+            }
+            if (val = ifnull.call(this)) {
+              return this[prop] = val;
+            }
+            return 0;
+          },
+          set: function(v) {
+            return dvw[setter](this + byteOffset, encode.call(this, v), iLE);
+          },
+          ...options
+        });
+      }
+      constructor.byteLength += byteLength;
+      return target;
     }
   }
 });
 
 Pointer.setBuffer(new ArrayBuffer(12096));
 
-malloc(ClassPointer).class = Pointer;
+PointerClass = malloc(ClassPointer);
+
+setScopeIndex(PointerClass, scope.i(Pointer));
+
+export default PointerClass;
