@@ -53,7 +53,7 @@ getAllHeaders = ( ptri = this ) ->
         byteOffset : +ptri
     }
 
-int32Property = ( byteOffset, property, desc = {} ) ->
+int32Property = ( byteOffset, classPointer, desc = {} ) ->
 
     setAsNumber         : ( i32v ) ->
         dvw.setInt32 this + byteOffset, i32v, iLE
@@ -75,9 +75,9 @@ int32Property = ( byteOffset, property, desc = {} ) ->
             return renew_Pointer ptri
 
         if  typeof desc.default isnt "function"
-            ptri = property.malloc desc.byteLength
+            ptri = classPointer.malloc desc.byteLength
 
-        else unless ptri = desc.default.call( this, byteOffset )
+        else unless ptri = desc.default.call( this, classPointer, byteOffset )
             return 0
 
         dvw.setInt32 this + byteOffset, ptri, iLE
@@ -311,6 +311,11 @@ define ClassPointer::,
         set     : (cl) -> setScopeIndex scopei( cl ) , this
         get     : -> scp[ getScopeIndex this ] or @create()
 
+    of          :
+        value   : ( ptri ) ->
+            setClassIndex getScopeIndex(this), ptri
+            renew_Pointer ptri
+
     define      : 
         value   : ( prop, desc ) ->
             define @class.prototype, [ prop ]: {
@@ -319,19 +324,17 @@ define ClassPointer::,
             } ; this
 
     property    :
-        value   : ( classi, prop, desc = {} ) ->
+        value   : ( classPointer, prop, desc = {} ) ->
             byteOffset = this.byteLength
             this.byteLength += 4
 
-            warn classi
-
-            prop = prop || classi.name.toCamelCase()
-            ptri = PropertyPointer.from classi, prop
+            prop = prop || classPointer.name.toCamelCase()
+            ptri = PropertyPointer.from classPointer, prop
 
             ptri . parent = this
             ptri . offset = byteOffset
 
-            io = int32Property byteOffset, ptri, desc
+            io = int32Property byteOffset, classPointer, desc
 
             @define prop, { 
                 get : io.getOrMalloc
@@ -353,11 +356,9 @@ extRefClass . define "object", {
 
 localWindowClass = rootPointerClass.extend "LocalWindow"
 localWindowClass . property extRefClass
-localWindowClass . property stringClass, "title", {
-    default : ->
-        byteOffset = stringClass.malloc 16
-        log getAllHeaders byteOffset
-        byteOffset
+localWindowClass . property stringClass, "name", {
+    default : ( propertyPointer ) ->
+        propertyPointer.of StringPointer.from window.name
 }
 
 
@@ -369,6 +370,7 @@ win.extRef.object = window
 
 log i32.subarray 0, 12
 log scp
+log getAllHeaders win.name
 log filterMallocs()
 
 a = ->

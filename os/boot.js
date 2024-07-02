@@ -101,7 +101,7 @@ getAllHeaders = function(ptri = this) {
   };
 };
 
-int32Property = function(byteOffset, property, desc = {}) {
+int32Property = function(byteOffset, classPointer, desc = {}) {
   return {
     setAsNumber: function(i32v) {
       return dvw.setInt32(this + byteOffset, i32v, iLE);
@@ -124,8 +124,8 @@ int32Property = function(byteOffset, property, desc = {}) {
         return renew_Pointer(ptri);
       }
       if (typeof desc.default !== "function") {
-        ptri = property.malloc(desc.byteLength);
-      } else if (!(ptri = desc.default.call(this, byteOffset))) {
+        ptri = classPointer.malloc(desc.byteLength);
+      } else if (!(ptri = desc.default.call(this, classPointer, byteOffset))) {
         return 0;
       }
       dvw.setInt32(this + byteOffset, ptri, iLE);
@@ -465,6 +465,12 @@ define(ClassPointer.prototype, {
       return scp[getScopeIndex(this)] || this.create();
     }
   },
+  of: {
+    value: function(ptri) {
+      setClassIndex(getScopeIndex(this), ptri);
+      return renew_Pointer(ptri);
+    }
+  },
   define: {
     value: function(prop, desc) {
       define(this.class.prototype, {
@@ -478,16 +484,15 @@ define(ClassPointer.prototype, {
     }
   },
   property: {
-    value: function(classi, prop, desc = {}) {
+    value: function(classPointer, prop, desc = {}) {
       var byteOffset, io, ptri;
       byteOffset = this.byteLength;
       this.byteLength += 4;
-      warn(classi);
-      prop = prop || classi.name.toCamelCase();
-      ptri = PropertyPointer.from(classi, prop);
+      prop = prop || classPointer.name.toCamelCase();
+      ptri = PropertyPointer.from(classPointer, prop);
       ptri.parent = this;
       ptri.offset = byteOffset;
-      io = int32Property(byteOffset, ptri, desc);
+      io = int32Property(byteOffset, classPointer, desc);
       this.define(prop, {
         get: io.getOrMalloc,
         set: io.setAsNumber,
@@ -517,12 +522,9 @@ localWindowClass = rootPointerClass.extend("LocalWindow");
 
 localWindowClass.property(extRefClass);
 
-localWindowClass.property(stringClass, "title", {
-  default: function() {
-    var byteOffset;
-    byteOffset = stringClass.malloc(16);
-    log(getAllHeaders(byteOffset));
-    return byteOffset;
+localWindowClass.property(stringClass, "name", {
+  default: function(propertyPointer) {
+    return propertyPointer.of(StringPointer.from(window.name));
   }
 });
 
@@ -537,6 +539,8 @@ win.extRef.object = window;
 log(i32.subarray(0, 12));
 
 log(scp);
+
+log(getAllHeaders(win.name));
 
 log(filterMallocs());
 
