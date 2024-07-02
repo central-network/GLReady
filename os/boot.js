@@ -1,4 +1,4 @@
-var Class, ExtRef, Function, String, Uint8Array, a, buf, clssNumber, clssPointer, define, dvw, error, i32, iLE, log, malloc, pointerOf, scopei, scp, ui8, verify, warn;
+var ClassPointer, FunctionPointer, PropertyPointer, StringPointer, Uint8ArrayPointer, a, buf, define, dvw, error, extRefClass, filterMallocs, getAllHeaders, getByteLength, getClassIndex, getNextOffset, getParentPtri, getScopeIndex, getUsersInt32, hasClassIndex, headersLength, i32, iLE, int32Property, localWindowClass, log, malloc, ptrByteLength, ptrClassIndex, ptrNextOffset, ptrParentPtri, ptrScopeIndex, ptrUsersInt32, renew_Pointer, rootPointerClass, scopei, scp, setByteLength, setClassIndex, setNextOffset, setParentPtri, setScopeIndex, setUsersInt32, stringClass, ui8, warn, win;
 
 ({log, warn, error} = console);
 
@@ -14,7 +14,160 @@ ui8 = new self.Uint8Array(i32.buffer);
 
 dvw = new self.DataView(i32.buffer);
 
-Atomics.or(i32, 0, 24);
+headersLength = 0;
+
+ptrNextOffset = headersLength += 4;
+
+getNextOffset = function(ptri = this) {
+  return dvw.getInt32(ptri - ptrNextOffset, iLE);
+};
+
+setNextOffset = function(i32v, ptri = this) {
+  return dvw.setInt32(ptri - ptrNextOffset, i32v, iLE);
+};
+
+ptrByteLength = headersLength += 4;
+
+getByteLength = function(ptri = this) {
+  return dvw.getInt32(ptri - ptrByteLength, iLE);
+};
+
+setByteLength = function(i32v, ptri = this) {
+  return dvw.setInt32(ptri - ptrByteLength, i32v, iLE);
+};
+
+ptrClassIndex = headersLength += 4;
+
+getClassIndex = function(ptri = this) {
+  return dvw.getInt32(ptri - ptrClassIndex, iLE);
+};
+
+hasClassIndex = function(clsi, ptri = this) {
+  return 0 === clsi - dvw.getInt32(ptri - ptrClassIndex, iLE);
+};
+
+setClassIndex = function(i32v, ptri = this) {
+  return dvw.setInt32(ptri - ptrClassIndex, i32v, iLE);
+};
+
+ptrScopeIndex = headersLength += 4;
+
+getScopeIndex = function(ptri = this) {
+  return dvw.getInt32(ptri - ptrScopeIndex, iLE);
+};
+
+setScopeIndex = function(i32v, ptri = this) {
+  return dvw.setInt32(ptri - ptrScopeIndex, i32v, iLE);
+};
+
+ptrParentPtri = headersLength += 4;
+
+getParentPtri = function(ptri = this) {
+  return dvw.getInt32(ptri - ptrParentPtri, iLE);
+};
+
+setParentPtri = function(i32v, ptri = this) {
+  return dvw.setInt32(ptri - ptrParentPtri, i32v, iLE);
+};
+
+ptrUsersInt32 = headersLength += 4;
+
+getUsersInt32 = function(ptri = this) {
+  return dvw.getInt32(ptri - ptrUsersInt32, iLE);
+};
+
+setUsersInt32 = function(i32v, ptri = this) {
+  return dvw.setInt32(ptri - ptrUsersInt32, i32v, iLE);
+};
+
+getAllHeaders = function(ptri = this) {
+  var begin, byteLength, classIndex, hlen, nextOffset, parentPtri, scopeIndex, usersInt32;
+  hlen = headersLength / 4;
+  begin = ptri / 4;
+  [usersInt32, parentPtri, scopeIndex, classIndex, byteLength, nextOffset] = i32.subarray(begin - hlen, begin);
+  return {
+    usersInt32,
+    parentPtri,
+    scopeIndex,
+    classIndex,
+    byteLength,
+    nextOffset,
+    class: scp[classIndex],
+    scopeItem: scp[scopeIndex],
+    parent: renew_Pointer(parentPtri),
+    next: renew_Pointer(nextOffset),
+    byteArray: ui8.subarray(ptri, ptri + byteLength).slice(),
+    byteOffset: +ptri
+  };
+};
+
+int32Property = function(byteOffset, property, desc = {}) {
+  return {
+    setAsNumber: function(i32v) {
+      return dvw.setInt32(this + byteOffset, i32v, iLE);
+    },
+    setAsScopei: function(object) {
+      return dvw.setInt32(this + byteOffset, scopei(object), iLE);
+    },
+    getAsScopei: function() {
+      return scp[dvw.getInt32(this + byteOffset, iLE)];
+    },
+    getAsNumber: function() {
+      return dvw.getInt32(this + byteOffset, iLE);
+    },
+    getAsPointer: function() {
+      return renew_Pointer(dvw.getInt32(this + byteOffset, iLE));
+    },
+    getOrMalloc: function() {
+      var ptri;
+      if (ptri = dvw.getInt32(this + byteOffset, iLE)) {
+        return renew_Pointer(ptri);
+      }
+      if (typeof desc.default !== "function") {
+        ptri = property.malloc(desc.byteLength);
+      } else if (!(ptri = desc.default.call(this, byteOffset))) {
+        return 0;
+      }
+      dvw.setInt32(this + byteOffset, ptri, iLE);
+      return ptri;
+    }
+  };
+};
+
+renew_Pointer = function(ptri = this) {
+  var clsi;
+  if (ptri && (clsi = getClassIndex(ptri))) {
+    return new scp[clsi](ptri);
+  }
+  return 0;
+};
+
+filterMallocs = function(test, ptri = this) {
+  var index, matchs, next, ptrj;
+  next = headersLength * 2;
+  index = 0;
+  matchs = [];
+  test = test && test.call && test;
+  while (next = getNextOffset(next)) {
+    if (ptri) {
+      if (ptri - getParentPtri(next)) {
+        continue;
+      }
+    }
+    if (!(ptrj = renew_Pointer(next))) {
+      continue;
+    }
+    if (test) {
+      if (!test.call(ptri, ptrj, index)) {
+        continue;
+      }
+    }
+    matchs[index++] = ptrj;
+  }
+  return matchs;
+};
+
+Atomics.or(i32, 0, headersLength);
 
 define = self.Object.defineProperties.bind(self.Object);
 
@@ -31,79 +184,49 @@ scopei = function(any) {
 
 malloc = function(byteLength = 0, Prototype = Number) {
   var allocBytes, byteOffset, classIndex, mod, nextOffset, ptriOffset;
-  allocBytes = byteLength + 24;
+  allocBytes = byteLength + headersLength;
   if (0 < (mod = allocBytes % 8)) {
     allocBytes += 8 - mod;
   }
   ptriOffset = Atomics.add(i32, 0, allocBytes);
-  nextOffset = ptriOffset + allocBytes + 24;
-  byteOffset = ptriOffset + 24;
+  nextOffset = ptriOffset + allocBytes + headersLength;
   classIndex = scopei(Prototype);
-  dvw.setInt32(byteOffset - 12, classIndex, iLE);
-  dvw.setInt32(byteOffset - 8, nextOffset, iLE);
-  dvw.setInt32(byteOffset - 4, byteLength, iLE);
-  return byteOffset;
+  byteOffset = ptriOffset + headersLength;
+  setClassIndex(classIndex, byteOffset);
+  setNextOffset(nextOffset, byteOffset);
+  setByteLength(byteLength, byteOffset);
+  return new Prototype(byteOffset);
 };
 
-verify = function(byteOffset) {
-  var byteLength, calcOffset, nextOffset;
-  if (byteOffset < 8) {
-    return 0;
-  }
-  if (byteOffset % 8) {
-    return 0;
-  }
-  nextOffset = dvw.getInt32(byteOffset - 8, iLE);
-  byteLength = dvw.getInt32(byteOffset - 4, iLE);
-  calcOffset = byteOffset + byteLength + 24;
-  if ((calcOffset - nextOffset) > 0) {
-    return 0;
-  }
-  return byteOffset;
-};
-
-pointerOf = function(byteOffset) {
-  var clsi, ptri;
-  if (!(ptri = verify(byteOffset))) {
-    return 0;
-  }
-  if (!(clsi = dvw.getInt32(ptri - 12, iLE))) {
-    return 0;
-  }
-  return new scp[clsi](ptri);
-};
-
-ExtRef = (function() {
-  class ExtRef extends Number {
-    static from(object) {
-      var ptri;
-      ptri = new this(malloc(this.byteLength, this));
-      ptri.object = object;
-      return ptri;
-    }
-
-  };
-
-  ExtRef.byteLength = 4;
-
-  return ExtRef;
-
-}).call(this);
-
-Uint8Array = class Uint8Array extends Number {
+Uint8ArrayPointer = class Uint8ArrayPointer extends Number {
   static from(uInt8Array) {
     var blen, ptri;
     blen = uInt8Array.byteLength;
-    ptri = new this(malloc(blen, this));
+    ptri = malloc(blen, this);
     ptri.toArray().set(uInt8Array);
     return ptri;
   }
 
 };
 
-Function = class Function extends ExtRef {};
+FunctionPointer = (function() {
+  class FunctionPointer extends Number {
+    static from(object) {
+      var ptri;
+      ptri = malloc(this.byteLength, this);
+      ptri.object = object;
+      return ptri;
+    }
 
-define(ExtRef.prototype, {
+  };
+
+  FunctionPointer.byteLength = 4;
+
+  return FunctionPointer;
+
+}).call(this);
+
+define(FunctionPointer.prototype, {
   object: {
     get: function() {
       return scp[dvw.getInt32(this, iLE)];
@@ -111,10 +234,7 @@ define(ExtRef.prototype, {
     set: function(v) {
       return dvw.setInt32(this, scopei(v), iLE);
     }
-  }
-});
-
-define(Function.prototype, {
+  },
   exec: {
     value: function() {
       return this.object(...arguments);
@@ -127,7 +247,7 @@ define(Function.prototype, {
   }
 });
 
-define(Uint8Array.prototype, {
+define(Uint8ArrayPointer.prototype, {
   array: {
     get: function() {
       return ui8.subarray(this, this + this.byteLength);
@@ -135,7 +255,7 @@ define(Uint8Array.prototype, {
   },
   byteLength: {
     get: function() {
-      return dvw.getInt32(this - 4, iLE);
+      return getByteLength(this);
     }
   },
   set: {
@@ -146,25 +266,25 @@ define(Uint8Array.prototype, {
   }
 });
 
-String = (function() {
-  class String extends Number {
+StringPointer = (function() {
+  class StringPointer extends Number {
     static from(string = "") {
       var data;
       data = this.encoder.exec(string);
-      return Uint8Array.from.call(this, data);
+      return Uint8ArrayPointer.from.call(this, data);
     }
 
   };
 
-  String.encoder = Function.from(TextEncoder.prototype.encode.bind(new TextEncoder));
+  StringPointer.encoder = FunctionPointer.from(TextEncoder.prototype.encode.bind(new TextEncoder));
 
-  String.decoder = Function.from(TextDecoder.prototype.decode.bind(new TextDecoder));
+  StringPointer.decoder = FunctionPointer.from(TextDecoder.prototype.decode.bind(new TextDecoder));
 
-  return String;
+  return StringPointer;
 
 }).call(this);
 
-define(String.prototype, {
+define(StringPointer.prototype, {
   value: {
     get: function() {
       return this.toString();
@@ -172,7 +292,7 @@ define(String.prototype, {
   },
   length: {
     get: function() {
-      return dvw.getInt32(this - 4, iLE);
+      return getByteLength(this);
     }
   },
   toArray: {
@@ -182,29 +302,92 @@ define(String.prototype, {
   },
   toString: {
     value: function() {
-      return String.decoder.exec(this.toArray());
+      return StringPointer.decoder.exec(this.toArray());
+    }
+  },
+  toCamelCase: {
+    value: function() {
+      return this.value[0].toLowerCase() + this.value.substring(1);
     }
   }
 });
 
-Class = (function() {
-  class Class extends Number {
+ClassPointer = (function() {
+  class ClassPointer extends Number {
     static from(Any) {
       var ptri;
-      ptri = new this(malloc(this.byteLength, this));
-      ptri.class = scopei(Any);
+      ptri = malloc(this.byteLength, ClassPointer);
+      ptri.name = StringPointer.from(Any.name);
+      ptri.class = Any;
+      ptri.create();
       return ptri;
     }
 
   };
 
-  Class.byteLength = 12;
+  ClassPointer.byteLength = 12;
 
-  return Class;
+  return ClassPointer;
 
 }).call(this);
 
-define(Class.prototype, {
+PropertyPointer = (function() {
+  class PropertyPointer extends Number {
+    static from(classi, name) {
+      var ptri;
+      ptri = malloc(this.byteLength, this);
+      ptri.name = StringPointer.from(name);
+      ptri.classPointer = classi;
+      return ptri;
+    }
+
+  };
+
+  PropertyPointer.byteLength = 16;
+
+  return PropertyPointer;
+
+}).call(this);
+
+define(PropertyPointer.prototype, {
+  offset: {
+    set: function(i32v) {
+      return dvw.setInt32(this + 8, i32v, iLE);
+    },
+    get: function() {
+      return dvw.getInt32(this + 8, iLE);
+    }
+  },
+  classPointer: {
+    set: function(ptri) {
+      return dvw.setInt32(this + 4, ptri, iLE);
+    },
+    get: function() {
+      return renew_Pointer(dvw.getInt32(this + 4, iLE));
+    }
+  },
+  name: {
+    set: function(ptri) {
+      return dvw.setInt32(this, ptri, iLE);
+    },
+    get: function() {
+      return renew_Pointer(dvw.getInt32(this, iLE));
+    }
+  },
+  parent: {
+    set: setParentPtri,
+    get: function() {
+      return renew_Pointer(getParentPtri(this));
+    }
+  },
+  malloc: {
+    value: function(byteLength = 0) {
+      return this.classPointer.malloc(byteLength);
+    }
+  }
+});
+
+define(ClassPointer.prototype, {
   name: {
     set: function(ptri) {
       return dvw.setInt32(this, ptri, iLE);
@@ -212,70 +395,153 @@ define(Class.prototype, {
     get: function() {
       var ptrn;
       if (ptrn = dvw.getInt32(this, iLE)) {
-        return new String(ptrn);
+        return new StringPointer(ptrn);
       }
-      return this.name = String.from(this.class.name);
+      return this.name = StringPointer.from(this.class.name);
+    }
+  },
+  byteLength: {
+    set: function(i32v) {
+      return dvw.setInt32(this + 4, i32v, iLE);
+    },
+    get: function() {
+      return dvw.getInt32(this + 4, iLE);
     }
   },
   parent: {
-    set: function(ptri) {
-      return dvw.setInt32(this + 4, ptri, iLE);
-    },
+    set: setParentPtri,
     get: function() {
-      return pointerOf(dvw.getInt32(this + 4, iLE));
+      return renew_Pointer(getParentPtri(this));
+    }
+  },
+  children: {
+    get: filterMallocs
+  },
+  extends: {
+    enumerable: true,
+    get: function() {
+      return filterMallocs.call(this, function(ptri) {
+        return ptri instanceof ClassPointer;
+      });
+    }
+  },
+  malloc: {
+    value: function(byteLength = 0) {
+      return malloc(this.byteLength + byteLength, this.class);
     }
   },
   extend: {
-    value: function(name, Prototype = this.constructor) {
-      var ptrc, ptri;
-      ptri = malloc(Prototype.byteLength, Prototype);
-      ptrc = new Prototype(ptri);
-      ptrc.name = String.from(name);
-      ptrc.parent = this;
-      ptrc.create();
-      return ptrc;
+    value: function(name) {
+      var clss, ptri;
+      clss = ClassPointer;
+      ptri = malloc(clss.byteLength, clss);
+      ptri.name = StringPointer.from(name);
+      ptri.parent = this;
+      ptri.create();
+      return ptri;
     }
   },
   create: {
     value: function() {
-      var parent;
-      if (parent = this.parent || "") {
-        self.pclass = parent.class;
-        parent = `extends ${self.pclass.name}`;
+      var parent, pname;
+      if (!(parent = this.parent && this.parent.class)) {
+        return scp[getScopeIndex(this)];
       }
+      self[pname = parent.name] = parent;
       document.body.appendChild(Object.assign(document.createElement("script"), {
-        text: `self.iclass = (class ${this.name} ${parent} {})`
+        text: `self.iclass = (class ${this.name} extends ${pname} {})`
       })).remove();
-      this.class = scopei(self.iclass);
+      this.class = self.iclass;
       delete self.iclass;
-      delete self.pclass;
-      return scp[this.class];
+      delete self[pname];
+      return this.class;
     }
   },
   class: {
-    set: function(v) {
-      return dvw.setInt32(this + 8, v, iLE);
+    set: function(cl) {
+      return setScopeIndex(scopei(cl), this);
     },
     get: function() {
-      return scp[dvw.getInt32(this + 8, iLE)] || this.create();
+      return scp[getScopeIndex(this)] || this.create();
+    }
+  },
+  define: {
+    value: function(prop, desc) {
+      define(this.class.prototype, {
+        [prop]: {
+          enumerable: true,
+          configurable: true,
+          ...desc
+        }
+      });
+      return this;
+    }
+  },
+  property: {
+    value: function(classi, prop, desc = {}) {
+      var byteOffset, io, ptri;
+      byteOffset = this.byteLength;
+      this.byteLength += 4;
+      warn(classi);
+      prop = prop || classi.name.toCamelCase();
+      ptri = PropertyPointer.from(classi, prop);
+      ptri.parent = this;
+      ptri.offset = byteOffset;
+      io = int32Property(byteOffset, ptri, desc);
+      this.define(prop, {
+        get: io.getOrMalloc,
+        set: io.setAsNumber,
+        ...desc
+      });
+      return prop;
     }
   }
 });
 
-clssNumber = Class.from(Number);
+rootPointerClass = ClassPointer.from(Number).extend("Pointer");
 
-clssPointer = clssNumber.extend("Pointer");
+extRefClass = rootPointerClass.extend("ExtRef");
 
-log(clssNumber);
+stringClass = rootPointerClass.extend("String");
 
-log(clssPointer);
+extRefClass.define("object", {
+  get: function() {
+    return scp[getScopeIndex(this)];
+  },
+  set: function(any) {
+    return setScopeIndex(scopei(any), this);
+  }
+});
+
+localWindowClass = rootPointerClass.extend("LocalWindow");
+
+localWindowClass.property(extRefClass);
+
+localWindowClass.property(stringClass, "title", {
+  default: function() {
+    var byteOffset;
+    byteOffset = stringClass.malloc(16);
+    log(getAllHeaders(byteOffset));
+    return byteOffset;
+  }
+});
+
+log(rootPointerClass);
+
+log(localWindowClass);
+
+log(win = localWindowClass.malloc());
+
+win.extRef.object = window;
 
 log(i32.subarray(0, 12));
 
 log(scp);
 
+log(filterMallocs());
+
 a = function() {
-  var BufferPointer, ClassPointer, ClassProperty, FunctionPointer, GlobalScope, Pointer, StringPointer, decodeMethod, encodeMethod, getByteLength, getClassIndex, getNextOffset, getParentPtri, getScopeIndex, getUsersInt32, hasClassIndex, headersLength, memoryClass, numberClass, ptrByteLength, ptrClassIndex, ptrNextOffset, ptrParentPtri, ptrScopeIndex, ptrUsersInt32, read, scope, setByteLength, setClassIndex, setNextOffset, setParentPtri, setScopeIndex, setUsersInt32, write;
+  var BufferPointer, ClassProperty, GlobalScope, Pointer, decodeMethod, encodeMethod, memoryClass, numberClass, read, scope, write;
   headersLength = 0;
   ptrNextOffset = headersLength += 4;
   getNextOffset = function(ptri = this) {

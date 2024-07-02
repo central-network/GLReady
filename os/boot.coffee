@@ -7,7 +7,113 @@ i32 = new self.Int32Array buf
 ui8 = new self.Uint8Array i32.buffer
 dvw = new self.DataView i32.buffer
 
-Atomics.or i32, 0, 24
+headersLength = 0
+ptrNextOffset = headersLength += 4 
+getNextOffset = ( ptri = this ) -> dvw.getInt32 ptri - ptrNextOffset, iLE
+setNextOffset = ( i32v , ptri = this ) -> dvw.setInt32 ptri - ptrNextOffset, i32v, iLE
+
+ptrByteLength = headersLength += 4 
+getByteLength = ( ptri = this ) -> dvw.getInt32 ptri - ptrByteLength, iLE
+setByteLength = ( i32v , ptri = this ) -> dvw.setInt32 ptri - ptrByteLength, i32v, iLE
+
+ptrClassIndex = headersLength += 4 
+getClassIndex = ( ptri = this ) -> dvw.getInt32 ptri - ptrClassIndex, iLE
+hasClassIndex = ( clsi , ptri = this ) -> 0 is clsi - dvw.getInt32 ptri - ptrClassIndex, iLE
+setClassIndex = ( i32v , ptri = this ) -> dvw.setInt32 ptri - ptrClassIndex, i32v, iLE
+
+ptrScopeIndex = headersLength += 4 
+getScopeIndex = ( ptri = this ) -> dvw.getInt32 ptri - ptrScopeIndex, iLE
+setScopeIndex = ( i32v , ptri = this ) -> dvw.setInt32 ptri - ptrScopeIndex, i32v, iLE
+
+ptrParentPtri = headersLength += 4 
+getParentPtri = ( ptri = this ) -> dvw.getInt32 ptri - ptrParentPtri, iLE
+setParentPtri = ( i32v , ptri = this ) -> dvw.setInt32 ptri - ptrParentPtri, i32v, iLE
+
+ptrUsersInt32 = headersLength += 4 
+getUsersInt32 = ( ptri = this ) -> dvw.getInt32 ptri - ptrUsersInt32, iLE
+setUsersInt32 = ( i32v , ptri = this ) -> dvw.setInt32 ptri - ptrUsersInt32, i32v, iLE
+
+getAllHeaders = ( ptri = this ) ->
+    hlen = headersLength / 4
+    begin = ptri / 4
+
+    [   usersInt32, parentPtri, scopeIndex, 
+        classIndex, byteLength, nextOffset ] =
+            i32.subarray begin - hlen, begin
+
+    return {
+        usersInt32, parentPtri, scopeIndex, 
+        classIndex, byteLength, nextOffset,
+
+        class : scp[ classIndex ]
+        scopeItem : scp[ scopeIndex ]
+        parent : renew_Pointer( parentPtri )
+        next : renew_Pointer( nextOffset )
+        byteArray : ui8.subarray(ptri, ptri + byteLength).slice()
+        byteOffset : +ptri
+    }
+
+int32Property = ( byteOffset, property, desc = {} ) ->
+
+    setAsNumber         : ( i32v ) ->
+        dvw.setInt32 this + byteOffset, i32v, iLE
+
+    setAsScopei         : ( object ) ->
+        dvw.setInt32 this + byteOffset, scopei(object), iLE
+
+    getAsScopei         : ->
+        scp[ dvw.getInt32 this + byteOffset, iLE ]
+
+    getAsNumber         : ->
+        dvw.getInt32 this + byteOffset, iLE
+
+    getAsPointer        : ->
+        renew_Pointer dvw.getInt32 this + byteOffset, iLE 
+
+    getOrMalloc         : ->
+        if  ptri = dvw.getInt32 this + byteOffset, iLE
+            return renew_Pointer ptri
+
+        if  typeof desc.default isnt "function"
+            ptri = property.malloc desc.byteLength
+
+        else unless ptri = desc.default.call( this, byteOffset )
+            return 0
+
+        dvw.setInt32 this + byteOffset, ptri, iLE
+
+        return ptri
+
+renew_Pointer = ( ptri = this ) ->
+    if  ptri and clsi = getClassIndex ptri
+        return new scp[ clsi ] ptri
+    0
+
+filterMallocs = ( test , ptri = this ) ->
+    next = headersLength * 2
+    index = 0
+    matchs = [] 
+    test = test and test.call and test
+    
+    while   next = getNextOffset next
+
+        if  ptri
+            if  ptri - getParentPtri next
+                continue 
+
+        
+        if !ptrj = renew_Pointer next
+            continue
+
+        if  test
+            if !test.call ptri, ptrj, index
+                continue 
+         
+        matchs[ index++ ] = ptrj 
+        
+    matchs
+
+Atomics.or i32, 0, headersLength
 
 define = self.Object.defineProperties.bind self.Object
 
@@ -20,63 +126,41 @@ scopei = ( any ) ->
     return i
 
 malloc = ( byteLength = 0, Prototype = Number ) ->
-    allocBytes = byteLength + 24
+    allocBytes = byteLength + headersLength
     
     if  0 < mod = allocBytes % 8
         allocBytes += 8 - mod
 
     ptriOffset = Atomics.add i32, 0, allocBytes
-    nextOffset = ptriOffset + allocBytes + 24
-    byteOffset = ptriOffset + 24
+    nextOffset = ptriOffset + allocBytes + headersLength
     classIndex = scopei Prototype
+    byteOffset = ptriOffset + headersLength
 
-    dvw.setInt32 byteOffset - 12, classIndex, iLE 
-    dvw.setInt32 byteOffset -  8, nextOffset, iLE 
-    dvw.setInt32 byteOffset -  4, byteLength, iLE 
+    setClassIndex classIndex, byteOffset
+    setNextOffset nextOffset, byteOffset
+    setByteLength byteLength, byteOffset
     
-    byteOffset
+    new Prototype byteOffset
 
-verify = ( byteOffset ) ->
-    return 0 if byteOffset < 8
-    return 0 if byteOffset % 8
-
-    nextOffset = dvw.getInt32 byteOffset - 8, iLE
-    byteLength = dvw.getInt32 byteOffset - 4, iLE
-    calcOffset = byteOffset + byteLength + 24
-    
-    return 0 if (calcOffset - nextOffset) > 0
-    return byteOffset    
-
-pointerOf = ( byteOffset ) ->
-    return 0 unless ptri = verify byteOffset
-    return 0 unless clsi = dvw.getInt32 ptri - 12, iLE
-
-    new scp[ clsi ] ptri
-
-class ExtRef extends Number
-    @byteLength : 4
-    @from       : ( object ) ->
-        ptri = new this malloc @byteLength, this
-        ptri . object = object
-        ptri
-
-class Uint8Array extends Number
+class Uint8ArrayPointer extends Number
 
     @from       : ( uInt8Array ) ->
         blen = uInt8Array.byteLength
-        ptri = new this malloc blen, this
-        ptri.toArray().set uInt8Array 
+        ptri = malloc blen, this
+        ptri . toArray().set uInt8Array 
         ptri
 
-class Function extends ExtRef
+class FunctionPointer extends Number
+    @byteLength : 4
+    @from       : ( object ) ->
+        ptri = malloc @byteLength, this
+        ptri . object = object
+        ptri
 
-define ExtRef::,
-
+define FunctionPointer::,
     object      :
         get     : -> scp[ dvw.getInt32 this, iLE ]
         set     : (v) -> dvw.setInt32 this, scopei(v), iLE
-
-define Function::,
 
     exec        :
         value   : -> @object arguments...
@@ -84,102 +168,208 @@ define Function::,
     name        :
         get     : -> @object.name
 
-define Uint8Array::,
+define Uint8ArrayPointer::,
 
     array       :
         get     : -> ui8.subarray this , this + @byteLength
 
     byteLength  :
-        get     : -> dvw.getInt32 this - 4, iLE
+        get     : -> getByteLength this
 
     set         :
-        value   : ( array, index = 0 ) ->
-            @array.set array , index ; this
+        value   : ( array, index = 0 ) -> @array.set array , index ; this
 
-class String extends Number
+class StringPointer extends Number
     
-    @encoder    : Function.from TextEncoder::encode.bind new TextEncoder
+    @encoder    : FunctionPointer.from TextEncoder::encode.bind new TextEncoder
 
-    @decoder    : Function.from TextDecoder::decode.bind new TextDecoder
+    @decoder    : FunctionPointer.from TextDecoder::decode.bind new TextDecoder
 
     @from       : ( string = "" ) ->
         data = @encoder.exec string
-        Uint8Array.from.call this, data
+        Uint8ArrayPointer.from.call this, data
 
-define String::,
+define StringPointer::,
 
     value       :
         get     : -> @toString()
 
     length      :
-        get     : -> dvw.getInt32 this - 4, iLE
+        get     : -> getByteLength this
 
     toArray     :
         value   : -> ui8.subarray this , this + @length
 
     toString    :
-        value   : -> String.decoder.exec @toArray()
+        value   : -> StringPointer.decoder.exec @toArray()
+
+    toCamelCase :
+        value   : -> @value[0].toLowerCase() + @value.substring(1)
 
 
-class Class extends Number
+class ClassPointer extends Number
 
     @byteLength : 12
 
     @from       : ( Any ) ->
-        ptri = new this malloc @byteLength, this
-        ptri . class = scopei Any
+        ptri = malloc @byteLength, ClassPointer
+        ptri . name = StringPointer.from Any.name
+        ptri . class = Any
+        ptri . create()
         ptri 
 
-define Class::,
+class PropertyPointer extends Number
+
+    @byteLength : 16
+
+    @from       : ( classi, name ) ->
+        ptri = malloc @byteLength, this        
+        ptri . name = StringPointer.from name
+        ptri . classPointer = classi
+        ptri 
+
+define PropertyPointer::,
+    offset      :
+        set     : ( i32v ) -> dvw.setInt32 this + 8, i32v, iLE
+        get     : -> dvw.getInt32 this + 8, iLE
+
+    classPointer:
+        set     : ( ptri ) -> dvw.setInt32 this + 4, ptri, iLE
+        get     : -> renew_Pointer dvw.getInt32 this + 4, iLE
+
     name        : 
         set     : ( ptri ) -> dvw.setInt32 this, ptri, iLE
-        get     : ->
-            if  ptrn = dvw.getInt32 this, iLE
-                return new String ptrn
-            @name = String.from @class.name
+        get     : -> renew_Pointer dvw.getInt32 this, iLE
 
     parent      : 
-        set     : ( ptri ) ->  dvw.setInt32 this + 4, ptri, iLE
-        get     : -> pointerOf dvw.getInt32 this + 4, iLE
+        set     : setParentPtri
+        get     : -> renew_Pointer getParentPtri( this )
+
+    malloc      :
+        value   : ( byteLength = 0 ) ->
+            @classPointer.malloc byteLength 
+
+define ClassPointer::,
+    name        : 
+        set     : ( ptri ) ->
+            dvw.setInt32 this, ptri, iLE
+
+        get     : ->
+            if  ptrn = dvw.getInt32 this, iLE
+                return new StringPointer ptrn
+            @name = StringPointer.from @class.name
+
+    byteLength  :
+        set     : ( i32v ) -> dvw.setInt32 this + 4, i32v, iLE
+        get     : -> dvw.getInt32 this + 4, iLE
+
+    parent      : 
+        set     : setParentPtri
+        get     : -> renew_Pointer getParentPtri( this )
+
+    children    :
+        get     : filterMallocs
+
+    extends     : enumerable : on, get : ->
+        filterMallocs.call this, ( ptri ) ->
+            ptri instanceof ClassPointer
+
+    malloc      :
+        value   : ( byteLength = 0 ) ->
+            malloc @byteLength + byteLength, @class 
 
     extend      :
-        value   : ( name, Prototype = @constructor ) ->
-            ptri = malloc Prototype.byteLength, Prototype
-            ptrc = new Prototype ptri
-            ptrc.name = String.from name
-            ptrc.parent = this
-            ptrc.create()
-            ptrc
+        value   : ( name ) ->
+            clss = ClassPointer
+            ptri = malloc clss.byteLength, clss
+            ptri.name = StringPointer.from name
+            ptri.parent = this
+            ptri.create()
+            ptri
 
     create      :
         value   : ->
-            if  parent = @parent or ""
-                self.pclass = parent.class 
-                parent = "extends #{self.pclass.name}"
+            if !parent = @parent and @parent.class
+                return scp[ getScopeIndex this ]
+                
+            self[ pname = parent.name ] = parent 
 
             document.body.appendChild(Object.assign(
                 document.createElement("script"), {text: (
-                    "self.iclass = (class #{@name} #{parent} {})")}
+                    "self.iclass = (class #{@name} extends #{pname} {})")}
             )).remove()
 
-            @class = scopei self.iclass
+            this.class =
+                self.iclass
 
             delete self.iclass
-            delete self.pclass
+            delete self[pname]
 
-            scp[ @class ]
+            @class
 
     class       :
-        set     : (v) -> dvw.setInt32 this + 8, v, iLE
-        get     : -> scp[ dvw.getInt32 this + 8, iLE ] or @create()
+        set     : (cl) -> setScopeIndex scopei( cl ) , this
+        get     : -> scp[ getScopeIndex this ] or @create()
 
-clssNumber = Class.from Number
-clssPointer = clssNumber.extend "Pointer"
-log clssNumber
-log clssPointer
+    define      : 
+        value   : ( prop, desc ) ->
+            define @class.prototype, [ prop ]: {
+                enumerable : on, 
+                configurable : on, desc... 
+            } ; this
+
+    property    :
+        value   : ( classi, prop, desc = {} ) ->
+            byteOffset = this.byteLength
+            this.byteLength += 4
+
+            warn classi
+
+            prop = prop || classi.name.toCamelCase()
+            ptri = PropertyPointer.from classi, prop
+
+            ptri . parent = this
+            ptri . offset = byteOffset
+
+            io = int32Property byteOffset, ptri, desc
+
+            @define prop, { 
+                get : io.getOrMalloc
+                set : io.setAsNumber, desc...
+            }
+            
+            prop
+        
+rootPointerClass = ClassPointer.from( Number ).extend "Pointer"
+
+extRefClass = rootPointerClass.extend "ExtRef"
+stringClass = rootPointerClass.extend "String"
+extRefClass . define "object", {
+    get : -> scp[ getScopeIndex this ]
+    set : ( any ) -> setScopeIndex scopei(any), this 
+}
+
+
+
+localWindowClass = rootPointerClass.extend "LocalWindow"
+localWindowClass . property extRefClass
+localWindowClass . property stringClass, "title", {
+    default : ->
+        byteOffset = stringClass.malloc 16
+        log getAllHeaders byteOffset
+        byteOffset
+}
+
+
+log rootPointerClass
+log localWindowClass
+log win = localWindowClass.malloc()
+
+win.extRef.object = window
 
 log i32.subarray 0, 12
 log scp
+log filterMallocs()
 
 a = ->
 
