@@ -1,4 +1,4 @@
-var ClassPointer, FunctionPointer, PropertyPointer, StringPointer, Uint8ArrayPointer, a, buf, define, dvw, error, extRefClass, filterMallocs, getAllHeaders, getByteLength, getClassIndex, getNextOffset, getParentPtri, getScopeIndex, getUsersInt32, hasClassIndex, headersLength, i32, iLE, int32Property, localWindowClass, log, malloc, ptrByteLength, ptrClassIndex, ptrNextOffset, ptrParentPtri, ptrScopeIndex, ptrUsersInt32, renew_Pointer, rootPointerClass, scopei, scp, setByteLength, setClassIndex, setNextOffset, setParentPtri, setScopeIndex, setUsersInt32, stringClass, ui8, warn, win;
+var ClassPointer, FunctionPointer, ObjectPointer, PropertyPointer, StringPointer, Uint8ArrayPointer, a, buf, define, dvw, error, extRefClass, filterMallocs, getAllHeaders, getByteLength, getClassIndex, getNextOffset, getParentPtri, getScopeIndex, getUsersInt32, hasClassIndex, headersLength, i32, iLE, int32Property, localWindowClass, log, malloc, ptrByteLength, ptrClassIndex, ptrNextOffset, ptrParentPtri, ptrScopeIndex, ptrUsersInt32, renew_Pointer, rootClass, rootPointerClass, scopei, scp, setByteLength, setClassIndex, setNextOffset, setParentPtri, setScopeIndex, setUsersInt32, stringClass, uInt32Class, ui8, warn, win;
 
 ({log, warn, error} = console);
 
@@ -142,7 +142,7 @@ renew_Pointer = function(ptri = this) {
   return 0;
 };
 
-filterMallocs = function(test, ptri = this) {
+self.dump = filterMallocs = function(test, ptri = this) {
   var index, matchs, next, ptrj;
   next = headersLength * 2;
   index = 0;
@@ -208,6 +208,34 @@ Uint8ArrayPointer = class Uint8ArrayPointer extends Number {
   }
 
 };
+
+ObjectPointer = (function() {
+  class ObjectPointer extends Number {
+    static from(object) {
+      var ptri;
+      ptri = malloc(this.byteLength, this);
+      ptri.object = object;
+      return ptri;
+    }
+
+  };
+
+  ObjectPointer.byteLength = 0;
+
+  return ObjectPointer;
+
+}).call(this);
+
+define(ObjectPointer.prototype, {
+  object: {
+    get: function() {
+      return scp[getScopeIndex(this)];
+    },
+    set: function(v) {
+      return setScopeIndex(scopei(v), this);
+    }
+  }
+});
 
 FunctionPointer = (function() {
   class FunctionPointer extends Number {
@@ -483,15 +511,29 @@ define(ClassPointer.prototype, {
       return this;
     }
   },
+  allocate: {
+    value: function(byteLength, prop, desc = function() {}) {
+      var byteOffset, ptri;
+      byteOffset = this.byteLength;
+      this.byteLength += byteLength;
+      prop = prop || classPointer.name.toCamelCase();
+      ptri = PropertyPointer.from(prop);
+      ptri.parent = this;
+      ptri.offset = byteOffset;
+      this.define(prop, desc.call(this, byteOffset, prop));
+      return prop;
+    }
+  },
   property: {
     value: function(classPointer, prop, desc = {}) {
       var byteOffset, io, ptri;
       byteOffset = this.byteLength;
       this.byteLength += 4;
       prop = prop || classPointer.name.toCamelCase();
-      ptri = PropertyPointer.from(classPointer, prop);
+      ptri = PropertyPointer.from(prop);
       ptri.parent = this;
       ptri.offset = byteOffset;
+      ptri.classPointer = classPointer;
       io = int32Property(byteOffset, classPointer, desc);
       this.define(prop, {
         get: io.getOrMalloc,
@@ -503,11 +545,11 @@ define(ClassPointer.prototype, {
   }
 });
 
-rootPointerClass = ClassPointer.from(Number).extend("Pointer");
+rootClass = ClassPointer.from(Number);
+
+rootPointerClass = rootClass.extend("Pointer");
 
 extRefClass = rootPointerClass.extend("ExtRef");
-
-stringClass = rootPointerClass.extend("String");
 
 extRefClass.define("object", {
   get: function() {
@@ -518,14 +560,80 @@ extRefClass.define("object", {
   }
 });
 
+uInt32Class = rootPointerClass.extend("Uint32Number");
+
+uInt32Class.allocate(4, "value", function(byteOffset) {
+  return {
+    get: function() {
+      return dvw.getUint32(this + byteOffset, iLE);
+    },
+    set: function() {
+      return dvw.setUint32(this + byteOffset, arguments[0], iLE);
+    }
+  };
+});
+
+stringClass = rootPointerClass.extend("String");
+
+stringClass.property(uInt32Class, "length");
+
+stringClass.define("byteArray", {
+  get: function() {
+    return getAllHeaders(this);
+  }
+});
+
+stringClass.define("value", {
+  get: function() {
+    return getAllHeaders(this);
+  }
+});
+
 localWindowClass = rootPointerClass.extend("LocalWindow");
 
-localWindowClass.property(extRefClass);
+localWindowClass.allocate(4, "document", function(byteOffset, prop) {
+  return {
+    set: function() {
+      return dvw.setInt32(this + byteOffset, arguments[0], iLE);
+    },
+    get: function() {
+      var ptri;
+      if (ptri = dvw.getInt32(this + byteOffset, iLE)) {
+        return renew_Pointer(ptri);
+      }
+      return this[prop] = ObjectPointer.from(document);
+    }
+  };
+});
 
-localWindowClass.property(stringClass, "name", {
-  default: function(propertyPointer) {
-    return propertyPointer.of(StringPointer.from(window.name));
-  }
+localWindowClass.allocate(4, "extRef", function(byteOffset, prop) {
+  return {
+    set: function() {
+      return dvw.setInt32(this + byteOffset, arguments[0], iLE);
+    },
+    get: function() {
+      var ptri;
+      if (ptri = dvw.getInt32(this + byteOffset, iLE)) {
+        return renew_Pointer(ptri);
+      }
+      return this[prop] = ObjectPointer.from(self);
+    }
+  };
+});
+
+localWindowClass.allocate(4, "name", function(byteOffset, prop) {
+  return {
+    set: function() {
+      return dvw.setInt32(this + byteOffset, arguments[0], iLE);
+    },
+    get: function() {
+      var ptri;
+      if (ptri = dvw.getInt32(this + byteOffset, iLE)) {
+        return renew_Pointer(ptri);
+      }
+      return this[prop] = StringPointer.from(self.name);
+    }
+  };
 });
 
 log(rootPointerClass);
@@ -534,8 +642,7 @@ log(localWindowClass);
 
 log(win = localWindowClass.malloc());
 
-win.extRef.object = window;
-
+//warn win.name
 log(i32.subarray(0, 12));
 
 log(scp);

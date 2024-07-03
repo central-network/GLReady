@@ -89,6 +89,7 @@ renew_Pointer = ( ptri = this ) ->
         return new scp[ clsi ] ptri
     0
 
+self.dump =
 filterMallocs = ( test , ptri = this ) ->
     next = headersLength * 2
     index = 0
@@ -149,6 +150,18 @@ class Uint8ArrayPointer extends Number
         ptri = malloc blen, this
         ptri . toArray().set uInt8Array 
         ptri
+
+class ObjectPointer extends Number
+    @byteLength : 0
+    @from       : ( object ) ->
+        ptri = malloc @byteLength, this
+        ptri . object = object
+        ptri
+
+define ObjectPointer::,
+    object      :
+        get     : -> scp[ getScopeIndex this ]
+        set     : (v) -> setScopeIndex scopei(v), this
 
 class FunctionPointer extends Number
     @byteLength : 4
@@ -323,16 +336,32 @@ define ClassPointer::,
                 configurable : on, desc... 
             } ; this
 
+    allocate    :
+        value   : ( byteLength, prop, desc = -> ) ->
+            byteOffset = this.byteLength
+            this.byteLength += byteLength
+
+            prop = prop || classPointer.name.toCamelCase()
+            ptri = PropertyPointer.from prop
+
+            ptri . parent = this
+            ptri . offset = byteOffset
+            
+            @define prop, desc.call( this, byteOffset, prop )
+
+            prop
+
     property    :
         value   : ( classPointer, prop, desc = {} ) ->
             byteOffset = this.byteLength
             this.byteLength += 4
 
             prop = prop || classPointer.name.toCamelCase()
-            ptri = PropertyPointer.from classPointer, prop
+            ptri = PropertyPointer.from prop
 
             ptri . parent = this
             ptri . offset = byteOffset
+            ptri . classPointer = classPointer
 
             io = int32Property byteOffset, classPointer, desc
 
@@ -343,30 +372,62 @@ define ClassPointer::,
             
             prop
         
-rootPointerClass = ClassPointer.from( Number ).extend "Pointer"
+rootClass = ClassPointer.from( Number )
+rootPointerClass = rootClass.extend "Pointer"
 
 extRefClass = rootPointerClass.extend "ExtRef"
-stringClass = rootPointerClass.extend "String"
 extRefClass . define "object", {
     get : -> scp[ getScopeIndex this ]
     set : ( any ) -> setScopeIndex scopei(any), this 
 }
 
+uInt32Class = rootPointerClass.extend "Uint32Number"
+uInt32Class . allocate 4, "value", ( byteOffset ) ->  
+    get : -> dvw.getUint32 this + byteOffset, iLE
+    set : -> dvw.setUint32 this + byteOffset, arguments[0], iLE
 
-
-localWindowClass = rootPointerClass.extend "LocalWindow"
-localWindowClass . property extRefClass
-localWindowClass . property stringClass, "name", {
-    default : ( propertyPointer ) ->
-        propertyPointer.of StringPointer.from window.name
+stringClass = rootPointerClass.extend "String"
+stringClass . property uInt32Class, "length"
+stringClass . define "byteArray", {
+    get : -> getAllHeaders this
 }
 
+stringClass . define "value", {
+    get : -> getAllHeaders this
+}
+
+localWindowClass = rootPointerClass.extend "LocalWindow"
+
+localWindowClass . allocate 4, "document", ( byteOffset, prop ) ->
+
+    set : -> dvw.setInt32 this + byteOffset, arguments[0], iLE
+    get : ->
+        if  ptri = dvw.getInt32 this + byteOffset, iLE
+            return renew_Pointer ptri
+        return @[ prop ] = ObjectPointer.from document
+
+localWindowClass . allocate 4, "extRef", ( byteOffset, prop ) ->
+
+    set : -> dvw.setInt32 this + byteOffset, arguments[0], iLE
+    get : ->
+        if  ptri = dvw.getInt32 this + byteOffset, iLE
+            return renew_Pointer ptri
+        return @[ prop ] = ObjectPointer.from self
+
+localWindowClass . allocate 4, "name", ( byteOffset, prop ) ->
+
+    set : -> dvw.setInt32 this + byteOffset, arguments[0], iLE
+    get : ->
+        if  ptri = dvw.getInt32 this + byteOffset, iLE
+            return renew_Pointer ptri
+        return @[ prop ] = StringPointer.from self.name
 
 log rootPointerClass
 log localWindowClass
 log win = localWindowClass.malloc()
 
-win.extRef.object = window
+
+#warn win.name
 
 log i32.subarray 0, 12
 log scp
